@@ -666,6 +666,46 @@
     }, 1800);
   }
 
+  // Alternar Modo Pantalla Completa / Vista Normal
+  const appViewport = document.querySelector('.app-viewport');
+  const btnToggleFullscreenView = document.getElementById('btnToggleFullscreenView');
+  const btnFloatingViewToggle = document.getElementById('btnFloatingViewToggle');
+  const fullscreenViewIcon = document.getElementById('fullscreenViewIcon');
+  const pillIcon = document.getElementById('pillIcon');
+  const pillText = document.getElementById('pillText');
+  let isFullscreenView = false;
+
+  function toggleFullscreenView() {
+    isFullscreenView = !isFullscreenView;
+    window.soundManager.playTileClick();
+
+    if (isFullscreenView) {
+      appViewport.classList.add('fullscreen-board-mode');
+      if (fullscreenViewIcon) fullscreenViewIcon.textContent = '🗗';
+      if (pillIcon) pillIcon.textContent = '🗗';
+      if (pillText) pillText.textContent = 'Vista Normal';
+    } else {
+      appViewport.classList.remove('fullscreen-board-mode');
+      if (fullscreenViewIcon) fullscreenViewIcon.textContent = '⛶';
+      if (pillIcon) pillIcon.textContent = '⛶';
+      if (pillText) pillText.textContent = 'Pantalla Completa';
+    }
+
+    // Re-ajustar el acomodo y escala de las fichas en la mesa de inmediato
+    const container = document.getElementById('boardContainer');
+    if (container && window.dominoRenderer) {
+      setTimeout(() => window.dominoRenderer.autoFitBoard(container), 30);
+      setTimeout(() => window.dominoRenderer.autoFitBoard(container), 150);
+    }
+  }
+
+  if (btnToggleFullscreenView) {
+    btnToggleFullscreenView.addEventListener('click', toggleFullscreenView);
+  }
+  if (btnFloatingViewToggle) {
+    btnFloatingViewToggle.addEventListener('click', toggleFullscreenView);
+  }
+
   // Sonido Mute Toggle
   document.getElementById('btnSoundToggle').addEventListener('click', () => {
     const isMuted = window.soundManager.toggleMute();

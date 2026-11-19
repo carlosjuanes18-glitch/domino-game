@@ -31,6 +31,11 @@
           <div class="text-[10px] text-amber-300 font-extrabold">Ronda <span id="roundNumHeader">1</span></div>
         </div>
 
+        <!-- Botón Pantalla Completa / Vista Normal -->
+        <button id="btnToggleFullscreenView" class="icon-btn" title="Pantalla Completa / Vista Normal">
+          <span id="fullscreenViewIcon">⛶</span>
+        </button>
+
         <!-- Botón Cuaderno de Juego / Scoreboard -->
         <button id="btnOpenScoreboard" class="icon-btn" title="Cuaderno de Juego y Marcador">
           📋
@@ -46,6 +51,12 @@
 
     <!-- Área de la Mesa de Dominó -->
     <main class="table-area">
+      <!-- Botón flotante para alternar pantalla completa / vista normal en todo momento -->
+      <button id="btnFloatingViewToggle" class="fullscreen-pill-btn" title="Alternar Vista de Mesa">
+        <span id="pillIcon">⛶</span>
+        <span id="pillText">Pantalla Completa</span>
+      </button>
+
       <!-- Banner de Turno Actual -->
       <div id="turnBanner" class="turnBanner">
         Cargando estado de la mesa...

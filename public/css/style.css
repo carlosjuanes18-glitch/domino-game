@@ -245,38 +245,158 @@ body {
   gap: 3px;
 }
 
-/* Cadena de fichas en la mesa */
+/* Botón flotante para alternar pantalla completa / vista normal */
+.fullscreen-pill-btn {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  z-index: 35;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(16, 185, 129, 0.5);
+  color: #fef08a;
+  border-radius: 20px;
+  padding: 4px 10px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+  transition: all 0.2s ease;
+}
+
+.fullscreen-pill-btn:active {
+  transform: scale(0.94);
+  background: rgba(16, 185, 129, 0.3);
+}
+
+/* Cadena de fichas en la mesa con auto-acomodo */
 .board-container {
   flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow-x: auto;
-  overflow-y: hidden;
-  padding: 10px 40px;
-  margin: 40px 10px 10px 10px;
+  overflow: hidden;
+  padding: 6px;
+  margin: 12px 8px 8px 8px;
   border-radius: 16px;
-  background: rgba(0, 0, 0, 0.15);
-  box-shadow: inset 0 2px 8px rgba(0,0,0,0.3);
-  scrollbar-width: none;
-}
-
-.board-container::-webkit-scrollbar {
-  display: none;
+  background: rgba(0, 0, 0, 0.22);
+  box-shadow: inset 0 2px 10px rgba(0,0,0,0.4);
+  position: relative;
 }
 
 .board-chain-flow {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  justify-content: center;
   gap: 4px;
-  padding: 10px 20px;
+  max-width: 440px;
+  padding: 6px;
+  transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .board-tile-wrapper {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  position: relative;
   transition: transform 0.25s ease;
+}
+
+/* Indicadores de extremo flotantes sobre la primera y última ficha */
+.end-chip {
+  position: absolute;
+  top: -10px;
+  background: #fef08a;
+  color: #1e293b;
+  font-size: 0.62rem;
+  font-weight: 900;
+  padding: 1px 5px;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.6);
+  z-index: 10;
+  pointer-events: none;
+  white-space: nowrap;
+  animation: pulseChip 1.5s infinite alternate;
+}
+
+.end-chip.chip-left {
+  left: 2px;
+}
+
+.end-chip.chip-right {
+  right: 2px;
+}
+
+@keyframes pulseChip {
+  from { transform: scale(0.95); }
+  to { transform: scale(1.08); }
+}
+
+/* ========================================= */
+/* MODO PANTALLA COMPLETA / VISTA EXPANDIDA */
+/* ========================================= */
+.app-viewport.fullscreen-board-mode .game-header {
+  height: 38px;
+  padding: 2px 10px;
+}
+
+.app-viewport.fullscreen-board-mode .brand-badge div div:last-child {
+  display: none;
+}
+
+.app-viewport.fullscreen-board-mode .turn-banner {
+  margin: 2px auto;
+  padding: 2px 8px;
+  font-size: 0.7rem;
+}
+
+.app-viewport.fullscreen-board-mode .board-ends-bar {
+  padding: 2px 12px;
+}
+
+.app-viewport.fullscreen-board-mode .player-pod {
+  transform: scale(0.72);
+  opacity: 0.88;
+  z-index: 10;
+}
+
+.app-viewport.fullscreen-board-mode .player-pod.north {
+  top: 0px;
+}
+
+.app-viewport.fullscreen-board-mode .player-pod.west {
+  left: 0px;
+}
+
+.app-viewport.fullscreen-board-mode .player-pod.east {
+  right: 0px;
+}
+
+.app-viewport.fullscreen-board-mode .player-pod.south {
+  display: none; /* Toda la info y fichas de Tú están en la barra inferior */
+}
+
+.app-viewport.fullscreen-board-mode .board-container {
+  margin: 2px 4px;
+  border-radius: 12px;
+}
+
+.app-viewport.fullscreen-board-mode .board-chain-flow {
+  max-width: 520px;
+}
+
+.app-viewport.fullscreen-board-mode .player-rack-bar {
+  padding: 4px 8px 8px 8px;
+  background: rgba(2, 44, 34, 0.98);
+}
+
+.app-viewport.fullscreen-board-mode .rack-tiles-container {
+  min-height: 78px;
+  padding: 6px 4px 2px 4px;
 }
 
 /* Indicadores de extremos jugables */

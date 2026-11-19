@@ -1,10 +1,6 @@
 // Renderizador de Fichas Clásicas de Dominó y Tablero en Tiempo Real
 class DominoRenderer {
   constructor() {
-    // Patrones estándar de puntos (3x3 grid: 0..8)
-    // 0 1 2
-    // 3 4 5
-    // 6 7 8
     this.dotPatterns = {
       0: [],
       1: [4],
@@ -61,7 +57,33 @@ class DominoRenderer {
     `;
   }
 
-  // Renderiza el tablero de juego adaptado para pantalla de celular (Cadena de dominó)
+  // Auto-ajusta el tamaño y escala para que TODAS las fichas quepan al 100% en la pantalla
+  autoFitBoard(containerEl) {
+    if (!containerEl) return;
+    const flow = containerEl.querySelector('.board-chain-flow');
+    if (!flow) return;
+
+    // Resetear transformación previa para medir dimensiones reales
+    flow.style.transform = 'none';
+
+    // Obtener dimensiones del contenedor
+    const pad = 12;
+    const containerW = containerEl.clientWidth - pad;
+    const containerH = containerEl.clientHeight - pad;
+    const flowW = flow.scrollWidth;
+    const flowH = flow.scrollHeight;
+
+    if (flowW > 0 && flowH > 0 && containerW > 0 && containerH > 0) {
+      const scaleX = containerW / flowW;
+      const scaleY = containerH / flowH;
+      // Escalar hacia abajo si excede el contenedor; mantener máximo 1.0 para nitidez
+      const fitScale = Math.min(1.0, Math.min(scaleX, scaleY));
+      flow.style.transform = `scale(${fitScale})`;
+      flow.style.transformOrigin = 'center center';
+    }
+  }
+
+  // Renderiza el tablero de dominó organizado en serpentina/filas adaptables
   renderBoard(boardTiles, leftEnd, rightEnd, containerEl) {
     if (!containerEl) return;
 
@@ -78,25 +100,23 @@ class DominoRenderer {
       return;
     }
 
-    // Renderizar la cadena de fichas en la mesa
-    // En móviles, se organiza como una serpentina o flujo continuo adaptable
     let tilesHtml = '';
-    
+
     boardTiles.forEach((tile, index) => {
       const isFirst = index === 0;
       const isLast = index === boardTiles.length - 1;
       const isDouble = tile.left === tile.right;
-
-      // Las fichas dobles se posicionan verticalmente como en el juego clásico
       const isVertical = isDouble;
 
       tilesHtml += `
         <div class="board-tile-wrapper ${isFirst ? 'board-head' : ''} ${isLast ? 'board-tail' : ''}">
+          ${isFirst ? `<span class="end-chip chip-left">◀ ${leftEnd}</span>` : ''}
           ${this.renderTile(tile.left, tile.right, {
             isVertical: isVertical,
             isDouble: isDouble,
             id: `board-${index}-${tile.id}`
           })}
+          ${isLast ? `<span class="end-chip chip-right">${rightEnd} ▶</span>` : ''}
         </div>
       `;
     });
@@ -107,12 +127,19 @@ class DominoRenderer {
       </div>
     `;
 
-    // Hacer scroll automático para centrar el último tiro o mantener los extremos a la vista
-    setTimeout(() => {
-      containerEl.scrollLeft = containerEl.scrollWidth / 2 - containerEl.clientWidth / 2;
-    }, 50);
+    // Ajustar escala y acomodo inmediatamente y con un ligero delay tras pintar el DOM
+    this.autoFitBoard(containerEl);
+    requestAnimationFrame(() => this.autoFitBoard(containerEl));
+    setTimeout(() => this.autoFitBoard(containerEl), 40);
   }
 }
 
 window.dominoRenderer = new DominoRenderer();
 
+// Re-ajustar automáticamente si la pantalla cambia de tamaño o se rota el teléfono
+window.addEventListener('resize', () => {
+  const container = document.getElementById('boardContainer');
+  if (container && window.dominoRenderer) {
+    window.dominoRenderer.autoFitBoard(container);
+  }
+});

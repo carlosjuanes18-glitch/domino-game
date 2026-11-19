@@ -1,6 +1,7 @@
-// Renderizador de Fichas Clásicas de Dominó y Tablero en Tiempo Real
+// Renderizador de Fichas Clásicas de Dominó con Serpenteo Natural 2D Realista
 class DominoRenderer {
   constructor() {
+    this.U = 29; // Unidad base de cuadrícula (mitad de ficha = 29x29 px)
     this.dotPatterns = {
       0: [],
       1: [4],
@@ -35,14 +36,18 @@ class DominoRenderer {
       isDouble = leftVal === rightVal,
       isPlayable = false,
       extraClasses = '',
-      id = `${leftVal}-${rightVal}`
+      id = `${leftVal}-${rightVal}`,
+      widthPx = null,
+      heightPx = null
     } = options;
 
     const playableClass = isPlayable ? 'playable-tile' : '';
     const orientationClass = isVertical ? 'domino-vertical' : 'domino-horizontal';
+    const inlineStyle = (widthPx && heightPx) ? `style="width:${widthPx}px; height:${heightPx}px;"` : '';
 
     return `
       <div class="domino-tile ${orientationClass} ${playableClass} ${extraClasses}"
+           ${inlineStyle}
            data-id="${id}"
            data-left="${leftVal}"
            data-right="${rightVal}">
@@ -57,33 +62,183 @@ class DominoRenderer {
     `;
   }
 
-  // Auto-ajusta el tamaño y escala para que TODAS las fichas quepan al 100% en la pantalla
+  // Algoritmo de Serpenteo 2D Natural (como en las mesas de dominó reales)
+  // Las fichas se conectan extremo con extremo, doblan en esquinas a 90° y las dobles van perpendiculares
+  computeSnakeLayout(board) {
+    if (!board || board.length === 0) return { tiles: [], width: 0, height: 0 };
+    const U = this.U;
+
+    const rootIdx = board.findIndex(t => t.side === 'root');
+    const safeRoot = rootIdx !== -1 ? rootIdx : Math.floor(board.length / 2);
+
+    const placed = new Array(board.length);
+
+    // Ficha inicial (Root)
+    const root = board[safeRoot];
+    const rootIsDouble = root.left === root.right;
+    const rw = rootIsDouble ? U : 2 * U;
+    const rh = rootIsDouble ? 2 * U : U;
+
+    placed[safeRoot] = {
+      x: 0,
+      y: 0,
+      w: rw,
+      h: rh,
+      isVertical: rootIsDouble,
+      tile: root,
+      isHead: safeRoot === 0,
+      isTail: safeRoot === board.length - 1
+    };
+
+    // --- RAMA DERECHA (safeRoot + 1 hacia el final) ---
+    // Crece hacia la derecha, y al alcanzar el límite dobla hacia ABAJO y luego hacia la IZQUIERDA
+    let rConnX = rw;
+    let rConnY = rh / 2;
+    let rDir = 'RIGHT';
+    let rCount = 0;
+
+    for (let i = safeRoot + 1; i < board.length; i++) {
+      const t = board[i];
+      const isDouble = t.left === t.right;
+      const isTail = (i === board.length - 1);
+      rCount++;
+
+      if (rDir === 'RIGHT') {
+        if (rCount >= 4 && !isDouble) {
+          // Doble hacia ABAJO (esquina)
+          const w = U; const h = 2 * U;
+          const x = rConnX - U;
+          const y = rConnY + U / 2;
+          placed[i] = { x, y, w, h, isVertical: true, tile: t, isTail, chipPos: 'bottom' };
+          rConnX = x;
+          rConnY = y + h;
+          rDir = 'LEFT';
+          rCount = 0;
+        } else {
+          const w = isDouble ? U : 2 * U;
+          const h = isDouble ? 2 * U : U;
+          const x = rConnX;
+          const y = rConnY - h / 2;
+          placed[i] = { x, y, w, h, isVertical: isDouble, tile: t, isTail, chipPos: 'right' };
+          rConnX = x + w;
+        }
+      } else if (rDir === 'LEFT') {
+        if (rCount >= 4 && !isDouble) {
+          // Doble hacia ABAJO (esquina)
+          const w = U; const h = 2 * U;
+          const x = rConnX;
+          const y = rConnY + U / 2;
+          placed[i] = { x, y, w, h, isVertical: true, tile: t, isTail, chipPos: 'bottom' };
+          rConnX = x + w;
+          rConnY = y + h;
+          rDir = 'RIGHT';
+          rCount = 0;
+        } else {
+          const w = isDouble ? U : 2 * U;
+          const h = isDouble ? 2 * U : U;
+          const x = rConnX - w;
+          const y = rConnY - h / 2;
+          placed[i] = { x, y, w, h, isVertical: isDouble, tile: t, isTail, chipPos: 'left' };
+          rConnX = x;
+        }
+      }
+    }
+
+    // --- RAMA IZQUIERDA (safeRoot - 1 hacia el principio) ---
+    // Crece hacia la izquierda, y al alcanzar el límite dobla hacia ARRIBA y luego hacia la DERECHA
+    let lConnX = 0;
+    let lConnY = rh / 2;
+    let lDir = 'LEFT';
+    let lCount = 0;
+
+    for (let i = safeRoot - 1; i >= 0; i--) {
+      const t = board[i];
+      const isDouble = t.left === t.right;
+      const isHead = (i === 0);
+      lCount++;
+
+      if (lDir === 'LEFT') {
+        if (lCount >= 4 && !isDouble) {
+          // Dobla hacia ARRIBA (esquina)
+          const w = U; const h = 2 * U;
+          const x = lConnX;
+          const y = lConnY - U / 2 - h;
+          placed[i] = { x, y, w, h, isVertical: true, tile: t, isHead, chipPos: 'top' };
+          lConnX = x + w;
+          lConnY = y;
+          lDir = 'RIGHT';
+          lCount = 0;
+        } else {
+          const w = isDouble ? U : 2 * U;
+          const h = isDouble ? 2 * U : U;
+          const x = lConnX - w;
+          const y = lConnY - h / 2;
+          placed[i] = { x, y, w, h, isVertical: isDouble, tile: t, isHead, chipPos: 'left' };
+          lConnX = x;
+        }
+      } else if (lDir === 'RIGHT') {
+        if (lCount >= 4 && !isDouble) {
+          // Dobla hacia ARRIBA (esquina)
+          const w = U; const h = 2 * U;
+          const x = lConnX - U;
+          const y = lConnY - U / 2 - h;
+          placed[i] = { x, y, w, h, isVertical: true, tile: t, isHead, chipPos: 'top' };
+          lConnX = x;
+          lConnY = y;
+          lDir = 'LEFT';
+          lCount = 0;
+        } else {
+          const w = isDouble ? U : 2 * U;
+          const h = isDouble ? 2 * U : U;
+          const x = lConnX;
+          const y = lConnY - h / 2;
+          placed[i] = { x, y, w, h, isVertical: isDouble, tile: t, isHead, chipPos: 'right' };
+          lConnX = x + w;
+        }
+      }
+    }
+
+    // Normalizar coordenadas para centrar exactamente
+    const minX = Math.min(...placed.map(p => p.x));
+    const maxX = Math.max(...placed.map(p => p.x + p.w));
+    const minY = Math.min(...placed.map(p => p.y));
+    const maxY = Math.max(...placed.map(p => p.y + p.h));
+
+    placed.forEach(p => {
+      p.x -= minX;
+      p.y -= minY;
+    });
+
+    const totalW = maxX - minX;
+    const totalH = maxY - minY;
+
+    return { placed, totalW, totalH };
+  }
+
+  // Auto-ajusta la escala para que la serpiente de fichas se vea completa sin cortarse
   autoFitBoard(containerEl) {
     if (!containerEl) return;
-    const flow = containerEl.querySelector('.board-chain-flow');
-    if (!flow) return;
+    const canvas = containerEl.querySelector('.board-snake-canvas');
+    if (!canvas) return;
 
-    // Resetear transformación previa para medir dimensiones reales
-    flow.style.transform = 'none';
+    canvas.style.transform = 'none';
 
-    // Obtener dimensiones del contenedor
-    const pad = 12;
+    const pad = 24;
     const containerW = containerEl.clientWidth - pad;
     const containerH = containerEl.clientHeight - pad;
-    const flowW = flow.scrollWidth;
-    const flowH = flow.scrollHeight;
+    const canvasW = canvas.offsetWidth;
+    const canvasH = canvas.offsetHeight;
 
-    if (flowW > 0 && flowH > 0 && containerW > 0 && containerH > 0) {
-      const scaleX = containerW / flowW;
-      const scaleY = containerH / flowH;
-      // Escalar hacia abajo si excede el contenedor; mantener máximo 1.0 para nitidez
-      const fitScale = Math.min(1.0, Math.min(scaleX, scaleY));
-      flow.style.transform = `scale(${fitScale})`;
-      flow.style.transformOrigin = 'center center';
+    if (canvasW > 0 && canvasH > 0 && containerW > 0 && containerH > 0) {
+      const scaleX = containerW / canvasW;
+      const scaleY = containerH / canvasH;
+      const fitScale = Math.min(1.15, Math.min(scaleX, scaleY));
+      canvas.style.transform = `scale(${fitScale})`;
+      canvas.style.transformOrigin = 'center center';
     }
   }
 
-  // Renderiza el tablero de dominó organizado en serpentina/filas adaptables
+  // Renderiza el tablero con la cadena continua natural
   renderBoard(boardTiles, leftEnd, rightEnd, containerEl) {
     if (!containerEl) return;
 
@@ -100,43 +255,56 @@ class DominoRenderer {
       return;
     }
 
+    const { placed, totalW, totalH } = this.computeSnakeLayout(boardTiles);
+
     let tilesHtml = '';
 
-    boardTiles.forEach((tile, index) => {
-      const isFirst = index === 0;
-      const isLast = index === boardTiles.length - 1;
-      const isDouble = tile.left === tile.right;
-      const isVertical = isDouble;
+    placed.forEach((item, index) => {
+      const tile = item.tile;
+      const isHead = item.isHead;
+      const isTail = item.isTail;
+
+      // Generar ficha con posicionamiento exacto
+      const tileMarkup = this.renderTile(tile.left, tile.right, {
+        isVertical: item.isVertical,
+        isDouble: tile.left === tile.right,
+        widthPx: item.w,
+        heightPx: item.h,
+        id: `board-${index}-${tile.id}`
+      });
+
+      // Indicadores en los extremos de la cadena
+      let chipMarkup = '';
+      if (isHead) {
+        chipMarkup = `<span class="end-chip chip-left">◀ ${leftEnd}</span>`;
+      }
+      if (isTail) {
+        chipMarkup = `<span class="end-chip chip-right">${rightEnd} ▶</span>`;
+      }
 
       tilesHtml += `
-        <div class="board-tile-wrapper ${isFirst ? 'board-head' : ''} ${isLast ? 'board-tail' : ''}">
-          ${isFirst ? `<span class="end-chip chip-left">◀ ${leftEnd}</span>` : ''}
-          ${this.renderTile(tile.left, tile.right, {
-            isVertical: isVertical,
-            isDouble: isDouble,
-            id: `board-${index}-${tile.id}`
-          })}
-          ${isLast ? `<span class="end-chip chip-right">${rightEnd} ▶</span>` : ''}
+        <div class="board-snake-tile ${isHead ? 'board-head' : ''} ${isTail ? 'board-tail' : ''}"
+             style="left:${item.x}px; top:${item.y}px; width:${item.w}px; height:${item.h}px;">
+          ${chipMarkup}
+          ${tileMarkup}
         </div>
       `;
     });
 
     containerEl.innerHTML = `
-      <div class="board-chain-flow">
+      <div class="board-snake-canvas" style="width:${totalW}px; height:${totalH}px;">
         ${tilesHtml}
       </div>
     `;
 
-    // Ajustar escala y acomodo inmediatamente y con un ligero delay tras pintar el DOM
     this.autoFitBoard(containerEl);
     requestAnimationFrame(() => this.autoFitBoard(containerEl));
-    setTimeout(() => this.autoFitBoard(containerEl), 40);
+    setTimeout(() => this.autoFitBoard(containerEl), 30);
   }
 }
 
 window.dominoRenderer = new DominoRenderer();
 
-// Re-ajustar automáticamente si la pantalla cambia de tamaño o se rota el teléfono
 window.addEventListener('resize', () => {
   const container = document.getElementById('boardContainer');
   if (container && window.dominoRenderer) {

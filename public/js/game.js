@@ -1,5 +1,12 @@
 // Lógica del Cliente de Dominó Multijugador en Tiempo Real
 (function() {
+  // Identificador único persistente del dispositivo/navegador
+  let myClientId = localStorage.getItem('domino_client_id');
+  if (!myClientId) {
+    myClientId = 'c_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+    localStorage.setItem('domino_client_id', myClientId);
+  }
+
   const socket = io({
     reconnection: true,
     reconnectionAttempts: Infinity,
@@ -13,7 +20,7 @@
     if (socket && socket.connected) {
       socket.emit('keep_alive');
     }
-  }, 15000);
+  }, 10000);
 
   // Auto-recuperar sesión de sala de espera al volver de WhatsApp u otra app
   socket.on('connect', () => {
@@ -21,7 +28,7 @@
     if (saved) {
       try {
         const data = JSON.parse(saved);
-        socket.emit('join_room', data);
+        socket.emit('join_room', { ...data, clientId: myClientId });
       } catch (e) {}
     }
   });
@@ -93,6 +100,25 @@
     });
   }
 
+  // Botón Reiniciar Sala Manualmente
+  const btnResetRoom = document.getElementById('btnResetRoom');
+  if (btnResetRoom) {
+    btnResetRoom.addEventListener('click', () => {
+      const roomInput = document.getElementById('inputRoomId').value.trim() || 'MESA-1';
+      if (confirm(`¿Deseas reiniciar ${roomInput} y dejarla libre para comenzar de cero?`)) {
+        window.soundManager.playTileClick();
+        const nameInput = document.getElementById('inputPlayerName').value.trim() || 'Jugador';
+        socket.emit('join_room', {
+          roomId: roomInput,
+          playerName: nameInput,
+          avatar: selectedAvatar,
+          clientId: myClientId,
+          forceReset: true
+        });
+      }
+    });
+  }
+
   // Botón Unirse / Crear Sala
   document.getElementById('btnJoinGame').addEventListener('click', () => {
     window.soundManager.init();
@@ -103,13 +129,15 @@
     sessionStorage.setItem('domino_active_session', JSON.stringify({
       roomId: roomInput,
       playerName: nameInput,
-      avatar: selectedAvatar
+      avatar: selectedAvatar,
+      clientId: myClientId
     }));
 
     socket.emit('join_room', {
       roomId: roomInput,
       playerName: nameInput,
-      avatar: selectedAvatar
+      avatar: selectedAvatar,
+      clientId: myClientId
     });
   });
 
@@ -751,6 +779,32 @@
   document.getElementById('btnSoundToggle').addEventListener('click', () => {
     const isMuted = window.soundManager.toggleMute();
     document.getElementById('soundIcon').textContent = isMuted ? '🔇' : '🔊';
+  });
+
+  // Opciones cuando una sala está llena
+  socket.on('room_full_options', ({ roomId, maxPlayers }) => {
+    const choice = confirm(
+      `La sala ${roomId} tiene una partida activa con ${maxPlayers} jugadores.\n\n` +
+      `¿Deseas REINICIAR esta sala para empezar una mesa nueva?\n\n` +
+      `• Presiona "Aceptar" para reiniciar ${roomId} y jugar ahora.\n` +
+      `• Presiona "Cancelar" para entrar a otra mesa libre.`
+    );
+    if (choice) {
+      socket.emit('join_room', {
+        roomId,
+        playerName: document.getElementById('inputPlayerName').value.trim() || 'Jugador',
+        avatar: selectedAvatar,
+        clientId: myClientId,
+        forceReset: true
+      });
+    } else {
+      const rand = Math.floor(Math.random() * 90) + 10;
+      const inputRoom = document.getElementById('inputRoomId');
+      if (inputRoom) {
+        inputRoom.value = `MESA-${rand}`;
+        document.getElementById('btnJoinGame').click();
+      }
+    }
   });
 
   // Errores

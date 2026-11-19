@@ -89,14 +89,15 @@ class DominoRenderer {
 
       if (dir === 'RIGHT') {
         if (tilesInRow > maxTilesPerRow && !isDouble && i < board.length - 1) {
-          // Doblar hacia ABAJO (esquina natural): Half A arriba, Half B abajo
-          const x = curX - U;
-          const y = curY + U;
+          // Doblar hacia ABAJO (esquina natural): Half 1 arriba (t.left), Half 2 abajo (t.right)
+          const x = curX;
+          const y = curY;
           placed.push({
             index: i,
             tile: t,
             isVertical: true,
             reverseHalves: false,
+            dir: 'DOWN',
             x, y,
             w: U,
             h: 2 * U,
@@ -116,6 +117,7 @@ class DominoRenderer {
             tile: t,
             isVertical: true,
             reverseHalves: false,
+            dir: 'RIGHT',
             x, y,
             w: U,
             h: 2 * U,
@@ -132,6 +134,7 @@ class DominoRenderer {
             tile: t,
             isVertical: false,
             reverseHalves: false,
+            dir: 'RIGHT',
             x, y,
             w: 2 * U,
             h: U,
@@ -142,14 +145,15 @@ class DominoRenderer {
         }
       } else if (dir === 'LEFT') {
         if (tilesInRow > maxTilesPerRow && !isDouble && i < board.length - 1) {
-          // Doblar hacia ABAJO (esquina natural): Half A arriba, Half B abajo
-          const x = curX;
+          // Doblar hacia ABAJO (esquina natural): Half 1 arriba (t.left), Half 2 abajo (t.right)
+          const x = curX - U;
           const y = curY + U;
           placed.push({
             index: i,
             tile: t,
             isVertical: true,
             reverseHalves: false,
+            dir: 'DOWN',
             x, y,
             w: U,
             h: 2 * U,
@@ -168,6 +172,7 @@ class DominoRenderer {
             tile: t,
             isVertical: true,
             reverseHalves: false,
+            dir: 'LEFT',
             x, y,
             w: U,
             h: 2 * U,
@@ -184,6 +189,7 @@ class DominoRenderer {
             tile: t,
             isVertical: false,
             reverseHalves: true,
+            dir: 'LEFT',
             x, y,
             w: 2 * U,
             h: U,
@@ -276,7 +282,13 @@ class DominoRenderer {
         chipMarkup = `<span class="end-chip chip-left">◀ ${leftEnd}</span>`;
       }
       if (isTail) {
-        chipMarkup = `<span class="end-chip chip-right">${rightEnd} ▶</span>`;
+        if (item.isVertical) {
+          chipMarkup += `<span class="end-chip chip-bottom">${rightEnd} ▶</span>`;
+        } else if (item.dir === 'LEFT') {
+          chipMarkup += `<span class="end-chip chip-left">${rightEnd} ▶</span>`;
+        } else {
+          chipMarkup += `<span class="end-chip chip-right">${rightEnd} ▶</span>`;
+        }
       }
 
       tilesHtml += `

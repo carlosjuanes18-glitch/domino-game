@@ -755,7 +755,14 @@
 
   // Errores
   socket.on('error_message', (msg) => {
-    alert(msg);
+    if (confirm(`${msg}\n\n¿Deseas entrar a otra mesa limpia automáticamente?`)) {
+      const rand = Math.floor(Math.random() * 90) + 10;
+      const inputRoom = document.getElementById('inputRoomId');
+      if (inputRoom) {
+        inputRoom.value = `MESA-${rand}`;
+        document.getElementById('btnJoinGame').click();
+      }
+    }
   });
 
 })();

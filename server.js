@@ -16,7 +16,18 @@ const io = new Server(server, {
 
 const PORT = process.env.PORT || 3000;
 
-app.use(express.static(path.join(__dirname, 'public')));
+// Desactivar caché agresivo en navegadores móviles para garantizar siempre la versión más reciente
+app.use((req, res, next) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  next();
+});
+
+app.use(express.static(path.join(__dirname, 'public'), {
+  etag: false,
+  maxAge: 0
+}));
 
 // Generar todas las 28 fichas del dominó tradicional doble-6
 function generateDominoSet() {
@@ -578,12 +589,16 @@ function calculateSessionBalance(room) {
 io.on('connection', (socket) => {
   let currentRoomId = null;
 
-  socket.on('join_room', ({ roomId, playerName, avatar, clientId, forceReset }) => {
+  socket.on('join_room', ({ roomId, playerName, avatar, clientId, forceReset, takeSeat }) => {
     const formattedRoomId = (roomId || 'MESA-1').toUpperCase().trim();
     let room = rooms.get(formattedRoomId);
 
-    // Si el usuario forzó el reinicio de la sala o no existe
-    if (forceReset || !room) {
+    // Identificar humanos vivos actualmente conectados por WebSocket
+    const liveHumans = room ? room.players.filter(p => !p.isBot && p.socketId && io.sockets.sockets.has(p.socketId)) : [];
+
+    // Si el usuario forzó el reinicio de la sala, o la sala no existe, o no tiene humanos vivos conectados:
+    // Reiniciar la sala completamente limpia en sala de espera con 0 fichas
+    if (forceReset || !room || liveHumans.length === 0) {
       room = createInitialRoom(formattedRoomId, socket.id);
       rooms.set(formattedRoomId, room);
     }
@@ -604,7 +619,7 @@ io.on('connection', (socket) => {
       }
     }
 
-    // 1. Verificar si hay un jugador con el mismo clientId, socketId o el mismo nombre
+    // 1. Verificar si hay un jugador con el mismo clientId, socketId o el mismo nombre (Reconexión legítima)
     let matchPlayer = room.players.find(p =>
       (p.clientId && p.clientId === effectiveClientId) ||
       p.socketId === socket.id ||
@@ -679,6 +694,20 @@ io.on('connection', (socket) => {
         }
       } else {
         // En PARTIDA ACTIVA ('playing'):
+        // Si el jugador es nuevo y NO pidió expresamente unirse a la partida en curso
+        if (!takeSeat) {
+          const hasReplaceable = room.players.some(p => p.isBot || !io.sockets.sockets.has(p.socketId));
+          socket.emit('room_in_progress', {
+            roomId: formattedRoomId,
+            round: room.round,
+            liveHumansCount: liveHumans.length,
+            canTakeSeat: hasReplaceable,
+            suggestedRoom: `MESA-${Math.floor(Math.random() * 90) + 10}`
+          });
+          return;
+        }
+
+        // Si pidió tomar asiento en la partida en curso:
         const replaceableSeat = room.players.find(p => p.isBot || !io.sockets.sockets.has(p.socketId));
         if (replaceableSeat) {
           replaceableSeat.socketId = socket.id;

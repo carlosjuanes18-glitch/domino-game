@@ -142,6 +142,35 @@
     });
   });
 
+  // Botón Crear Mesa Nueva Limpia (Automática)
+  const btnCreateCleanRoom = document.getElementById('btnCreateCleanRoom');
+  if (btnCreateCleanRoom) {
+    btnCreateCleanRoom.addEventListener('click', () => {
+      window.soundManager.init();
+      window.soundManager.playTileClick();
+      const nameInput = document.getElementById('inputPlayerName').value.trim() || 'Jugador';
+      const rand = Math.floor(Math.random() * 90) + 10;
+      const cleanRoom = `MESA-${rand}`;
+      const inputRoom = document.getElementById('inputRoomId');
+      if (inputRoom) inputRoom.value = cleanRoom;
+
+      sessionStorage.setItem('domino_active_session', JSON.stringify({
+        roomId: cleanRoom,
+        playerName: nameInput,
+        avatar: selectedAvatar,
+        clientId: myClientId
+      }));
+
+      socket.emit('join_room', {
+        roomId: cleanRoom,
+        playerName: nameInput,
+        avatar: selectedAvatar,
+        clientId: myClientId,
+        forceReset: true
+      });
+    });
+  }
+
   // Evento: Unido exitosamente a la sala
   socket.on('joined_successfully', (data) => {
     mySeat = data.playerSeat;
@@ -799,41 +828,62 @@
     document.getElementById('soundIcon').textContent = isMuted ? '🔇' : '🔊';
   });
 
+  // Opciones cuando una sala tiene partida en progreso
+  socket.on('room_in_progress', ({ roomId, round, liveHumansCount, canTakeSeat, suggestedRoom }) => {
+    const choice = confirm(
+      `La sala ${roomId} tiene una partida activa en la Ronda ${round} con ${liveHumansCount} jugador(es).\n\n` +
+      `¿Deseas entrar a una MESA NUEVA LIMPIA (${suggestedRoom}) para comenzar desde cero?\n\n` +
+      `• Presiona "Aceptar" para entrar a ${suggestedRoom} limpia de inmediato.\n` +
+      `• Presiona "Cancelar" para REINICIAR ${roomId} limpia desde el inicio.`
+    );
+    const targetRoom = choice ? suggestedRoom : roomId;
+    const inputRoom = document.getElementById('inputRoomId');
+    if (inputRoom) inputRoom.value = targetRoom;
+    socket.emit('join_room', {
+      roomId: targetRoom,
+      playerName: document.getElementById('inputPlayerName').value.trim() || 'Jugador',
+      avatar: selectedAvatar,
+      clientId: myClientId,
+      forceReset: !choice
+    });
+  });
+
   // Opciones cuando una sala está llena
   socket.on('room_full_options', ({ roomId, maxPlayers }) => {
+    const rand = Math.floor(Math.random() * 90) + 10;
+    const suggested = `MESA-${rand}`;
     const choice = confirm(
-      `La sala ${roomId} tiene una partida activa con ${maxPlayers} jugadores.\n\n` +
-      `¿Deseas REINICIAR esta sala para empezar una mesa nueva?\n\n` +
-      `• Presiona "Aceptar" para reiniciar ${roomId} y jugar ahora.\n` +
-      `• Presiona "Cancelar" para entrar a otra mesa libre.`
+      `La sala ${roomId} está completa con ${maxPlayers} jugadores.\n\n` +
+      `¿Deseas entrar a una mesa nueva libre (${suggested}) o reiniciar ${roomId}?\n\n` +
+      `• Presiona "Aceptar" para entrar a la mesa nueva ${suggested}.\n` +
+      `• Presiona "Cancelar" para forzar el reinicio de ${roomId}.`
     );
-    if (choice) {
+    const targetRoom = choice ? suggested : roomId;
+    const inputRoom = document.getElementById('inputRoomId');
+    if (inputRoom) inputRoom.value = targetRoom;
+    socket.emit('join_room', {
+      roomId: targetRoom,
+      playerName: document.getElementById('inputPlayerName').value.trim() || 'Jugador',
+      avatar: selectedAvatar,
+      clientId: myClientId,
+      forceReset: !choice
+    });
+  });
+
+  // Errores
+  socket.on('error_message', (msg) => {
+    const rand = Math.floor(Math.random() * 90) + 10;
+    const suggested = `MESA-${rand}`;
+    if (confirm(`${msg}\n\n¿Deseas entrar a la mesa limpia ${suggested} automáticamente?`)) {
+      const inputRoom = document.getElementById('inputRoomId');
+      if (inputRoom) inputRoom.value = suggested;
       socket.emit('join_room', {
-        roomId,
+        roomId: suggested,
         playerName: document.getElementById('inputPlayerName').value.trim() || 'Jugador',
         avatar: selectedAvatar,
         clientId: myClientId,
         forceReset: true
       });
-    } else {
-      const rand = Math.floor(Math.random() * 90) + 10;
-      const inputRoom = document.getElementById('inputRoomId');
-      if (inputRoom) {
-        inputRoom.value = `MESA-${rand}`;
-        document.getElementById('btnJoinGame').click();
-      }
-    }
-  });
-
-  // Errores
-  socket.on('error_message', (msg) => {
-    if (confirm(`${msg}\n\n¿Deseas entrar a otra mesa limpia automáticamente?`)) {
-      const rand = Math.floor(Math.random() * 90) + 10;
-      const inputRoom = document.getElementById('inputRoomId');
-      if (inputRoom) {
-        inputRoom.value = `MESA-${rand}`;
-        document.getElementById('btnJoinGame').click();
-      }
     }
   });
 
@@ -1141,6 +1191,10 @@
     lobbyModal.classList.remove('hidden');
     lobbyModal.style.display = 'flex';
     window.soundManager.playTileClick();
+    // Limpiar visualmente el tablero de dominó y fichas de la mano
+    if (boardContainer) boardContainer.innerHTML = '';
+    const myHandContainer = document.getElementById('myHand');
+    if (myHandContainer) myHandContainer.innerHTML = '';
   });
 
   // Botones dentro de #finalBalanceModal

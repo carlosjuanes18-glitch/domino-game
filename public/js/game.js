@@ -169,14 +169,10 @@
     });
   }
 
-  // Configuración de Número de Jugadores (Solo Anfitrión)
+  // Configuración de Número de Jugadores (Libre para configurar la mesa)
   document.querySelectorAll('.player-count-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       if (!currentRoom) return;
-      if (currentRoom.hostId !== socket.id) {
-        alert('Solo el anfitrión de la sala puede elegir la cantidad de jugadores.');
-        return;
-      }
       const count = parseInt(btn.getAttribute('data-count'));
       window.soundManager.playTileClick();
       socket.emit('set_player_count', { count });
@@ -296,11 +292,6 @@
         btn.classList.add('active');
       } else {
         btn.classList.remove('active');
-      }
-      if (!isHost) {
-        btn.classList.add('opacity-75');
-      } else {
-        btn.classList.remove('opacity-75');
       }
     });
 

@@ -487,7 +487,7 @@ function calculateSessionBalance(room) {
         leaderWins: pA.wins,
         followerWins: pB.wins,
         diffWins: diff,
-        summaryText: diff > 0 
+        summaryText: diff > 0
           ? `${pA.name} superó a ${pB.name} por ${diff} juego(s) (${pA.wins} vs ${pB.wins} victorias)`
           : `${pA.name} y ${pB.name} empataron con ${pA.wins} victoria(s)`
       });
@@ -515,7 +515,7 @@ function calculateSessionBalance(room) {
         payerPasses: p2.passesTotal,
         diffPasses: diff,
         amount: extraMoney,
-        summaryText: diff > 0 
+        summaryText: diff > 0
           ? `${p1.name} recibe dinero extra de $${extraMoney} de ${p2.name} (diferencia de ${diff} pasos menos)`
           : `Ambos jugadores pasaron la misma cantidad de veces (${p1.passesTotal} pasos)`
       });
@@ -604,8 +604,8 @@ io.on('connection', (socket) => {
     }
 
     // 1. Verificar si hay un jugador con el mismo clientId, socketId o el mismo nombre
-    let matchPlayer = room.players.find(p => 
-      (p.clientId && p.clientId === effectiveClientId) || 
+    let matchPlayer = room.players.find(p =>
+      (p.clientId && p.clientId === effectiveClientId) ||
       p.socketId === socket.id ||
       p.name.toLowerCase() === cleanName.toLowerCase() ||
       p.name.toLowerCase() === `${cleanName.toLowerCase()} (auto)`
@@ -749,16 +749,14 @@ io.on('connection', (socket) => {
     broadcastRoom(room);
   });
 
-  // El Anfitrión elige el número de jugadores (2, 3 o 4)
+  // Configurar el número de jugadores (2, 3 o 4)
   socket.on('set_player_count', ({ count }) => {
     if (!currentRoomId) return;
     const room = rooms.get(currentRoomId);
     if (!room || room.status !== 'waiting') return;
 
-    if (room.hostId !== socket.id) {
-      socket.emit('error_message', 'Solo el anfitrión de la sala puede elegir la cantidad de jugadores.');
-      return;
-    }
+    // Quien configure la cantidad de jugadores toma la capitanía/anfitrión de la mesa
+    room.hostId = socket.id;
 
     const num = parseInt(count);
     if (![2, 3, 4].includes(num)) return;

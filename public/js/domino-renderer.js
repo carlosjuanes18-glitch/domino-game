@@ -125,12 +125,13 @@ class DominoRenderer {
       rightAttachX = 2 * U; rightAttachY = 0;
     }
 
-    // 2. Rama DERECHA (avanza hacia la derecha, luego abajo, luego izquierda)
+    // 2. Rama DERECHA (avanza hacia la derecha, luego dobla 90° HACIA ARRIBA, luego izquierda)
     let curX = rightAttachX;
     let curY = rightAttachY;
     let dir = 'RIGHT';
     let tilesInRun = 0;
-    const maxRightRun = 3;
+    const maxHorizontal = 2; // Máximo 2 fichas horizontales en móvil antes de doblar en ángulo recto
+    let prevWasDouble = rootTile.isDouble;
 
     for (let i = 0; i < rightBranch.length; i++) {
       const t = rightBranch[i];
@@ -138,27 +139,28 @@ class DominoRenderer {
       tilesInRun++;
 
       if (dir === 'RIGHT') {
-        if (tilesInRun > maxRightRun && !t.isDouble && !isLast) {
-          // Doblar hacia ABAJO: ficha vertical tocando la cara derecha de la previa
+        if (tilesInRun > maxHorizontal && !t.isDouble) {
+          // Doblar 90° HACIA ARRIBA: ficha vertical sobre la mitad derecha de la anterior
           const x = curX - U;
-          const y = curY + U;
+          const y = prevWasDouble ? (curY - U / 2 - 2 * U) : (curY - 2 * U);
           placed.push({
             index: rootIndex + 1 + i,
             tile: t,
             isVertical: true,
-            reverseHalves: false,
+            reverseHalves: true, // val1 (top) = t.right, val2 (bottom) = t.left
             x, y,
             w: U, h: 2 * U,
             isHead: false,
             isTail: isLast,
-            dir: 'DOWN'
+            dir: 'UP'
           });
           curX = x;
-          curY = y + 2 * U;
-          dir = 'LEFT';
+          curY = y;
+          dir = 'UP';
           tilesInRun = 0;
+          prevWasDouble = false;
         } else if (t.isDouble) {
-          // Doble vertical perpendicular
+          // Doble vertical perpendicular al camino horizontal
           const x = curX;
           const y = curY - U / 2;
           placed.push({
@@ -173,6 +175,7 @@ class DominoRenderer {
             dir: 'RIGHT'
           });
           curX = x + U;
+          prevWasDouble = true;
         } else {
           // Horizontal normal hacia la derecha
           const x = curX;
@@ -189,12 +192,68 @@ class DominoRenderer {
             dir: 'RIGHT'
           });
           curX = x + 2 * U;
+          prevWasDouble = false;
+        }
+      } else if (dir === 'UP') {
+        if (tilesInRun > 2 && !t.isDouble) {
+          // Doblar 90° hacia la IZQUIERDA
+          const x = curX - 2 * U;
+          const y = curY;
+          placed.push({
+            index: rootIndex + 1 + i,
+            tile: t,
+            isVertical: false,
+            reverseHalves: true,
+            x, y,
+            w: 2 * U, h: U,
+            isHead: false,
+            isTail: isLast,
+            dir: 'LEFT'
+          });
+          curX = x;
+          dir = 'LEFT';
+          tilesInRun = 0;
+          prevWasDouble = false;
+        } else if (t.isDouble) {
+          // Doble horizontal perpendicular al camino vertical
+          const x = curX - U / 2;
+          const y = curY - U;
+          placed.push({
+            index: rootIndex + 1 + i,
+            tile: t,
+            isVertical: false,
+            reverseHalves: false,
+            x, y,
+            w: 2 * U, h: U,
+            isHead: false,
+            isTail: isLast,
+            dir: 'UP'
+          });
+          curY = y;
+          prevWasDouble = true;
+        } else {
+          // Ficha vertical continuando hacia arriba
+          const x = curX;
+          const y = curY - 2 * U;
+          placed.push({
+            index: rootIndex + 1 + i,
+            tile: t,
+            isVertical: true,
+            reverseHalves: true,
+            x, y,
+            w: U, h: 2 * U,
+            isHead: false,
+            isTail: isLast,
+            dir: 'UP'
+          });
+          curY = y;
+          prevWasDouble = false;
         }
       } else if (dir === 'LEFT') {
-        if (tilesInRun > maxRightRun + 2 && !t.isDouble && !isLast) {
-          // Doblar hacia ABAJO nuevamente
+        if (tilesInRun > 2 && !t.isDouble) {
+          // Doblar 90° hacia ARRIBA
           const x = curX;
-          const y = curY + U;
+          const y = curY - 2 * U;
           placed.push({
             index: rootIndex + 1 + i,
             tile: t,
@@ -204,12 +263,12 @@ class DominoRenderer {
             w: U, h: 2 * U,
             isHead: false,
             isTail: isLast,
-            dir: 'DOWN'
+            dir: 'UP'
           });
-          curX = x + U;
-          curY = y + 2 * U;
-          dir = 'RIGHT';
+          curY = y;
+          dir = 'UP';
           tilesInRun = 0;
+          prevWasDouble = false;
         } else if (t.isDouble) {
           const x = curX - U;
           const y = curY - U / 2;
@@ -225,6 +284,7 @@ class DominoRenderer {
             dir: 'LEFT'
           });
           curX = x;
+          prevWasDouble = true;
         } else {
           const x = curX - 2 * U;
           const y = curY;
@@ -240,16 +300,17 @@ class DominoRenderer {
             dir: 'LEFT'
           });
           curX = x;
+          prevWasDouble = false;
         }
       }
     }
 
-    // 3. Rama IZQUIERDA (avanza hacia la izquierda, luego arriba, luego derecha)
+    // 3. Rama IZQUIERDA (avanza hacia la izquierda, luego dobla 90° HACIA ABAJO, luego derecha)
     curX = leftAttachX;
     curY = leftAttachY;
     dir = 'LEFT';
     tilesInRun = 0;
-    const maxLeftRun = 3;
+    prevWasDouble = rootTile.isDouble;
 
     for (let i = 0; i < leftBranch.length; i++) {
       const t = leftBranch[i];
@@ -258,25 +319,26 @@ class DominoRenderer {
       tilesInRun++;
 
       if (dir === 'LEFT') {
-        if (tilesInRun > maxLeftRun && !t.isDouble && !isLast) {
-          // Doblar hacia ARRIBA: ficha vertical sobre la última mitad
+        if (tilesInRun > maxHorizontal && !t.isDouble) {
+          // Doblar 90° HACIA ABAJO: ficha vertical bajo la mitad izquierda de la anterior
           const x = curX;
-          const y = curY - 2 * U;
+          const y = curY + U;
           placed.push({
             index: origIndex,
             tile: t,
             isVertical: true,
-            reverseHalves: false,
+            reverseHalves: false, // val1 (top) = t.right (conecta al previo), val2 (bottom) = t.left (nuevo extremo)
             x, y,
             w: U, h: 2 * U,
             isHead: isLast,
             isTail: false,
-            dir: 'UP'
+            dir: 'DOWN'
           });
-          curX = x + U;
-          curY = y;
-          dir = 'RIGHT';
+          curX = x;
+          curY = y + 2 * U;
+          dir = 'DOWN';
           tilesInRun = 0;
+          prevWasDouble = false;
         } else if (t.isDouble) {
           const x = curX - U;
           const y = curY - U / 2;
@@ -292,8 +354,9 @@ class DominoRenderer {
             dir: 'LEFT'
           });
           curX = x;
+          prevWasDouble = true;
         } else {
-          // Horizontal hacia la izquierda: t.left a la izq (nuevo extremo), t.right a la der (conecta al previo)
+          // Horizontal hacia la izquierda: t.left a la izq, t.right a la der
           const x = curX - 2 * U;
           const y = curY;
           placed.push({
@@ -308,12 +371,50 @@ class DominoRenderer {
             dir: 'LEFT'
           });
           curX = x;
+          prevWasDouble = false;
         }
-      } else if (dir === 'RIGHT') {
-        if (tilesInRun > maxLeftRun + 2 && !t.isDouble && !isLast) {
-          // Doblar hacia ARRIBA nuevamente
-          const x = curX - U;
-          const y = curY - 2 * U;
+      } else if (dir === 'DOWN') {
+        if (tilesInRun > 2 && !t.isDouble) {
+          // Doblar 90° hacia la DERECHA
+          const x = curX + U;
+          const y = curY - U;
+          placed.push({
+            index: origIndex,
+            tile: t,
+            isVertical: false,
+            reverseHalves: false,
+            x, y,
+            w: 2 * U, h: U,
+            isHead: isLast,
+            isTail: false,
+            dir: 'RIGHT'
+          });
+          curX = x + 2 * U;
+          curY = y;
+          dir = 'RIGHT';
+          tilesInRun = 0;
+          prevWasDouble = false;
+        } else if (t.isDouble) {
+          // Doble horizontal perpendicular al camino vertical
+          const x = curX - U / 2;
+          const y = curY;
+          placed.push({
+            index: origIndex,
+            tile: t,
+            isVertical: false,
+            reverseHalves: false,
+            x, y,
+            w: 2 * U, h: U,
+            isHead: isLast,
+            isTail: false,
+            dir: 'DOWN'
+          });
+          curY = y + U;
+          prevWasDouble = true;
+        } else {
+          // Ficha vertical continuando hacia abajo
+          const x = curX;
+          const y = curY;
           placed.push({
             index: origIndex,
             tile: t,
@@ -323,12 +424,32 @@ class DominoRenderer {
             w: U, h: 2 * U,
             isHead: isLast,
             isTail: false,
-            dir: 'UP'
+            dir: 'DOWN'
+          });
+          curY = y + 2 * U;
+          prevWasDouble = false;
+        }
+      } else if (dir === 'RIGHT') {
+        if (tilesInRun > 2 && !t.isDouble) {
+          // Doblar 90° hacia ABAJO
+          const x = curX - U;
+          const y = curY + U;
+          placed.push({
+            index: origIndex,
+            tile: t,
+            isVertical: true,
+            reverseHalves: false,
+            x, y,
+            w: U, h: 2 * U,
+            isHead: isLast,
+            isTail: false,
+            dir: 'DOWN'
           });
           curX = x;
-          curY = y;
-          dir = 'LEFT';
+          curY = y + 2 * U;
+          dir = 'DOWN';
           tilesInRun = 0;
+          prevWasDouble = false;
         } else if (t.isDouble) {
           const x = curX;
           const y = curY - U / 2;
@@ -344,15 +465,15 @@ class DominoRenderer {
             dir: 'RIGHT'
           });
           curX = x + U;
+          prevWasDouble = true;
         } else {
-          // Horizontal hacia la derecha (nivel superior de la rama izquierda)
           const x = curX;
           const y = curY;
           placed.push({
             index: origIndex,
             tile: t,
             isVertical: false,
-            reverseHalves: true,
+            reverseHalves: false,
             x, y,
             w: 2 * U, h: U,
             isHead: isLast,
@@ -360,6 +481,7 @@ class DominoRenderer {
             dir: 'RIGHT'
           });
           curX = x + 2 * U;
+          prevWasDouble = false;
         }
       }
     }
@@ -446,6 +568,8 @@ class DominoRenderer {
       if (isHead) {
         if (item.dir === 'UP') {
           chipMarkup = `<span class="end-chip chip-top">◀ ${leftEnd}</span>`;
+        } else if (item.dir === 'DOWN') {
+          chipMarkup = `<span class="end-chip chip-bottom">◀ ${leftEnd}</span>`;
         } else if (item.dir === 'RIGHT') {
           chipMarkup = `<span class="end-chip chip-right">◀ ${leftEnd}</span>`;
         } else {
@@ -453,12 +577,14 @@ class DominoRenderer {
         }
       }
       if (isTail) {
-        if (item.dir === 'DOWN') {
-          chipMarkup = `<span class="end-chip chip-bottom">${rightEnd} ▶</span>`;
+        if (item.dir === 'UP') {
+          chipMarkup += `<span class="end-chip chip-top">${rightEnd} ▶</span>`;
+        } else if (item.dir === 'DOWN') {
+          chipMarkup += `<span class="end-chip chip-bottom">${rightEnd} ▶</span>`;
         } else if (item.dir === 'LEFT') {
-          chipMarkup = `<span class="end-chip chip-left">${rightEnd} ▶</span>`;
+          chipMarkup += `<span class="end-chip chip-left">${rightEnd} ▶</span>`;
         } else {
-          chipMarkup = `<span class="end-chip chip-right">${rightEnd} ▶</span>`;
+          chipMarkup += `<span class="end-chip chip-right">${rightEnd} ▶</span>`;
         }
       }
 

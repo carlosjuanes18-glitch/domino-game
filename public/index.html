@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Dominó Clásico - Modalidad Bloqueo 4P</title>
+  <!-- Tailwind CSS CDN para diseño responsivo ágil -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Socket.io -->
+  <script src="/socket.io/socket.io.js"></script>
+  <!-- Estilos personalizados -->
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+  <div class="app-viewport">
+    <!-- Encabezado de la Mesa -->
+    <header class="game-header">
+      <div class="brand-badge">
+        <span class="text-xl">🀫</span>
+        <div>
+          <div class="leading-tight">DOMINÓ <span id="headerPlayerMode">4P</span></div>
+          <div class="text-[9px] font-semibold text-emerald-300 uppercase tracking-wider">Bloqueo (Sin Pozo)</div>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <!-- Indicador de Sala y Ronda -->
+        <div class="bg-emerald-950/80 border border-emerald-600/40 rounded-lg px-2 py-1 text-center">
+          <div class="text-[9px] text-emerald-400 font-bold uppercase">Sala: <span id="roomCodeHeader">---</span></div>
+          <div class="text-[10px] text-amber-300 font-extrabold">Ronda <span id="roundNumHeader">1</span></div>
+        </div>
+
+        <!-- Botón Cuaderno de Juego / Scoreboard -->
+        <button id="btnOpenScoreboard" class="icon-btn" title="Cuaderno de Juego y Marcador">
+          📋
+          <span id="scoreboardBadge" class="badge-counter hidden">0</span>
+        </button>
+
+        <!-- Botón de Sonido -->
+        <button id="btnSoundToggle" class="icon-btn" title="Alternar Sonido">
+          <span id="soundIcon">🔊</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Área de la Mesa de Dominó -->
+    <main class="table-area">
+      <!-- Banner de Turno Actual -->
+      <div id="turnBanner" class="turnBanner">
+        Cargando estado de la mesa...
+      </div>
+
+      <!-- Pod Jugador NORTE (Frente) -->
+      <div id="pod_north" class="player-pod north hidden">
+        <div class="avatar-wrapper pod-avatar"></div>
+        <div class="tile-count-badge pod-tile-count">7</div>
+        <div class="player-info-tag">
+          <span class="player-name-text pod-name">Norte</span>
+          <span class="player-pass-counter pod-pass-count">🚫 0</span>
+        </div>
+      </div>
+
+      <!-- Pod Jugador OESTE (Izquierda) -->
+      <div id="pod_west" class="player-pod west hidden">
+        <div class="avatar-wrapper pod-avatar"></div>
+        <div class="tile-count-badge pod-tile-count">7</div>
+        <div class="player-info-tag">
+          <span class="player-name-text pod-name">Oeste</span>
+          <span class="player-pass-counter pod-pass-count">🚫 0</span>
+        </div>
+      </div>
+
+      <!-- Pod Jugador ESTE (Derecha) -->
+      <div id="pod_east" class="player-pod east hidden">
+        <div class="avatar-wrapper pod-avatar"></div>
+        <div class="tile-count-badge pod-tile-count">7</div>
+        <div class="player-info-tag">
+          <span class="player-name-text pod-name">Este</span>
+          <span class="player-pass-counter pod-pass-count">🚫 0</span>
+        </div>
+      </div>
+
+      <!-- Pod Jugador SUR (Tú) -->
+      <div id="pod_south" class="player-pod south hidden">
+        <div class="avatar-wrapper pod-avatar"></div>
+        <div class="player-info-tag">
+          <span class="player-name-text pod-name">Tú</span>
+          <span class="player-pass-counter pod-pass-count">🚫 0</span>
+        </div>
+      </div>
+
+      <!-- Indicadores de Extremos de la Cadena -->
+      <div class="board-ends-bar">
+        <div class="end-indicator">
+          <span>◀ Extremo Izq:</span>
+          <span id="leftEndVal" class="end-value">-</span>
+        </div>
+        <div class="text-[11px] text-emerald-200/60 font-semibold self-center">
+          CADENA ACTIVA
+        </div>
+        <div class="end-indicator">
+          <span>Extremo Der: ▶</span>
+          <span id="rightEndVal" class="end-value">-</span>
+        </div>
+      </div>
+
+      <!-- Contenedor de la Cadena de Fichas (Mesa) -->
+      <div id="boardContainer" class="board-container">
+        <!-- Renderizado dinámico de fichas -->
+      </div>
+    </main>
+
+    <!-- Rack de Mano del Jugador (Inferior) -->
+    <footer class="player-rack-bar">
+      <div class="flex items-center justify-between text-[11px] text-emerald-200/80 px-1 font-semibold">
+        <span>Tus Fichas (Toca para jugar):</span>
+        <span id="passCounterBadge" class="text-red-400 font-bold bg-red-950/60 px-2 py-0.5 rounded border border-red-500/30">
+          0 pasos acumulados
+        </span>
+      </div>
+
+      <!-- Fichas en mano del jugador -->
+      <div id="playerRack" class="rack-tiles-container">
+        <!-- Fichas generadas por JS -->
+      </div>
+
+      <!-- Botones de Acción: Paso y Emojis -->
+      <div class="rack-actions-row">
+        <button id="passBtn" class="pass-button" disabled>
+          🚫 Pasar Turno (0 acumulados)
+        </button>
+
+        <button id="emojiTriggerBtn" class="emoji-trigger-btn" title="Reacciones">
+          😃
+        </button>
+      </div>
+
+      <!-- Drawer de Emojis y Frases Rápidas -->
+      <div id="emojiDrawer" class="emoji-drawer hidden">
+        <button class="emoji-btn" data-emoji="😂">😂</button>
+        <button class="emoji-btn" data-emoji="👏">👏</button>
+        <button class="emoji-btn" data-emoji="🤔">🤔</button>
+        <button class="emoji-btn" data-emoji="😱">😱</button>
+        <button class="emoji-btn" data-emoji="🔥">🔥</button>
+        <button class="emoji-btn" data-emoji="💀">💀</button>
+        <button class="emoji-btn" data-emoji="🍿">🍿</button>
+        <button class="emoji-btn" data-emoji="🏆">🏆</button>
+
+        <div class="col-span-4 grid grid-cols-2 gap-1.5 pt-2 border-t border-slate-700/60">
+          <button class="quick-phrase-btn secondary-btn !py-1 !text-[10px]" data-text="¡Dominó!">🀫 ¡Dominó!</button>
+          <button class="quick-phrase-btn secondary-btn !py-1 !text-[10px]" data-text="¡Tranca!">🔒 ¡Tranca!</button>
+          <button class="quick-phrase-btn secondary-btn !py-1 !text-[10px]" data-text="¡No llevo!">🚫 ¡No llevo!</button>
+          <button class="quick-phrase-btn secondary-btn !py-1 !text-[10px]" data-text="¡Abran paso!">⚡ ¡Abran paso!</button>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- MODAL 1: BIENVENIDA Y SELECCIÓN DE AVATAR -->
+  <!-- ============================================== -->
+  <div id="setupModal" class="modal-backdrop">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">
+          <span>🀫</span> Dominó Multijugador
+        </div>
+        <span class="text-xs bg-emerald-900/60 text-emerald-300 font-bold px-2 py-1 rounded">4 Jugadores</span>
+      </div>
+
+      <div class="text-xs text-slate-300 mb-3">
+        Modalidad <strong>Bloqueo (sin pozo)</strong>: 28 fichas clásicas repartidas equitativamente (7 a cada uno).
+      </div>
+
+      <!-- Nombre del Jugador -->
+      <label class="text-xs font-bold text-slate-300 mb-1 block">Tu Nombre o Apodo:</label>
+      <input id="inputPlayerName" type="text" maxlength="15" placeholder="Ej: Roberto, Carmen, Alex..."
+             class="w-full bg-slate-900 border border-emerald-500/40 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-400 mb-3" />
+
+      <!-- Selección de Avatar Personalizable -->
+      <label class="text-xs font-bold text-slate-300 block">Elige tu Avatar (Masculinos y Femeninos):</label>
+      <div id="avatarGrid" class="avatar-grid">
+        <!-- Poblado por JS -->
+      </div>
+
+      <!-- Código de Sala -->
+      <label class="text-xs font-bold text-slate-300 mb-1 block">Código de Sala:</label>
+      <input id="inputRoomId" type="text" maxlength="8" value="MESA-1" placeholder="MESA-1"
+             class="w-full bg-slate-900 border border-emerald-500/40 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-400 uppercase font-mono tracking-wider mb-4" />
+
+      <button id="btnJoinGame" class="primary-btn">
+        <span>Entrar a la Sala de Espera</span> ➔
+      </button>
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- MODAL 2: SALA DE ESPERA (LOBBY) -->
+  <!-- ============================================== -->
+  <div id="lobbyModal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">
+          <span>⏳</span> Sala de Espera
+        </div>
+        <div class="text-xs bg-emerald-950 text-emerald-300 font-extrabold px-2.5 py-1 rounded-full border border-emerald-500/40">
+          <span id="lobbyCount">1/4</span>
+        </div>
+      </div>
+
+      <div class="bg-slate-900/80 border border-slate-700/60 rounded-xl p-3 mb-3 flex items-center justify-between">
+        <div>
+          <div class="text-[10px] text-slate-400 uppercase font-bold">Código de Sala</div>
+          <div id="lobbyRoomCode" class="text-base font-black text-amber-300 font-mono tracking-wider">MESA-1</div>
+        </div>
+        <button id="btnCopyInvite" class="secondary-btn text-xs">
+          📋 Copiar Enlace
+        </button>
+      </div>
+
+      <!-- Selector de Jugadores (Configurado por el Anfitrión) -->
+      <div class="bg-slate-900/90 border border-emerald-500/40 rounded-xl p-3 mb-3">
+        <div class="flex items-center justify-between mb-2">
+          <label class="text-xs font-bold text-emerald-300 flex items-center gap-1.5">
+            👥 Jugadores en la partida:
+          </label>
+          <span id="hostStatusTag" class="text-[10px] bg-amber-500/20 text-amber-300 font-extrabold px-2 py-0.5 rounded border border-amber-500/40">
+            👑 Eres el Anfitrión
+          </span>
+        </div>
+        <div id="playerCountButtons" class="grid grid-cols-3 gap-2">
+          <button type="button" class="player-count-btn secondary-btn !py-2 !text-xs font-bold" data-count="2">
+            2 Jugadores
+          </button>
+          <button type="button" class="player-count-btn secondary-btn !py-2 !text-xs font-bold" data-count="3">
+            3 Jugadores
+          </button>
+          <button type="button" class="player-count-btn secondary-btn !py-2 !text-xs font-bold active" data-count="4">
+            4 Jugadores
+          </button>
+        </div>
+        <div id="nonHostNotice" class="text-[10px] text-slate-400 mt-1.5 hidden text-center">
+          (Solo el anfitrión puede cambiar el número de jugadores)
+        </div>
+      </div>
+
+      <div class="text-xs text-slate-300 font-bold mb-1">
+        Jugadores en la mesa (se requieren <span id="lobbyNeededPlayers">4</span> para iniciar):
+      </div>
+
+      <!-- Grid de los 4 Asientos -->
+      <div id="lobbySeats" class="lobby-seats-grid">
+        <!-- Renderizado dinámico -->
+      </div>
+
+      <!-- Ajustes de Penalización por Paso -->
+      <div class="bg-red-950/30 border border-red-500/30 rounded-xl p-2.5 mb-3">
+        <label class="text-[11px] font-bold text-red-200 block mb-1">
+          💰 Penalización / Aportación por cada "Paso":
+        </label>
+        <div class="flex items-center gap-2">
+          <input id="penaltyInput" type="number" min="0" max="100" value="1"
+                 class="w-20 bg-slate-900 border border-red-500/40 rounded-lg px-2 py-1 text-sm text-center text-white font-bold" />
+          <span class="text-xs text-slate-300">unidad(es) o $ por falta de fichas</span>
+        </div>
+      </div>
+
+      <!-- Botones de Acción del Lobby -->
+      <div class="flex flex-col gap-2">
+        <button id="btnAddBot" class="secondary-btn">
+          <span>🤖 Añadir Bot Inteligente (Completar asiento)</span>
+        </button>
+        <button id="btnStartGame" class="primary-btn opacity-50" disabled>
+          <span>🚀 ¡Comenzar Partida (4/4)!</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- MODAL 3: CUADERNO DE JUEGO / SCOREBOARD Y PASOS -->
+  <!-- ============================================== -->
+  <div id="scoreboardModal" class="modal-backdrop hidden">
+    <div class="modal-card !max-w-md">
+      <div class="modal-header">
+        <div class="modal-title">
+          <span>📋</span> Cuaderno de Juego
+        </div>
+        <button id="btnCloseScoreboard" class="modal-close-btn">&times;</button>
+      </div>
+
+      <div class="notebook-body">
+        <div class="text-xs font-bold text-slate-300 mb-2 flex items-center justify-between">
+          <span>Puntuaciones e Historial de Victorias</span>
+          <span class="text-[10px] text-emerald-400">Modalidad Bloqueo</span>
+        </div>
+
+        <!-- Tarjetas de Estadísticas de Jugadores -->
+        <div id="scoreboardList" class="score-stats-grid">
+          <!-- Renderizado dinámico -->
+        </div>
+
+        <!-- Resumen de Penalizaciones / Aportaciones por Paso -->
+        <div id="penaltySummaryBox" class="penalty-summary-box">
+          <!-- Resumen del Pozo de Pasos -->
+        </div>
+
+        <!-- Historial de Rondas Jugadas -->
+        <div class="mt-4">
+          <div class="text-xs font-bold text-slate-300 mb-1">Historial de Rondas:</div>
+          <div id="roundsHistoryTable" class="bg-slate-900/90 rounded-xl border border-slate-700/60 overflow-hidden">
+            <!-- Tabla de rondas -->
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-4 pt-2 border-t border-slate-800 flex gap-2">
+        <button id="btnResetMatch" class="secondary-btn flex-1 !text-xs !text-red-400 !border-red-900/50">
+          🔄 Reiniciar Marcador
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- MODAL 4: ELECCIÓN DE EXTREMO (IZQUIERDA O DERECHA) -->
+  <!-- ============================================== -->
+  <div id="endChoiceModal" class="modal-backdrop hidden">
+    <div class="modal-card !max-w-xs text-center">
+      <div class="modal-title justify-center mb-1">
+        <span>🔄</span> ¿En qué extremo jugar?
+      </div>
+      <p class="text-xs text-slate-300">
+        Tu ficha coincide con ambos extremos de la cadena. Elige dónde colocarla:
+      </p>
+
+      <div class="ends-choice-container">
+        <button id="btnChooseLeft" class="end-choice-btn">
+          <span class="text-xs text-blue-300">Extremo Izquierdo</span>
+          <span id="endChoiceLeftVal" class="text-xl font-black text-amber-300">0</span>
+        </button>
+
+        <button id="btnChooseRight" class="end-choice-btn">
+          <span class="text-xs text-blue-300">Extremo Derecho</span>
+          <span id="endChoiceRightVal" class="text-xl font-black text-amber-300">0</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- MODAL 5: FIN DE RONDA / VICTORIA / TRANCA -->
+  <!-- ============================================== -->
+  <div id="roundOverModal" class="modal-backdrop hidden">
+    <div class="modal-card text-center">
+      <div id="roundOverTitle" class="text-2xl font-black text-yellow-400 mb-1">
+        🏆 ¡DOMINÓ!
+      </div>
+      <div id="roundOverWinner" class="text-sm text-slate-200 mb-3">
+        <!-- Info del ganador -->
+      </div>
+
+      <div class="bg-slate-900/80 rounded-xl p-3 border border-slate-700/60 mb-4 text-left">
+        <div class="text-[11px] font-bold text-slate-400 uppercase mb-2">Resumen de la ronda:</div>
+        <div id="roundOverSummary" class="flex flex-col gap-1">
+          <!-- Lista de puntos y fichas restantes -->
+        </div>
+      </div>
+
+      <button id="btnNextRound" class="primary-btn">
+        <span>Continuar a la Siguiente Ronda</span> ➔
+      </button>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="/js/avatars.js"></script>
+  <script src="/js/audio.js"></script>
+  <script src="/js/domino-renderer.js"></script>
+  <script src="/js/game.js"></script>
+</body>
+</html>
+

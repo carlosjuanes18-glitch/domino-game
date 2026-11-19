@@ -1,6 +1,30 @@
 // Lógica del Cliente de Dominó Multijugador en Tiempo Real
 (function() {
-  const socket = io();
+  const socket = io({
+    reconnection: true,
+    reconnectionAttempts: Infinity,
+    reconnectionDelay: 1000,
+    reconnectionDelayMax: 5000,
+    timeout: 120000
+  });
+
+  // Mantener la conexión activa en celulares y evitar que se duerma
+  setInterval(() => {
+    if (socket && socket.connected) {
+      socket.emit('keep_alive');
+    }
+  }, 15000);
+
+  // Auto-recuperar sesión de sala de espera al volver de WhatsApp u otra app
+  socket.on('connect', () => {
+    const saved = sessionStorage.getItem('domino_active_session');
+    if (saved) {
+      try {
+        const data = JSON.parse(saved);
+        socket.emit('join_room', data);
+      } catch (e) {}
+    }
+  });
 
   // Estado del Cliente
   let mySeat = null;
@@ -74,6 +98,13 @@
     window.soundManager.init();
     const nameInput = document.getElementById('inputPlayerName').value.trim() || 'Jugador';
     const roomInput = document.getElementById('inputRoomId').value.trim() || 'MESA-1';
+
+    // Guardar para que nunca se pierda si minimiza o cambia de app
+    sessionStorage.setItem('domino_active_session', JSON.stringify({
+      roomId: roomInput,
+      playerName: nameInput,
+      avatar: selectedAvatar
+    }));
 
     socket.emit('join_room', {
       roomId: roomInput,

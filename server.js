@@ -6,7 +6,12 @@ const path = require('path');
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
-  cors: { origin: '*' }
+  cors: { origin: '*' },
+  pingInterval: 20000,
+  pingTimeout: 300000, // 5 minutos de tolerancia para que no se desconecte en celulares
+  connectionStateRecovery: {
+    maxDisconnectionDuration: 10 * 60 * 1000 // 10 minutos de recuperación de sesión
+  }
 });
 
 const PORT = process.env.PORT || 3000;
@@ -407,6 +412,12 @@ io.on('connection', (socket) => {
       rooms.set(formattedRoomId, room);
     }
 
+    // Cancelar temporizador de limpieza si el anfitrión o un jugador regresa
+    if (room.cleanupTimer) {
+      clearTimeout(room.cleanupTimer);
+      room.cleanupTimer = null;
+    }
+
     const cleanName = (playerName || 'Jugador').trim();
 
     // 1. Verificar si el jugador ya está conectado con este mismo socket
@@ -690,31 +701,38 @@ io.on('connection', (socket) => {
     broadcastRoom(room);
   });
 
+  socket.on('keep_alive', () => {
+    // Mantener la conexión activa en segundo plano
+  });
+
   socket.on('disconnect', () => {
     if (!currentRoomId) return;
     const room = rooms.get(currentRoomId);
     if (!room) return;
 
+    const player = room.players.find(p => p.socketId === socket.id);
+    if (player) {
+      player.isDisconnected = true;
+      player.disconnectedAt = Date.now();
+    }
+
     if (room.status === 'waiting') {
-      room.players = room.players.filter(p => p.socketId !== socket.id);
-      const hasHuman = room.players.some(p => !p.isBot);
-      if (room.players.length === 0 || !hasHuman) {
-        rooms.delete(currentRoomId);
-      } else {
-        if (room.hostId === socket.id && room.players.length > 0) {
-          const newHost = room.players.find(p => !p.isBot) || room.players[0];
-          room.hostId = newHost.socketId;
-        }
-        room.players.forEach((p, idx) => p.seat = idx);
-        broadcastRoom(room);
+      // En la sala de espera, NO expulsar de inmediato al jugador ni borrar la sala.
+      // Se da tiempo de espera ilimitado/prolongado (hasta 30 minutos) para que puedan invitar amigos por WhatsApp
+      if (!room.cleanupTimer) {
+        room.cleanupTimer = setTimeout(() => {
+          const hasActiveHuman = room.players.some(p => !p.isBot && !p.isDisconnected);
+          if (!hasActiveHuman) {
+            rooms.delete(currentRoomId);
+          }
+        }, 30 * 60 * 1000); // 30 minutos de espera
       }
+      broadcastRoom(room);
     } else {
-      const player = room.players.find(p => p.socketId === socket.id);
       if (player) {
         player.isBot = true;
         player.name = `${player.name} (Auto)`;
 
-        // Si ya no queda ningún jugador humano en la partida en curso, limpiar la sala
         const hasHuman = room.players.some(p => !p.isBot);
         if (!hasHuman) {
           rooms.delete(currentRoomId);

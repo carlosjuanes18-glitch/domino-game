@@ -1146,6 +1146,97 @@
       netTableEl.innerHTML = html;
     }
 
+    // 4. Desglose Detallado Partida por Partida (En cada partida)
+    const roundsBadgeEl = document.getElementById('fbRoundsCountBadge');
+    if (roundsBadgeEl) {
+      roundsBadgeEl.textContent = (balance.history ? balance.history.length : 0);
+    }
+
+    const roundsDetailedEl = document.getElementById('fbRoundsDetailedList');
+    if (roundsDetailedEl) {
+      if (!balance.history || balance.history.length === 0) {
+        roundsDetailedEl.innerHTML = `
+          <div class="text-xs text-slate-400 italic p-3 text-center bg-slate-950/50 rounded-lg border border-slate-800">
+            No se han registrado partidas completadas en esta sesión.
+          </div>
+        `;
+      } else {
+        let roundsHtml = '';
+        balance.history.forEach((h, hIdx) => {
+          const typeBadge = h.type === 'domino' 
+            ? '🀫 Ganada por Dominó' 
+            : (h.type === 'tranca' ? '🔒 Ganada por Tranca / Cierre' : '🚪 Ganada por Abandono');
+          const typeColor = h.type === 'domino' ? 'text-emerald-300' : (h.type === 'tranca' ? 'text-amber-300' : 'text-rose-400');
+          
+          roundsHtml += `
+            <div class="round-detail-card border border-slate-700/80 rounded-xl p-3 bg-slate-950/70 mb-3">
+              <div class="flex flex-wrap items-center justify-between border-b border-slate-800 pb-2 mb-2 gap-2 text-xs">
+                <div class="flex items-center gap-2">
+                  <span class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 font-extrabold border border-emerald-500/40">
+                    Partida #${h.round || (hIdx + 1)}
+                  </span>
+                  <span class="text-slate-400">🕒 ${h.timestamp || ''}</span>
+                  <span class="font-bold ${typeColor}">${typeBadge}</span>
+                </div>
+                <div class="text-yellow-300 font-black">
+                  🏆 Ganador: <span>${h.winnerName || 'Nadie'}</span> (+${h.pointsAwarded || 0} pts)
+                </div>
+              </div>
+
+              <div class="overflow-x-auto">
+                <table class="balance-table round-table-mini w-full text-xs">
+                  <thead>
+                    <tr>
+                      <th>Jugador</th>
+                      <th>Resultado</th>
+                      <th>Pasos en Partida</th>
+                      <th>Fichas en Mano</th>
+                      <th>Puntos (Pips)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+          `;
+
+          if (h.playerStats && h.playerStats.length > 0) {
+            h.playerStats.forEach(ps => {
+              const isWinner = ps.isWinner || (h.winnerName && ps.name === h.winnerName);
+              const isSurrender = ps.isSurrender || (h.surrenderedBy && ps.name === h.surrenderedBy);
+              
+              let statusLabel = isWinner 
+                ? '<strong class="text-yellow-400">🏆 Ganó</strong>' 
+                : (isSurrender ? '<span class="text-rose-400 font-bold">🚪 Abandonó</span>' : '<span class="text-slate-400">Derrota</span>');
+
+              let tilesDesc = '';
+              if (ps.remainingTiles === 0) {
+                tilesDesc = '<span class="text-emerald-400 font-bold">0 fichas (¡Dominó!)</span>';
+              } else {
+                const handDisplay = ps.handText || (ps.hand ? ps.hand.map(t => `[${t.left}|${t.right}]`).join(' ') : '');
+                tilesDesc = `<span class="text-slate-200"><strong>${ps.remainingTiles} fichas</strong>: <span class="font-mono text-[11px] text-amber-200">${handDisplay}</span></span>`;
+              }
+
+              roundsHtml += `
+                <tr class="${isWinner ? 'champion-row' : ''}">
+                  <td><strong>${ps.name}</strong></td>
+                  <td>${statusLabel}</td>
+                  <td class="text-amber-300 font-bold">${ps.passesRound || 0} paso(s)</td>
+                  <td>${tilesDesc}</td>
+                  <td class="text-emerald-300 font-bold">${ps.remainingPips || 0} pts</td>
+                </tr>
+              `;
+            });
+          }
+
+          roundsHtml += `
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          `;
+        });
+        roundsDetailedEl.innerHTML = roundsHtml;
+      }
+    }
+
     // Firmas de Conformidad
     const sigRowEl = document.getElementById('fbSignaturesRow');
     if (sigRowEl && balance.rankedByWins) {
@@ -1238,6 +1329,20 @@
         const sign = p.passNetBalance > 0 ? `+ $${p.passNetBalance} (Recibe)` : (p.passNetBalance < 0 ? `- $${Math.abs(p.passNetBalance)} (Paga)` : `$0`);
         text += `• ${p.name}: ${p.wins} victorias | ${p.passesTotal} pasos | Saldo: ${sign}\n`;
       });
+
+      if (b.history && b.history.length > 0) {
+        text += `\n🗂️ *Historial Partida por Partida:*\n`;
+        b.history.forEach(h => {
+          const typeName = h.type === 'domino' ? 'Dominó' : (h.type === 'tranca' ? 'Tranca' : 'Abandono');
+          text += `\n• *Partida #${h.round} (${typeName})* - Ganó: ${h.winnerName} (+${h.pointsAwarded} pts)\n`;
+          if (h.playerStats) {
+            h.playerStats.forEach(ps => {
+              const res = ps.isWinner || (h.winnerName === ps.name) ? '🏆 Ganó' : (ps.isSurrender ? '🚪 Abandonó' : 'Derrota');
+              text += `   - ${ps.name} (${res}): ${ps.passesRound} pasos | ${ps.remainingTiles} fichas restantes (${ps.remainingPips} pts) ${ps.handText ? ps.handText : ''}\n`;
+            });
+          }
+        });
+      }
 
       navigator.clipboard.writeText(text).then(() => {
         alert('¡Resumen de Balance copiado al portapapeles!\n\nPuedes pegarlo directamente en WhatsApp.');

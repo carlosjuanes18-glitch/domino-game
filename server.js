@@ -424,14 +424,19 @@ function handleRoundEnd(room, outcome) {
   const playerStatsRound = room.players.map(p => {
     const pips = (p.hand || []).reduce((acc, t) => acc + t.left + t.right, 0);
     totalRemainingPips += pips;
+    const handTiles = (p.hand || []).map(t => ({ left: t.left, right: t.right }));
+    const handText = handTiles.length > 0 ? handTiles.map(t => `[${t.left}|${t.right}]`).join(' ') : '0 fichas (¡Dominó!)';
     return {
       seat: p.seat,
       name: p.name,
       remainingPips: pips,
-      remainingTiles: (p.hand || []).length,
+      remainingTiles: handTiles.length,
       passesRound: p.passesRound || 0,
       passesTotal: p.passesTotal || 0,
-      hand: p.hand || []
+      hand: handTiles,
+      handText: handText,
+      isWinner: winner ? p.seat === winner.seat : false,
+      isSurrender: outcome.surrenderedBy === p.name
     };
   });
 

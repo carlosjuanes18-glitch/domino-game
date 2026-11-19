@@ -157,7 +157,7 @@ function startRound(room) {
 
 function getPlayableTiles(hand, leftEnd, rightEnd) {
   if (leftEnd === null || rightEnd === null) return [...hand]; // Primera jugada
-  return hand.filter(t => 
+  return hand.filter(t =>
     t.left === leftEnd || t.right === leftEnd ||
     t.left === rightEnd || t.right === rightEnd
   );
@@ -435,8 +435,8 @@ io.on('connection', (socket) => {
       }
     } else {
       // 2. Verificar si hay un asiento con el mismo nombre o marcado como Auto
-      let sameNamePlayer = room.players.find(p => 
-        p.name.toLowerCase() === cleanName.toLowerCase() || 
+      let sameNamePlayer = room.players.find(p =>
+        p.name.toLowerCase() === cleanName.toLowerCase() ||
         p.name.toLowerCase() === `${cleanName.toLowerCase()} (auto)`
       );
 

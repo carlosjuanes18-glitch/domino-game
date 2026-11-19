@@ -353,6 +353,13 @@ body {
   transform: translateX(-50%);
 }
 
+.end-chip.chip-top {
+  top: -12px;
+  bottom: auto;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
 @keyframes pulseChip {
   from { transform: scale(0.95); }
   to { transform: scale(1.08); }

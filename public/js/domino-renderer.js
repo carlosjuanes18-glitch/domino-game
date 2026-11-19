@@ -68,157 +68,319 @@ class DominoRenderer {
     `;
   }
 
-  // Algoritmo de Serpenteo Continuo Real de Dominó:
-  // Garantiza matemáticamente que el extremo saliente de la ficha 'i' toca exactamente
-  // el extremo entrante coincidente de la ficha 'i+1' (ej. 3 con 3, 6 con 6).
+  // Algoritmo de Acomodo Real de Dominó idéntico a las mesas tradicionales:
+  // - La ficha inicial (doble o ficha de apertura) se sitúa en el centro de la mesa.
+  // - La rama derecha avanza hacia la derecha y se dobla hacia abajo.
+  // - La rama izquierda avanza hacia la izquierda y se dobla hacia arriba.
+  // - Los dobles se colocan cruzados (perpendiculares a la línea de avance).
+  // - Cada ficha conecta cara con cara con su número idéntico (ej: 6 con 6, 3 con 3).
+  // - Cero colisiones ni encimamientos entre filas.
   computeSnakeLayout(board) {
     if (!board || board.length === 0) return { placed: [], totalW: 0, totalH: 0 };
-    const U = this.U;
+    const U = this.U; // 30 px por mitad de ficha
+
+    const rootIndex = board.findIndex(t => t.side === 'root') !== -1 
+      ? board.findIndex(t => t.side === 'root') 
+      : 0;
+
+    const rootTile = board[rootIndex];
+    const leftBranch = board.slice(0, rootIndex).reverse();
+    const rightBranch = board.slice(rootIndex + 1);
+
     const placed = [];
 
-    let dir = 'RIGHT';
-    let curX = 0;
-    let curY = 0;
-    let tilesInRow = 0;
-    const maxTilesPerRow = 4; // 4 fichas por fila antes de doblar en ángulo recto
+    // 1. Ficha Central / Inicial (Root)
+    let leftAttachX = 0, leftAttachY = 0;
+    let rightAttachX = 0, rightAttachY = 0;
 
-    for (let i = 0; i < board.length; i++) {
-      const t = board[i];
-      const isDouble = t.left === t.right;
-      tilesInRow++;
+    if (rootTile.isDouble) {
+      // Doble colocado transversalmente (vertical en el centro)
+      placed.push({
+        index: rootIndex,
+        tile: rootTile,
+        isVertical: true,
+        reverseHalves: false,
+        x: 0, y: 0,
+        w: U, h: 2 * U,
+        isHead: rootIndex === 0 && leftBranch.length === 0,
+        isTail: rootIndex === board.length - 1 && rightBranch.length === 0,
+        dir: 'CENTER'
+      });
+      leftAttachX = 0; leftAttachY = U / 2;
+      rightAttachX = U; rightAttachY = U / 2;
+    } else {
+      // Ficha horizontal normal en el centro
+      placed.push({
+        index: rootIndex,
+        tile: rootTile,
+        isVertical: false,
+        reverseHalves: false,
+        x: 0, y: 0,
+        w: 2 * U, h: U,
+        isHead: rootIndex === 0 && leftBranch.length === 0,
+        isTail: rootIndex === board.length - 1 && rightBranch.length === 0,
+        dir: 'CENTER'
+      });
+      leftAttachX = 0; leftAttachY = 0;
+      rightAttachX = 2 * U; rightAttachY = 0;
+    }
+
+    // 2. Rama DERECHA (avanza hacia la derecha, luego abajo, luego izquierda)
+    let curX = rightAttachX;
+    let curY = rightAttachY;
+    let dir = 'RIGHT';
+    let tilesInRun = 0;
+    const maxRightRun = 3;
+
+    for (let i = 0; i < rightBranch.length; i++) {
+      const t = rightBranch[i];
+      const isLast = (i === rightBranch.length - 1);
+      tilesInRun++;
 
       if (dir === 'RIGHT') {
-        if (tilesInRow > maxTilesPerRow && !isDouble && i < board.length - 1) {
-          // Doblar hacia ABAJO (esquina natural): Half 1 arriba (t.left), Half 2 abajo (t.right)
-          const x = curX;
-          const y = curY;
+        if (tilesInRun > maxRightRun && !t.isDouble && !isLast) {
+          // Doblar hacia ABAJO: ficha vertical tocando la cara derecha de la previa
+          const x = curX - U;
+          const y = curY + U;
           placed.push({
-            index: i,
+            index: rootIndex + 1 + i,
             tile: t,
             isVertical: true,
             reverseHalves: false,
-            dir: 'DOWN',
             x, y,
-            w: U,
-            h: 2 * U,
-            isHead: i === 0,
-            isTail: i === board.length - 1
+            w: U, h: 2 * U,
+            isHead: false,
+            isTail: isLast,
+            dir: 'DOWN'
           });
           curX = x;
-          curY = y + U;
+          curY = y + 2 * U;
           dir = 'LEFT';
-          tilesInRow = 0;
-        } else if (isDouble) {
-          // Doble colocado de forma transversal (perpendicular)
+          tilesInRun = 0;
+        } else if (t.isDouble) {
+          // Doble vertical perpendicular
           const x = curX;
           const y = curY - U / 2;
           placed.push({
-            index: i,
+            index: rootIndex + 1 + i,
             tile: t,
             isVertical: true,
             reverseHalves: false,
-            dir: 'RIGHT',
             x, y,
-            w: U,
-            h: 2 * U,
-            isHead: i === 0,
-            isTail: i === board.length - 1
+            w: U, h: 2 * U,
+            isHead: false,
+            isTail: isLast,
+            dir: 'RIGHT'
           });
           curX = x + U;
         } else {
-          // Ficha horizontal normal hacia la derecha: t.left a la izq, t.right a la der
+          // Horizontal normal hacia la derecha
           const x = curX;
           const y = curY;
           placed.push({
-            index: i,
+            index: rootIndex + 1 + i,
             tile: t,
             isVertical: false,
             reverseHalves: false,
-            dir: 'RIGHT',
             x, y,
-            w: 2 * U,
-            h: U,
-            isHead: i === 0,
-            isTail: i === board.length - 1
+            w: 2 * U, h: U,
+            isHead: false,
+            isTail: isLast,
+            dir: 'RIGHT'
           });
           curX = x + 2 * U;
         }
       } else if (dir === 'LEFT') {
-        if (tilesInRow > maxTilesPerRow && !isDouble && i < board.length - 1) {
-          // Doblar hacia ABAJO (esquina natural): Half 1 arriba (t.left), Half 2 abajo (t.right)
-          const x = curX - U;
+        if (tilesInRun > maxRightRun + 2 && !t.isDouble && !isLast) {
+          // Doblar hacia ABAJO nuevamente
+          const x = curX;
           const y = curY + U;
           placed.push({
-            index: i,
+            index: rootIndex + 1 + i,
             tile: t,
             isVertical: true,
             reverseHalves: false,
-            dir: 'DOWN',
             x, y,
-            w: U,
-            h: 2 * U,
-            isHead: i === 0,
-            isTail: i === board.length - 1
+            w: U, h: 2 * U,
+            isHead: false,
+            isTail: isLast,
+            dir: 'DOWN'
           });
           curX = x + U;
-          curY = y + U;
+          curY = y + 2 * U;
           dir = 'RIGHT';
-          tilesInRow = 0;
-        } else if (isDouble) {
+          tilesInRun = 0;
+        } else if (t.isDouble) {
           const x = curX - U;
           const y = curY - U / 2;
           placed.push({
-            index: i,
+            index: rootIndex + 1 + i,
             tile: t,
             isVertical: true,
             reverseHalves: false,
-            dir: 'LEFT',
             x, y,
-            w: U,
-            h: 2 * U,
-            isHead: i === 0,
-            isTail: i === board.length - 1
+            w: U, h: 2 * U,
+            isHead: false,
+            isTail: isLast,
+            dir: 'LEFT'
           });
           curX = x;
         } else {
-          // Ficha horizontal hacia la izquierda: t.left a la der (conectando al previo), t.right a la izq (nuevo extremo)
           const x = curX - 2 * U;
           const y = curY;
           placed.push({
-            index: i,
+            index: rootIndex + 1 + i,
             tile: t,
             isVertical: false,
             reverseHalves: true,
-            dir: 'LEFT',
             x, y,
-            w: 2 * U,
-            h: U,
-            isHead: i === 0,
-            isTail: i === board.length - 1
+            w: 2 * U, h: U,
+            isHead: false,
+            isTail: isLast,
+            dir: 'LEFT'
           });
           curX = x;
         }
       }
     }
 
-    // Normalizar coordenadas para que minX=0, minY=0
+    // 3. Rama IZQUIERDA (avanza hacia la izquierda, luego arriba, luego derecha)
+    curX = leftAttachX;
+    curY = leftAttachY;
+    dir = 'LEFT';
+    tilesInRun = 0;
+    const maxLeftRun = 3;
+
+    for (let i = 0; i < leftBranch.length; i++) {
+      const t = leftBranch[i];
+      const origIndex = rootIndex - 1 - i;
+      const isLast = (i === leftBranch.length - 1);
+      tilesInRun++;
+
+      if (dir === 'LEFT') {
+        if (tilesInRun > maxLeftRun && !t.isDouble && !isLast) {
+          // Doblar hacia ARRIBA: ficha vertical sobre la última mitad
+          const x = curX;
+          const y = curY - 2 * U;
+          placed.push({
+            index: origIndex,
+            tile: t,
+            isVertical: true,
+            reverseHalves: true,
+            x, y,
+            w: U, h: 2 * U,
+            isHead: isLast,
+            isTail: false,
+            dir: 'UP'
+          });
+          curX = x + U;
+          curY = y;
+          dir = 'RIGHT';
+          tilesInRun = 0;
+        } else if (t.isDouble) {
+          const x = curX - U;
+          const y = curY - U / 2;
+          placed.push({
+            index: origIndex,
+            tile: t,
+            isVertical: true,
+            reverseHalves: false,
+            x, y,
+            w: U, h: 2 * U,
+            isHead: isLast,
+            isTail: false,
+            dir: 'LEFT'
+          });
+          curX = x;
+        } else {
+          const x = curX - 2 * U;
+          const y = curY;
+          placed.push({
+            index: origIndex,
+            tile: t,
+            isVertical: false,
+            reverseHalves: true,
+            x, y,
+            w: 2 * U, h: U,
+            isHead: isLast,
+            isTail: false,
+            dir: 'LEFT'
+          });
+          curX = x;
+        }
+      } else if (dir === 'RIGHT') {
+        if (tilesInRun > maxLeftRun + 2 && !t.isDouble && !isLast) {
+          // Doblar hacia ARRIBA nuevamente
+          const x = curX - U;
+          const y = curY - 2 * U;
+          placed.push({
+            index: origIndex,
+            tile: t,
+            isVertical: true,
+            reverseHalves: true,
+            x, y,
+            w: U, h: 2 * U,
+            isHead: isLast,
+            isTail: false,
+            dir: 'UP'
+          });
+          curX = x;
+          curY = y;
+          dir = 'LEFT';
+          tilesInRun = 0;
+        } else if (t.isDouble) {
+          const x = curX;
+          const y = curY - U / 2;
+          placed.push({
+            index: origIndex,
+            tile: t,
+            isVertical: true,
+            reverseHalves: false,
+            x, y,
+            w: U, h: 2 * U,
+            isHead: isLast,
+            isTail: false,
+            dir: 'RIGHT'
+          });
+          curX = x + U;
+        } else {
+          const x = curX;
+          const y = curY;
+          placed.push({
+            index: origIndex,
+            tile: t,
+            isVertical: false,
+            reverseHalves: false,
+            x, y,
+            w: 2 * U, h: U,
+            isHead: isLast,
+            isTail: false,
+            dir: 'RIGHT'
+          });
+          curX = x + 2 * U;
+        }
+      }
+    }
+
+    // Margen de seguridad para que ningún chip o sombra quede fuera del borde
+    const pad = 16;
     const minX = Math.min(...placed.map(p => p.x));
     const maxX = Math.max(...placed.map(p => p.x + p.w));
     const minY = Math.min(...placed.map(p => p.y));
     const maxY = Math.max(...placed.map(p => p.y + p.h));
 
     placed.forEach(p => {
-      p.x -= minX;
-      p.y -= minY;
+      p.x = p.x - minX + pad;
+      p.y = p.y - minY + pad;
     });
 
-    const totalW = maxX - minX;
-    const totalH = maxY - minY;
+    const totalW = (maxX - minX) + (pad * 2);
+    const totalH = (maxY - minY) + (pad * 2);
 
     return { placed, totalW, totalH };
   }
 
-  // Auto-ajusta la escala para que toda la mesa quepa al 100% en la pantalla
+  // Auto-ajusta la escala para que toda la mesa quepa al 100% en la pantalla sin desbordar
   autoFitBoard(containerEl) {
     if (!containerEl) return;
     const canvas = containerEl.querySelector('.board-snake-canvas');
@@ -226,7 +388,7 @@ class DominoRenderer {
 
     canvas.style.transform = 'none';
 
-    const pad = 24;
+    const pad = 16;
     const containerW = containerEl.clientWidth - pad;
     const containerH = containerEl.clientHeight - pad;
     const canvasW = canvas.offsetWidth;
@@ -235,7 +397,8 @@ class DominoRenderer {
     if (canvasW > 0 && canvasH > 0 && containerW > 0 && containerH > 0) {
       const scaleX = containerW / canvasW;
       const scaleY = containerH / canvasH;
-      const fitScale = Math.min(1.1, Math.min(scaleX, scaleY));
+      // Escala dinámica (ej: 0.9, 0.7, 0.5) para que todo el dominó quepa visible
+      const fitScale = Math.min(1.0, Math.min(scaleX, scaleY));
       canvas.style.transform = `scale(${fitScale})`;
       canvas.style.transformOrigin = 'center center';
     }
@@ -279,15 +442,21 @@ class DominoRenderer {
       // Indicadores en los extremos de la cadena
       let chipMarkup = '';
       if (isHead) {
-        chipMarkup = `<span class="end-chip chip-left">◀ ${leftEnd}</span>`;
+        if (item.dir === 'UP') {
+          chipMarkup = `<span class="end-chip chip-top">◀ ${leftEnd}</span>`;
+        } else if (item.dir === 'RIGHT') {
+          chipMarkup = `<span class="end-chip chip-right">◀ ${leftEnd}</span>`;
+        } else {
+          chipMarkup = `<span class="end-chip chip-left">◀ ${leftEnd}</span>`;
+        }
       }
       if (isTail) {
-        if (item.isVertical) {
-          chipMarkup += `<span class="end-chip chip-bottom">${rightEnd} ▶</span>`;
+        if (item.dir === 'DOWN') {
+          chipMarkup = `<span class="end-chip chip-bottom">${rightEnd} ▶</span>`;
         } else if (item.dir === 'LEFT') {
-          chipMarkup += `<span class="end-chip chip-left">${rightEnd} ▶</span>`;
+          chipMarkup = `<span class="end-chip chip-left">${rightEnd} ▶</span>`;
         } else {
-          chipMarkup += `<span class="end-chip chip-right">${rightEnd} ▶</span>`;
+          chipMarkup = `<span class="end-chip chip-right">${rightEnd} ▶</span>`;
         }
       }
 
@@ -309,6 +478,14 @@ class DominoRenderer {
     this.autoFitBoard(containerEl);
     requestAnimationFrame(() => this.autoFitBoard(containerEl));
     setTimeout(() => this.autoFitBoard(containerEl), 30);
+    setTimeout(() => this.autoFitBoard(containerEl), 150);
+
+    if (!this._resizeObserver && window.ResizeObserver && containerEl) {
+      this._resizeObserver = new ResizeObserver(() => {
+        this.autoFitBoard(containerEl);
+      });
+      this._resizeObserver.observe(containerEl);
+    }
   }
 }
 

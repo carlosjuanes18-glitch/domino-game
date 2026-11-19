@@ -1,7 +1,7 @@
-// Renderizador de Fichas Clásicas de Dominó con Serpenteo Natural 2D Realista
+// Renderizador de Fichas Clásicas de Dominó con Serpenteo Continuo y Lógica Real de Conexión
 class DominoRenderer {
   constructor() {
-    this.U = 29; // Unidad base de cuadrícula (mitad de ficha = 29x29 px)
+    this.U = 30; // Tamaño unitario de mitad de ficha (30x30 px)
     this.dotPatterns = {
       0: [],
       1: [4],
@@ -38,8 +38,14 @@ class DominoRenderer {
       extraClasses = '',
       id = `${leftVal}-${rightVal}`,
       widthPx = null,
-      heightPx = null
+      heightPx = null,
+      reverseHalves = false
     } = options;
+
+    // Si reverseHalves es true (por avanzar hacia la izquierda), invertimos visualmente las mitades
+    // para que el número conectado coincida exactamente cara a cara
+    const val1 = reverseHalves ? rightVal : leftVal;
+    const val2 = reverseHalves ? leftVal : rightVal;
 
     const playableClass = isPlayable ? 'playable-tile' : '';
     const orientationClass = isVertical ? 'domino-vertical' : 'domino-horizontal';
@@ -52,153 +58,144 @@ class DominoRenderer {
            data-left="${leftVal}"
            data-right="${rightVal}">
         <div class="domino-face">
-          ${this.renderHalf(leftVal, isVertical)}
+          ${this.renderHalf(val1, isVertical)}
           <div class="domino-divider">
             <div class="domino-spinner"></div>
           </div>
-          ${this.renderHalf(rightVal, isVertical)}
+          ${this.renderHalf(val2, isVertical)}
         </div>
       </div>
     `;
   }
 
-  // Algoritmo de Serpenteo 2D Natural (como en las mesas de dominó reales)
-  // Las fichas se conectan extremo con extremo, doblan en esquinas a 90° y las dobles van perpendiculares
+  // Algoritmo de Serpenteo Continuo Real de Dominó:
+  // Garantiza matemáticamente que el extremo saliente de la ficha 'i' toca exactamente
+  // el extremo entrante coincidente de la ficha 'i+1' (ej. 3 con 3, 6 con 6).
   computeSnakeLayout(board) {
-    if (!board || board.length === 0) return { tiles: [], width: 0, height: 0 };
+    if (!board || board.length === 0) return { placed: [], totalW: 0, totalH: 0 };
     const U = this.U;
+    const placed = [];
 
-    const rootIdx = board.findIndex(t => t.side === 'root');
-    const safeRoot = rootIdx !== -1 ? rootIdx : Math.floor(board.length / 2);
+    let dir = 'RIGHT';
+    let curX = 0;
+    let curY = 0;
+    let tilesInRow = 0;
+    const maxTilesPerRow = 4; // 4 fichas por fila antes de doblar en ángulo recto
 
-    const placed = new Array(board.length);
-
-    // Ficha inicial (Root)
-    const root = board[safeRoot];
-    const rootIsDouble = root.left === root.right;
-    const rw = rootIsDouble ? U : 2 * U;
-    const rh = rootIsDouble ? 2 * U : U;
-
-    placed[safeRoot] = {
-      x: 0,
-      y: 0,
-      w: rw,
-      h: rh,
-      isVertical: rootIsDouble,
-      tile: root,
-      isHead: safeRoot === 0,
-      isTail: safeRoot === board.length - 1
-    };
-
-    // --- RAMA DERECHA (safeRoot + 1 hacia el final) ---
-    // Crece hacia la derecha, y al alcanzar el límite dobla hacia ABAJO y luego hacia la IZQUIERDA
-    let rConnX = rw;
-    let rConnY = rh / 2;
-    let rDir = 'RIGHT';
-    let rCount = 0;
-
-    for (let i = safeRoot + 1; i < board.length; i++) {
+    for (let i = 0; i < board.length; i++) {
       const t = board[i];
       const isDouble = t.left === t.right;
-      const isTail = (i === board.length - 1);
-      rCount++;
+      tilesInRow++;
 
-      if (rDir === 'RIGHT') {
-        if (rCount >= 4 && !isDouble) {
-          // Doble hacia ABAJO (esquina)
-          const w = U; const h = 2 * U;
-          const x = rConnX - U;
-          const y = rConnY + U / 2;
-          placed[i] = { x, y, w, h, isVertical: true, tile: t, isTail, chipPos: 'bottom' };
-          rConnX = x;
-          rConnY = y + h;
-          rDir = 'LEFT';
-          rCount = 0;
+      if (dir === 'RIGHT') {
+        if (tilesInRow > maxTilesPerRow && !isDouble && i < board.length - 1) {
+          // Doblar hacia ABAJO (esquina natural): Half A arriba, Half B abajo
+          const x = curX - U;
+          const y = curY + U;
+          placed.push({
+            index: i,
+            tile: t,
+            isVertical: true,
+            reverseHalves: false,
+            x, y,
+            w: U,
+            h: 2 * U,
+            isHead: i === 0,
+            isTail: i === board.length - 1
+          });
+          curX = x;
+          curY = y + U;
+          dir = 'LEFT';
+          tilesInRow = 0;
+        } else if (isDouble) {
+          // Doble colocado de forma transversal (perpendicular)
+          const x = curX;
+          const y = curY - U / 2;
+          placed.push({
+            index: i,
+            tile: t,
+            isVertical: true,
+            reverseHalves: false,
+            x, y,
+            w: U,
+            h: 2 * U,
+            isHead: i === 0,
+            isTail: i === board.length - 1
+          });
+          curX = x + U;
         } else {
-          const w = isDouble ? U : 2 * U;
-          const h = isDouble ? 2 * U : U;
-          const x = rConnX;
-          const y = rConnY - h / 2;
-          placed[i] = { x, y, w, h, isVertical: isDouble, tile: t, isTail, chipPos: 'right' };
-          rConnX = x + w;
+          // Ficha horizontal normal hacia la derecha: t.left a la izq, t.right a la der
+          const x = curX;
+          const y = curY;
+          placed.push({
+            index: i,
+            tile: t,
+            isVertical: false,
+            reverseHalves: false,
+            x, y,
+            w: 2 * U,
+            h: U,
+            isHead: i === 0,
+            isTail: i === board.length - 1
+          });
+          curX = x + 2 * U;
         }
-      } else if (rDir === 'LEFT') {
-        if (rCount >= 4 && !isDouble) {
-          // Doble hacia ABAJO (esquina)
-          const w = U; const h = 2 * U;
-          const x = rConnX;
-          const y = rConnY + U / 2;
-          placed[i] = { x, y, w, h, isVertical: true, tile: t, isTail, chipPos: 'bottom' };
-          rConnX = x + w;
-          rConnY = y + h;
-          rDir = 'RIGHT';
-          rCount = 0;
+      } else if (dir === 'LEFT') {
+        if (tilesInRow > maxTilesPerRow && !isDouble && i < board.length - 1) {
+          // Doblar hacia ABAJO (esquina natural): Half A arriba, Half B abajo
+          const x = curX;
+          const y = curY + U;
+          placed.push({
+            index: i,
+            tile: t,
+            isVertical: true,
+            reverseHalves: false,
+            x, y,
+            w: U,
+            h: 2 * U,
+            isHead: i === 0,
+            isTail: i === board.length - 1
+          });
+          curX = x + U;
+          curY = y + U;
+          dir = 'RIGHT';
+          tilesInRow = 0;
+        } else if (isDouble) {
+          const x = curX - U;
+          const y = curY - U / 2;
+          placed.push({
+            index: i,
+            tile: t,
+            isVertical: true,
+            reverseHalves: false,
+            x, y,
+            w: U,
+            h: 2 * U,
+            isHead: i === 0,
+            isTail: i === board.length - 1
+          });
+          curX = x;
         } else {
-          const w = isDouble ? U : 2 * U;
-          const h = isDouble ? 2 * U : U;
-          const x = rConnX - w;
-          const y = rConnY - h / 2;
-          placed[i] = { x, y, w, h, isVertical: isDouble, tile: t, isTail, chipPos: 'left' };
-          rConnX = x;
+          // Ficha horizontal hacia la izquierda: t.left a la der (conectando al previo), t.right a la izq (nuevo extremo)
+          const x = curX - 2 * U;
+          const y = curY;
+          placed.push({
+            index: i,
+            tile: t,
+            isVertical: false,
+            reverseHalves: true,
+            x, y,
+            w: 2 * U,
+            h: U,
+            isHead: i === 0,
+            isTail: i === board.length - 1
+          });
+          curX = x;
         }
       }
     }
 
-    // --- RAMA IZQUIERDA (safeRoot - 1 hacia el principio) ---
-    // Crece hacia la izquierda, y al alcanzar el límite dobla hacia ARRIBA y luego hacia la DERECHA
-    let lConnX = 0;
-    let lConnY = rh / 2;
-    let lDir = 'LEFT';
-    let lCount = 0;
-
-    for (let i = safeRoot - 1; i >= 0; i--) {
-      const t = board[i];
-      const isDouble = t.left === t.right;
-      const isHead = (i === 0);
-      lCount++;
-
-      if (lDir === 'LEFT') {
-        if (lCount >= 4 && !isDouble) {
-          // Dobla hacia ARRIBA (esquina)
-          const w = U; const h = 2 * U;
-          const x = lConnX;
-          const y = lConnY - U / 2 - h;
-          placed[i] = { x, y, w, h, isVertical: true, tile: t, isHead, chipPos: 'top' };
-          lConnX = x + w;
-          lConnY = y;
-          lDir = 'RIGHT';
-          lCount = 0;
-        } else {
-          const w = isDouble ? U : 2 * U;
-          const h = isDouble ? 2 * U : U;
-          const x = lConnX - w;
-          const y = lConnY - h / 2;
-          placed[i] = { x, y, w, h, isVertical: isDouble, tile: t, isHead, chipPos: 'left' };
-          lConnX = x;
-        }
-      } else if (lDir === 'RIGHT') {
-        if (lCount >= 4 && !isDouble) {
-          // Dobla hacia ARRIBA (esquina)
-          const w = U; const h = 2 * U;
-          const x = lConnX - U;
-          const y = lConnY - U / 2 - h;
-          placed[i] = { x, y, w, h, isVertical: true, tile: t, isHead, chipPos: 'top' };
-          lConnX = x;
-          lConnY = y;
-          lDir = 'LEFT';
-          lCount = 0;
-        } else {
-          const w = isDouble ? U : 2 * U;
-          const h = isDouble ? 2 * U : U;
-          const x = lConnX;
-          const y = lConnY - h / 2;
-          placed[i] = { x, y, w, h, isVertical: isDouble, tile: t, isHead, chipPos: 'right' };
-          lConnX = x + w;
-        }
-      }
-    }
-
-    // Normalizar coordenadas para centrar exactamente
+    // Normalizar coordenadas para que minX=0, minY=0
     const minX = Math.min(...placed.map(p => p.x));
     const maxX = Math.max(...placed.map(p => p.x + p.w));
     const minY = Math.min(...placed.map(p => p.y));
@@ -215,7 +212,7 @@ class DominoRenderer {
     return { placed, totalW, totalH };
   }
 
-  // Auto-ajusta la escala para que la serpiente de fichas se vea completa sin cortarse
+  // Auto-ajusta la escala para que toda la mesa quepa al 100% en la pantalla
   autoFitBoard(containerEl) {
     if (!containerEl) return;
     const canvas = containerEl.querySelector('.board-snake-canvas');
@@ -232,7 +229,7 @@ class DominoRenderer {
     if (canvasW > 0 && canvasH > 0 && containerW > 0 && containerH > 0) {
       const scaleX = containerW / canvasW;
       const scaleY = containerH / canvasH;
-      const fitScale = Math.min(1.15, Math.min(scaleX, scaleY));
+      const fitScale = Math.min(1.1, Math.min(scaleX, scaleY));
       canvas.style.transform = `scale(${fitScale})`;
       canvas.style.transformOrigin = 'center center';
     }
@@ -264,10 +261,10 @@ class DominoRenderer {
       const isHead = item.isHead;
       const isTail = item.isTail;
 
-      // Generar ficha con posicionamiento exacto
       const tileMarkup = this.renderTile(tile.left, tile.right, {
         isVertical: item.isVertical,
         isDouble: tile.left === tile.right,
+        reverseHalves: item.reverseHalves,
         widthPx: item.w,
         heightPx: item.h,
         id: `board-${index}-${tile.id}`

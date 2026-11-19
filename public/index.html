@@ -259,8 +259,11 @@
             4 Jugadores
           </button>
         </div>
-        <div id="nonHostNotice" class="text-[10px] text-slate-400 mt-1.5 hidden text-center">
-          (Solo el anfitrión puede cambiar el número de jugadores)
+        <div id="nonHostNotice" class="text-[10px] text-slate-400 mt-2 hidden flex items-center justify-between bg-slate-800/80 p-2 rounded-lg border border-slate-700">
+          <span>(Estás como invitado)</span>
+          <button id="btnClaimHost" type="button" class="text-xs bg-amber-500/20 text-amber-300 border border-amber-500/50 px-2.5 py-1 rounded-full font-bold hover:bg-amber-500/30">
+            👑 Reclamar Anfitrión
+          </button>
         </div>
       </div>
 
@@ -292,6 +295,9 @@
         </button>
         <button id="btnStartGame" class="primary-btn opacity-50" disabled>
           <span>🚀 ¡Comenzar Partida (4/4)!</span>
+        </button>
+        <button id="btnResetLobby" type="button" class="text-xs text-amber-300/80 hover:text-amber-300 underline font-semibold text-center mt-1 py-1">
+          🔄 ¿Hay jugadores fantasma o quieres reiniciar la mesa? Toca aquí
         </button>
       </div>
     </div>

@@ -420,39 +420,42 @@ io.on('connection', (socket) => {
     const cleanName = (playerName || 'Jugador').trim();
     const effectiveClientId = clientId || socket.id;
 
-    // 1. Verificar si el mismo cliente (por clientId o por socketId) ya está en la sala
-    let clientMatch = room.players.find(p => (p.clientId && p.clientId === effectiveClientId) || p.socketId === socket.id);
-    if (clientMatch) {
-      clientMatch.socketId = socket.id;
-      clientMatch.clientId = effectiveClientId;
-      clientMatch.name = cleanName;
-      clientMatch.avatar = avatar || clientMatch.avatar;
-      clientMatch.isBot = false;
-      clientMatch.isDisconnected = false;
-      clientMatch.lastSeen = Date.now();
-      if (!room.players.some(p => p.socketId === room.hostId && !p.isBot)) {
+    // En sala de espera, purgar jugadores desconectados que ya no tengan socket activo
+    if (room.status === 'waiting') {
+      room.players = room.players.filter(p => p.socketId === socket.id || (p.socketId && io.sockets.sockets.has(p.socketId)));
+      if (room.players.length === 0 || !room.players.some(p => p.socketId === room.hostId && io.sockets.sockets.has(p.socketId))) {
+        room.hostId = socket.id;
+      }
+    }
+
+    // 1. Verificar si hay un jugador con el mismo clientId, socketId o el mismo nombre
+    let matchPlayer = room.players.find(p => 
+      (p.clientId && p.clientId === effectiveClientId) || 
+      p.socketId === socket.id ||
+      p.name.toLowerCase() === cleanName.toLowerCase() ||
+      p.name.toLowerCase() === `${cleanName.toLowerCase()} (auto)`
+    );
+
+    if (matchPlayer) {
+      // Si había un socket previo zombie diferente, desconectarlo
+      if (matchPlayer.socketId && matchPlayer.socketId !== socket.id) {
+        const oldSock = io.sockets.sockets.get(matchPlayer.socketId);
+        if (oldSock) oldSock.disconnect(true);
+      }
+      matchPlayer.socketId = socket.id;
+      matchPlayer.clientId = effectiveClientId;
+      matchPlayer.name = cleanName;
+      matchPlayer.avatar = avatar || matchPlayer.avatar;
+      matchPlayer.isBot = false;
+      matchPlayer.isDisconnected = false;
+      matchPlayer.lastSeen = Date.now();
+      // Si era el anfitrión o el anfitrión no está vivo, este jugador es el anfitrión
+      if (room.hostId === matchPlayer.socketId || !room.players.some(p => p.socketId === room.hostId && io.sockets.sockets.has(p.socketId))) {
         room.hostId = socket.id;
       }
     } else {
-      // 2. Verificar si hay un asiento con el mismo nombre o marcado como Auto
-      let sameNamePlayer = room.players.find(p =>
-        p.name.toLowerCase() === cleanName.toLowerCase() ||
-        p.name.toLowerCase() === `${cleanName.toLowerCase()} (auto)`
-      );
-
-      if (sameNamePlayer) {
-        sameNamePlayer.socketId = socket.id;
-        sameNamePlayer.clientId = effectiveClientId;
-        sameNamePlayer.name = cleanName;
-        sameNamePlayer.avatar = avatar || sameNamePlayer.avatar;
-        sameNamePlayer.isBot = false;
-        sameNamePlayer.isDisconnected = false;
-        sameNamePlayer.lastSeen = Date.now();
-        if (!room.players.some(p => p.socketId === room.hostId && !p.isBot)) {
-          room.hostId = socket.id;
-        }
-      } else if (room.status === 'waiting') {
-        // 3. En SALA DE ESPERA NUNCA SE BLOQUEA:
+      if (room.status === 'waiting') {
+        // En SALA DE ESPERA:
         // Si hay algún bot, se reemplaza por el humano
         const botSeat = room.players.find(p => p.isBot);
         if (botSeat) {
@@ -499,8 +502,7 @@ io.on('connection', (socket) => {
           return;
         }
       } else {
-        // 4. En PARTIDA ACTIVA ('playing'):
-        // Si hay bots o jugadores ausentes, el nuevo humano toma su asiento
+        // En PARTIDA ACTIVA ('playing'):
         const replaceableSeat = room.players.find(p => p.isBot || !io.sockets.sockets.has(p.socketId));
         if (replaceableSeat) {
           replaceableSeat.socketId = socket.id;
@@ -514,11 +516,15 @@ io.on('connection', (socket) => {
             room.hostId = socket.id;
           }
         } else {
-          // Todos los asientos están ocupados por humanos activos en juego
           socket.emit('room_full_options', { roomId: formattedRoomId, maxPlayers: room.maxPlayers || 2 });
           return;
         }
       }
+    }
+
+    // Reasignar asientos correlativos si estamos en espera
+    if (room.status === 'waiting') {
+      room.players.forEach((p, idx) => p.seat = idx);
     }
 
     currentRoomId = formattedRoomId;
@@ -529,6 +535,42 @@ io.on('connection', (socket) => {
       playerSeat: room.players.find(p => p.socketId === socket.id)?.seat
     });
 
+    broadcastRoom(room);
+  });
+
+  // Reclamar Anfitrión manualmente
+  socket.on('claim_host', () => {
+    if (!currentRoomId) return;
+    const room = rooms.get(currentRoomId);
+    if (!room) return;
+    room.hostId = socket.id;
+    broadcastRoom(room);
+  });
+
+  // Limpiar mesa de espera (dejar solo al llamante como anfitrión único)
+  socket.on('reset_lobby', () => {
+    if (!currentRoomId) return;
+    const room = rooms.get(currentRoomId);
+    if (!room) return;
+    const me = room.players.find(p => p.socketId === socket.id);
+    room.players = [{
+      socketId: socket.id,
+      clientId: me ? me.clientId : socket.id,
+      id: socket.id,
+      name: me ? me.name : 'Jugador',
+      avatar: me ? me.avatar : 'male_1',
+      seat: 0,
+      isBot: false,
+      ready: false,
+      hand: [],
+      passesTotal: 0,
+      passesRound: 0,
+      wins: 0,
+      points: 0,
+      lastSeen: Date.now()
+    }];
+    room.hostId = socket.id;
+    room.status = 'waiting';
     broadcastRoom(room);
   });
 

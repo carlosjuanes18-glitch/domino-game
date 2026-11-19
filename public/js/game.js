@@ -148,6 +148,26 @@
     lobbyModal.classList.remove('hidden');
   });
 
+  // Botón Reclamar Anfitrión
+  const btnClaimHost = document.getElementById('btnClaimHost');
+  if (btnClaimHost) {
+    btnClaimHost.addEventListener('click', () => {
+      window.soundManager.playTileClick();
+      socket.emit('claim_host');
+    });
+  }
+
+  // Botón Limpiar/Vaciar Sala desde el Lobby
+  const btnResetLobby = document.getElementById('btnResetLobby');
+  if (btnResetLobby) {
+    btnResetLobby.addEventListener('click', () => {
+      if (confirm('¿Deseas vaciar los asientos de la sala y quedar tú solo como anfitrión en la mesa?')) {
+        window.soundManager.playTileClick();
+        socket.emit('reset_lobby');
+      }
+    });
+  }
+
   // Configuración de Número de Jugadores (Solo Anfitrión)
   document.querySelectorAll('.player-count-btn').forEach(btn => {
     btn.addEventListener('click', () => {

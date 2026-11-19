@@ -1146,10 +1146,52 @@
       netTableEl.innerHTML = html;
     }
 
-    // 4. Desglose Detallado Partida por Partida (En cada partida)
+    // 4. Planilla y Desglose Detallado Partida por Partida (En cada partida)
     const roundsBadgeEl = document.getElementById('fbRoundsCountBadge');
     if (roundsBadgeEl) {
       roundsBadgeEl.textContent = (balance.history ? balance.history.length : 0);
+    }
+
+    // Tabla Resumen Planilla de Rondas
+    const summaryTableEl = document.getElementById('fbRoundsSummaryTable');
+    if (summaryTableEl) {
+      if (!balance.history || balance.history.length === 0) {
+        summaryTableEl.innerHTML = '';
+      } else {
+        let sHtml = `
+          <table class="balance-table w-full text-xs">
+            <thead>
+              <tr>
+                <th>Partida</th>
+                <th>Salida</th>
+                <th>Cierre</th>
+                <th>Ganador</th>
+                <th>Puntos Ganados</th>
+                <th>Pasos en Partida</th>
+                <th>Fichas en Mano al Terminar</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+        balance.history.forEach((h, idx) => {
+          const typeLabel = h.type === 'domino' ? '🀫 Dominó' : (h.type === 'tranca' ? '🔒 Tranca' : '🚪 Abandono');
+          const passesStr = (h.playerStats || []).map(p => `<strong>${p.name}</strong>: ${p.passesRound || 0}`).join(' | ');
+          const tilesStr = (h.playerStats || []).map(p => `<strong>${p.name}</strong>: ${p.remainingTiles === 0 ? '¡Dominó!' : `${p.remainingTiles} fichas (${p.remainingPips} pts)`}`).join(' | ');
+          sHtml += `
+            <tr>
+              <td class="font-bold text-amber-300 text-center">Partida #${h.round || (idx + 1)}</td>
+              <td class="text-slate-300 font-mono">${h.starter || '---'}</td>
+              <td>${typeLabel}</td>
+              <td class="text-yellow-400 font-extrabold">🏆 ${h.winnerName}</td>
+              <td class="text-emerald-400 font-bold">+${h.pointsAwarded || 0} pts</td>
+              <td class="text-amber-200 text-[11px]">${passesStr}</td>
+              <td class="text-slate-200 text-[11px]">${tilesStr}</td>
+            </tr>
+          `;
+        });
+        sHtml += `</tbody></table>`;
+        summaryTableEl.innerHTML = sHtml;
+      }
     }
 
     const roundsDetailedEl = document.getElementById('fbRoundsDetailedList');

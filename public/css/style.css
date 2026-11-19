@@ -1081,10 +1081,10 @@ body {
     width: 100% !important;
     background: #ffffff !important;
     color: #111827 !important;
-    border: 2px solid #111827 !important;
+    border: none !important;
     box-shadow: none !important;
-    padding: 20px !important;
-    border-radius: 8px !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
     max-height: none !important;
     overflow: visible !important;
   }
@@ -1092,13 +1092,6 @@ body {
   #printableBalanceReport {
     color: #111827 !important;
     padding: 0 !important;
-  }
-
-  #printableBalanceReport * {
-    color: #111827 !important;
-    background: transparent !important;
-    border-color: #94a3b8 !important;
-    box-shadow: none !important;
   }
 
   #printableBalanceReport .text-emerald-400,
@@ -1115,24 +1108,34 @@ body {
   #printableBalanceReport .bg-slate-900,
   #printableBalanceReport .bg-slate-950,
   #printableBalanceReport .bg-amber-950 {
-    background: #f8fafc !important;
-    border: 1px solid #cbd5e1 !important;
+    background: #ffffff !important;
+    border: 1px solid #94a3b8 !important;
   }
 
-  .balance-table {
-    border: 1px solid #000000 !important;
+  .balance-table,
+  .round-table-mini {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    border: 1.5px solid #111827 !important;
+    margin-bottom: 10px !important;
   }
 
-  .balance-table th {
+  .balance-table th,
+  .round-table-mini th {
     background: #e2e8f0 !important;
     color: #000000 !important;
-    border: 1px solid #94a3b8 !important;
+    border: 1px solid #475569 !important;
     font-weight: bold !important;
+    padding: 5px 7px !important;
+    font-size: 11px !important;
   }
 
-  .balance-table td {
+  .balance-table td,
+  .round-table-mini td {
     color: #000000 !important;
-    border: 1px solid #e2e8f0 !important;
+    border: 1px solid #cbd5e1 !important;
+    padding: 5px 7px !important;
+    font-size: 10.5px !important;
   }
 
   #printSignaturesArea {
@@ -1159,24 +1162,6 @@ body {
 
   .round-detail-card * {
     color: #111827 !important;
-  }
-
-  .round-table-mini {
-    margin-top: 6px !important;
-    border: 1px solid #94a3b8 !important;
-  }
-
-  .round-table-mini th {
-    background: #f1f5f9 !important;
-    color: #000000 !important;
-    font-size: 10.5px !important;
-    padding: 4px 6px !important;
-  }
-
-  .round-table-mini td {
-    font-size: 10.5px !important;
-    padding: 4px 6px !important;
-    color: #000000 !important;
   }
 }
 

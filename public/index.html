@@ -9,7 +9,7 @@
   <!-- Socket.io -->
   <script src="/socket.io/socket.io.js"></script>
   <!-- Estilos personalizados -->
-  <link rel="stylesheet" href="/css/style.css?v=4.1">
+  <link rel="stylesheet" href="/css/style.css?v=4.2">
 </head>
 <body>
 
@@ -499,18 +499,25 @@
           </div>
         </div>
 
-        <!-- SECCIÓN 4: Desglose Partida por Partida (En Cada Partida) -->
+        <!-- SECCIÓN 4: Planilla y Desglose Partida por Partida (En Cada Partida) -->
         <div class="bg-slate-900/90 border border-slate-700/80 rounded-xl p-3.5 mb-4">
           <div class="text-xs font-black text-indigo-400 uppercase tracking-wider mb-2 flex items-center justify-between">
             <span class="flex items-center gap-1.5">
-              <span>🗂️</span> 4. Desglose Detallado de Cada Partida Jugada:
+              <span>🗂️</span> 4. Planilla y Desglose Detallado de Cada Partida:
             </span>
             <span class="text-[10px] text-slate-400 font-bold">
-              Partidas registradas: <strong id="fbRoundsCountBadge" class="text-amber-300">0</strong>
+              Partidas Registradas: <strong id="fbRoundsCountBadge" class="text-amber-300">0</strong>
             </span>
           </div>
+
+          <!-- Tabla Resumen Planilla de Rondas -->
+          <div id="fbRoundsSummaryTable" class="overflow-x-auto mb-3">
+            <!-- Tabla de anotación estilo libreta -->
+          </div>
+
+          <div class="text-[11px] font-bold text-slate-300 mb-2">Fichas exactas y pasos individuales en cada partida:</div>
           <div id="fbRoundsDetailedList" class="flex flex-col gap-3">
-            <!-- Rellenado dinámicamente con cada partida -->
+            <!-- Tarjetas detalladas de cada partida -->
           </div>
         </div>
 
@@ -542,10 +549,10 @@
   </div>
 
   <!-- Scripts -->
-  <script src="/js/avatars.js?v=4.1"></script>
-  <script src="/js/audio.js?v=4.1"></script>
-  <script src="/js/domino-renderer.js?v=4.1"></script>
-  <script src="/js/game.js?v=4.1"></script>
+  <script src="/js/avatars.js?v=4.2"></script>
+  <script src="/js/audio.js?v=4.2"></script>
+  <script src="/js/domino-renderer.js?v=4.2"></script>
+  <script src="/js/game.js?v=4.2"></script>
 </body>
 </html>
 

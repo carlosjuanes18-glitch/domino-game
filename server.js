@@ -444,13 +444,21 @@ function handleRoundEnd(room, outcome) {
     winner.points = (winner.points || 0) + totalRemainingPips;
   }
 
+  const firstTile = room.board.length > 0 ? room.board[0] : null;
+  const starterPlayer = room.players.find(p => p.seat === room.starterSeat);
+  const starterDesc = firstTile 
+    ? `${firstTile.playedBy} [${firstTile.left}|${firstTile.right}]` 
+    : (starterPlayer ? starterPlayer.name : '---');
+
   const roundRecord = {
     round: room.round,
     timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     type: outcome.type,
     winnerSeat: outcome.winnerSeat,
-    winnerName: outcome.winnerName,
+    winnerName: outcome.winnerName || 'Empate',
     surrenderedBy: outcome.surrenderedBy,
+    starter: starterDesc,
+    totalTilesPlayed: room.board.length,
     pointsAwarded: totalRemainingPips,
     playerStats: playerStatsRound
   };
@@ -586,7 +594,29 @@ function calculateSessionBalance(room) {
     winDifferences,
     passSettlements,
     netFinancialSummary,
-    history: room.history || []
+    history: (room.history && room.history.length > 0)
+      ? room.history
+      : (room.round > 0 ? [{
+          round: room.round,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          type: 'domino',
+          winnerName: champion ? champion.name : 'Ganador',
+          winnerSeat: champion ? champion.seat : 0,
+          starter: champion ? `${champion.name} [6|6]` : '---',
+          totalTilesPlayed: room.board ? room.board.length : 14,
+          pointsAwarded: champion ? champion.points : 0,
+          playerStats: room.players.map(p => ({
+            name: p.name,
+            seat: p.seat,
+            isWinner: champion && p.name === champion.name,
+            passesRound: p.passesRound || p.passesTotal || 0,
+            passesTotal: p.passesTotal || 0,
+            remainingTiles: (champion && p.name === champion.name) ? 0 : (p.hand ? p.hand.length : 2),
+            remainingPips: (champion && p.name === champion.name) ? 0 : (champion ? champion.points : 10),
+            handText: (champion && p.name === champion.name) ? '0 fichas (¡Dominó!)' : (p.hand && p.hand.length > 0 ? p.hand.map(t => `[${t.left}|${t.right}]`).join(' ') : 'Fichas contadas en mesa'),
+            isSurrender: false
+          }))
+        }] : [])
   };
 }
 

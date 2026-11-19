@@ -266,7 +266,7 @@ class DominoRenderer {
             index: origIndex,
             tile: t,
             isVertical: true,
-            reverseHalves: true,
+            reverseHalves: false,
             x, y,
             w: U, h: 2 * U,
             isHead: isLast,
@@ -293,13 +293,14 @@ class DominoRenderer {
           });
           curX = x;
         } else {
+          // Horizontal hacia la izquierda: t.left a la izq (nuevo extremo), t.right a la der (conecta al previo)
           const x = curX - 2 * U;
           const y = curY;
           placed.push({
             index: origIndex,
             tile: t,
             isVertical: false,
-            reverseHalves: true,
+            reverseHalves: false,
             x, y,
             w: 2 * U, h: U,
             isHead: isLast,
@@ -317,7 +318,7 @@ class DominoRenderer {
             index: origIndex,
             tile: t,
             isVertical: true,
-            reverseHalves: true,
+            reverseHalves: false,
             x, y,
             w: U, h: 2 * U,
             isHead: isLast,
@@ -344,13 +345,14 @@ class DominoRenderer {
           });
           curX = x + U;
         } else {
+          // Horizontal hacia la derecha (nivel superior de la rama izquierda)
           const x = curX;
           const y = curY;
           placed.push({
             index: origIndex,
             tile: t,
             isVertical: false,
-            reverseHalves: false,
+            reverseHalves: true,
             x, y,
             w: 2 * U, h: U,
             isHead: isLast,

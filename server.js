@@ -401,46 +401,80 @@ io.on('connection', (socket) => {
     const formattedRoomId = (roomId || 'MESA-1').toUpperCase().trim();
     let room = rooms.get(formattedRoomId);
 
-    if (!room) {
+    // Si la sala no existe o quedó abandonada únicamente con bots, reiniciarla limpia
+    if (!room || room.players.every(p => p.isBot)) {
       room = createInitialRoom(formattedRoomId, socket.id);
       rooms.set(formattedRoomId, room);
     }
 
+    const cleanName = (playerName || 'Jugador').trim();
+
+    // 1. Verificar si el jugador ya está conectado con este mismo socket
     let existingPlayer = room.players.find(p => p.socketId === socket.id);
     if (existingPlayer) {
-      existingPlayer.name = playerName || existingPlayer.name;
+      existingPlayer.name = cleanName;
       existingPlayer.avatar = avatar || existingPlayer.avatar;
     } else {
-      const maxP = room.maxPlayers || 4;
-      if (room.players.length >= maxP) {
-        socket.emit('error_message', `La sala ya tiene ${maxP} jugadores completos.`);
-        return;
-      }
+      // 2. Verificar si el jugador se desconectó previamente y quedó como (Auto) con el mismo nombre
+      let autoSeat = room.players.find(p => p.isBot && (p.name === cleanName || p.name === `${cleanName} (Auto)`));
 
-      const takenSeats = room.players.map(p => p.seat);
-      let freeSeat = 0;
-      for (let s = 0; s < maxP; s++) {
-        if (!takenSeats.includes(s)) {
-          freeSeat = s;
-          break;
+      if (autoSeat) {
+        // Recuperar su propio asiento
+        autoSeat.socketId = socket.id;
+        autoSeat.id = socket.id;
+        autoSeat.name = cleanName;
+        autoSeat.avatar = avatar || autoSeat.avatar;
+        autoSeat.isBot = false;
+        if (!room.players.some(p => p.socketId === room.hostId && !p.isBot)) {
+          room.hostId = socket.id;
+        }
+      } else {
+        const maxP = room.maxPlayers || 4;
+
+        if (room.players.length >= maxP) {
+          // 3. Si la sala está llena pero hay un BOT, el jugador humano toma el lugar del bot
+          const botPlayer = room.players.find(p => p.isBot);
+          if (botPlayer) {
+            botPlayer.socketId = socket.id;
+            botPlayer.id = socket.id;
+            botPlayer.name = cleanName;
+            botPlayer.avatar = avatar || 'male_1';
+            botPlayer.isBot = false;
+            if (!room.players.some(p => p.socketId === room.hostId && !p.isBot)) {
+              room.hostId = socket.id;
+            }
+          } else {
+            socket.emit('error_message', `La sala ya tiene ${maxP} jugadores reales jugando. Elige otro código de sala como MESA-2.`);
+            return;
+          }
+        } else {
+          // Asignar primer asiento libre
+          const takenSeats = room.players.map(p => p.seat);
+          let freeSeat = 0;
+          for (let s = 0; s < maxP; s++) {
+            if (!takenSeats.includes(s)) {
+              freeSeat = s;
+              break;
+            }
+          }
+
+          const newPlayer = {
+            socketId: socket.id,
+            id: socket.id,
+            name: cleanName,
+            avatar: avatar || 'male_1',
+            seat: freeSeat,
+            isBot: false,
+            ready: false,
+            hand: [],
+            passesTotal: 0,
+            passesRound: 0,
+            wins: 0,
+            points: 0
+          };
+          room.players.push(newPlayer);
         }
       }
-
-      const newPlayer = {
-        socketId: socket.id,
-        id: socket.id,
-        name: playerName || `Jugador ${freeSeat + 1}`,
-        avatar: avatar || 'male_1',
-        seat: freeSeat,
-        isBot: false,
-        ready: false,
-        hand: [],
-        passesTotal: 0,
-        passesRound: 0,
-        wins: 0,
-        points: 0
-      };
-      room.players.push(newPlayer);
     }
 
     currentRoomId = formattedRoomId;
@@ -663,15 +697,14 @@ io.on('connection', (socket) => {
 
     if (room.status === 'waiting') {
       room.players = room.players.filter(p => p.socketId !== socket.id);
-      if (room.players.length === 0) {
+      const hasHuman = room.players.some(p => !p.isBot);
+      if (room.players.length === 0 || !hasHuman) {
         rooms.delete(currentRoomId);
       } else {
-        // Si el anfitrión sale, transferir el rol al siguiente jugador
         if (room.hostId === socket.id && room.players.length > 0) {
           const newHost = room.players.find(p => !p.isBot) || room.players[0];
           room.hostId = newHost.socketId;
         }
-        // Reasignar asientos
         room.players.forEach((p, idx) => p.seat = idx);
         broadcastRoom(room);
       }
@@ -680,6 +713,14 @@ io.on('connection', (socket) => {
       if (player) {
         player.isBot = true;
         player.name = `${player.name} (Auto)`;
+
+        // Si ya no queda ningún jugador humano en la partida en curso, limpiar la sala
+        const hasHuman = room.players.some(p => !p.isBot);
+        if (!hasHuman) {
+          rooms.delete(currentRoomId);
+          return;
+        }
+
         broadcastRoom(room);
         checkBotTurn(room);
       }

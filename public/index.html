@@ -197,8 +197,13 @@
 
       <!-- Código de Sala -->
       <label class="text-xs font-bold text-slate-300 mb-1 block">Código de Sala:</label>
-      <input id="inputRoomId" type="text" maxlength="8" value="MESA-1" placeholder="MESA-1"
-             class="w-full bg-slate-900 border border-emerald-500/40 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-400 uppercase font-mono tracking-wider mb-4" />
+      <div class="flex gap-2 mb-4">
+        <input id="inputRoomId" type="text" maxlength="8" value="MESA-1" placeholder="MESA-1"
+               class="flex-1 bg-slate-900 border border-emerald-500/40 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-400 uppercase font-mono tracking-wider" />
+        <button id="btnRandomRoom" type="button" class="secondary-btn !py-2 !px-3 text-xs font-bold" title="Generar otra sala">
+          🎲 Otra
+        </button>
+      </div>
 
       <button id="btnJoinGame" class="primary-btn">
         <span>Entrar a la Sala de Espera</span> ➔

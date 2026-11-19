@@ -59,6 +59,16 @@
 
   initAvatarSelector();
 
+  // Botón Generar Otra Sala Aleatoria
+  const btnRandomRoom = document.getElementById('btnRandomRoom');
+  if (btnRandomRoom) {
+    btnRandomRoom.addEventListener('click', () => {
+      window.soundManager.playTileClick();
+      const rand = Math.floor(Math.random() * 90) + 10;
+      document.getElementById('inputRoomId').value = `MESA-${rand}`;
+    });
+  }
+
   // Botón Unirse / Crear Sala
   document.getElementById('btnJoinGame').addEventListener('click', () => {
     window.soundManager.init();

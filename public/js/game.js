@@ -46,6 +46,7 @@
   const scoreboardModal = document.getElementById('scoreboardModal');
   const endChoiceModal = document.getElementById('endChoiceModal');
   const roundOverModal = document.getElementById('roundOverModal');
+  const finalBalanceModal = document.getElementById('finalBalanceModal');
   const emojiDrawer = document.getElementById('emojiDrawer');
 
   const boardContainer = document.getElementById('boardContainer');
@@ -838,5 +839,339 @@
       }
     }
   });
+
+  // ==========================================
+  // ABANDONAR PARTIDA Y ACABAR DE JUGAR (BALANCE FINAL)
+  // ==========================================
+  let currentSessionBalance = null;
+
+  function handleLeaveGameClick() {
+    const ok = confirm(
+      '¿Estás seguro de que deseas abandonar la partida?\n\n' +
+      '• Se registrará como 1 juego perdido en tu historial.\n' +
+      '• Si quedan 2 o más jugadores en la mesa, la partida continuará para ellos.'
+    );
+    if (ok) {
+      window.soundManager.playPop();
+      socket.emit('leave_game');
+    }
+  }
+
+  function handleFinishSessionClick() {
+    const ok = confirm(
+      '¿Desean finalizar la sesión de dominó de todos los jugadores?\n\n' +
+      '• Se generará el Balance Final Oficial.\n' +
+      '• Desglose de diferencias de victorias (quién ganó más).\n' +
+      '• Liquidación de dinero extra por pasos (quien pasó menos recibe de quien más pasó).\n' +
+      '• Listo para imprimir o guardar en PDF.'
+    );
+    if (ok) {
+      window.soundManager.playTileClick();
+      socket.emit('finish_session');
+    }
+  }
+
+  // Vincular botones de Abandonar Partida
+  const btnLeaveGame = document.getElementById('btnLeaveGame');
+  if (btnLeaveGame) btnLeaveGame.addEventListener('click', handleLeaveGameClick);
+
+  const btnScoreboardLeave = document.getElementById('btnScoreboardLeave');
+  if (btnScoreboardLeave) btnScoreboardLeave.addEventListener('click', handleLeaveGameClick);
+
+  // Vincular botones de Acabar de Jugar
+  const btnFinishSession = document.getElementById('btnFinishSession');
+  if (btnFinishSession) btnFinishSession.addEventListener('click', handleFinishSessionClick);
+
+  const btnScoreboardFinish = document.getElementById('btnScoreboardFinish');
+  if (btnScoreboardFinish) btnScoreboardFinish.addEventListener('click', handleFinishSessionClick);
+
+  const btnRoundOverFinish = document.getElementById('btnRoundOverFinish');
+  if (btnRoundOverFinish) btnRoundOverFinish.addEventListener('click', handleFinishSessionClick);
+
+  // Evento cuando un jugador abandona
+  socket.on('player_surrendered', (data) => {
+    window.soundManager.playPop();
+    if (data.roundEnded) {
+      alert(`🚪 ${data.playerName} abandonó la partida (juego perdido).\n\n🏆 ¡${data.winnerName} gana la ronda!`);
+    } else {
+      alert(`🚪 ${data.playerName} abandonó la partida (juego perdido).\n\nLa partida continúa con los ${data.remainingCount} jugadores restantes.`);
+    }
+  });
+
+  // Confirmación al jugador que abandonó
+  socket.on('leave_game_ack', (data) => {
+    alert(`Has abandonado la partida. Se registró 1 juego perdido para ${data.playerName}. Total de derrotas acumuladas: ${data.losses}.`);
+    lobbyModal.classList.add('hidden');
+    scoreboardModal.classList.add('hidden');
+    roundOverModal.classList.add('hidden');
+    finalBalanceModal.classList.add('hidden');
+    setupModal.classList.remove('hidden');
+    currentRoom = null;
+    mySeat = null;
+  });
+
+  // Renderizar y mostrar el Balance Final (Imágenes 1 y 2)
+  function renderFinalBalance(balance) {
+    currentSessionBalance = balance;
+
+    // Encabezado
+    const roomCodeEl = document.getElementById('fbRoomCode');
+    if (roomCodeEl) roomCodeEl.textContent = balance.roomId || 'MESA-1';
+
+    const dateEl = document.getElementById('fbDate');
+    if (dateEl) dateEl.textContent = balance.finishedAt || new Date().toLocaleString();
+
+    const roundsEl = document.getElementById('fbTotalRounds');
+    if (roundsEl) roundsEl.textContent = balance.totalRounds || 0;
+
+    // Campeón y Diferencia Destacada (Imagen 2)
+    const champEl = document.getElementById('fbChampionName');
+    if (champEl) {
+      champEl.textContent = balance.isDraw ? '¡Empate en Victorias!' : `🥇 ${balance.champion}`;
+    }
+
+    const highlightEl = document.getElementById('fbWinDiffHighlight');
+    if (highlightEl) {
+      if (balance.winDifferences && balance.winDifferences.length > 0) {
+        highlightEl.textContent = balance.winDifferences[0].summaryText;
+      } else {
+        highlightEl.textContent = 'Sesión finalizada';
+      }
+    }
+
+    // 1. Tabla de Victorias
+    const winTableEl = document.getElementById('fbWinTable');
+    if (winTableEl && balance.rankedByWins) {
+      let html = `
+        <table class="balance-table">
+          <thead>
+            <tr>
+              <th>Lugar</th>
+              <th>Jugador</th>
+              <th>Victorias</th>
+              <th>Derrotas</th>
+              <th>Puntos (Pips)</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+      balance.rankedByWins.forEach((p, idx) => {
+        const medal = idx === 0 ? '🥇 1º' : (idx === 1 ? '🥈 2º' : (idx === 2 ? '🥉 3º' : `${idx + 1}º`));
+        const isTop = idx === 0;
+        html += `
+          <tr class="${isTop ? 'champion-row' : ''}">
+            <td><strong>${medal}</strong></td>
+            <td><strong>${p.name}</strong> ${p.hasLeft ? '<span class="text-[9px] text-rose-400 font-bold">(Abandonó)</span>' : ''}</td>
+            <td class="text-amber-300 font-black">${p.wins} juego(s)</td>
+            <td class="text-slate-400 font-bold">${p.losses}</td>
+            <td class="text-emerald-300 font-bold">${p.points} pts</td>
+          </tr>
+        `;
+      });
+      html += `</tbody></table>`;
+      winTableEl.innerHTML = html;
+    }
+
+    // Lista de Diferencias de Victorias (Imagen 2)
+    const winDiffEl = document.getElementById('fbWinDifferencesList');
+    if (winDiffEl) {
+      if (balance.winDifferences && balance.winDifferences.length > 0) {
+        winDiffEl.innerHTML = balance.winDifferences.map(d => `
+          <div class="flex items-center gap-2 py-1 border-b border-slate-800 last:border-none">
+            <span class="text-amber-400 font-bold">➔</span>
+            <span><strong>${d.summaryText}</strong></span>
+          </div>
+        `).join('');
+      } else {
+        winDiffEl.innerHTML = '<div class="text-slate-400">Sin diferencias de juegos registradas.</div>';
+      }
+    }
+
+    // 2. Tabla de Pasos y Penalizaciones (Imagen 1)
+    const penaltyRateEl = document.getElementById('fbPenaltyRate');
+    if (penaltyRateEl) penaltyRateEl.textContent = balance.penaltyPerPass || 1;
+
+    const passTableEl = document.getElementById('fbPassTable');
+    if (passTableEl && balance.rankedByPasses) {
+      let html = `
+        <table class="balance-table">
+          <thead>
+            <tr>
+              <th>Posición</th>
+              <th>Jugador</th>
+              <th>Pasos Totales</th>
+              <th>Aportación ($)</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+      balance.rankedByPasses.forEach((p, idx) => {
+        const penaltyCost = p.passesTotal * (balance.penaltyPerPass || 1);
+        const tag = idx === 0 ? '⭐ Menos pasos' : `${idx + 1}º`;
+        html += `
+          <tr class="${idx === 0 ? 'champion-row' : ''}">
+            <td>${tag}</td>
+            <td><strong>${p.name}</strong></td>
+            <td class="text-amber-300 font-bold">${p.passesTotal} paso(s)</td>
+            <td class="text-rose-400 font-bold">$${penaltyCost}</td>
+          </tr>
+        `;
+      });
+      html += `</tbody></table>`;
+      passTableEl.innerHTML = html;
+    }
+
+    // Liquidación de Dinero Extra por Pasos (Imagen 1)
+    const passSetEl = document.getElementById('fbPassSettlementsList');
+    if (passSetEl) {
+      if (balance.passSettlements && balance.passSettlements.length > 0) {
+        passSetEl.innerHTML = balance.passSettlements.map(s => `
+          <div class="flex items-center gap-2 py-1.5 border-b border-amber-800/40 last:border-none">
+            <span class="text-emerald-400 font-bold text-base">💵</span>
+            <span><strong>${s.summaryText}</strong></span>
+          </div>
+        `).join('');
+      } else {
+        passSetEl.innerHTML = '<div class="text-slate-400">No hubo diferencias de pasos entre los jugadores.</div>';
+      }
+    }
+
+    // 3. Resumen y Saldo Neto Final
+    const netTableEl = document.getElementById('fbNetTable');
+    if (netTableEl && balance.netFinancialSummary) {
+      let html = `
+        <table class="balance-table">
+          <thead>
+            <tr>
+              <th>Jugador</th>
+              <th>Victorias</th>
+              <th>Pasos</th>
+              <th>Liquidación de Pasos</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+      balance.netFinancialSummary.forEach(p => {
+        const netColor = p.passNetBalance > 0 ? 'text-emerald-400' : (p.passNetBalance < 0 ? 'text-rose-400' : 'text-slate-300');
+        const netSign = p.passNetBalance > 0 ? `+ $${p.passNetBalance} (Recibe)` : (p.passNetBalance < 0 ? `- $${Math.abs(p.passNetBalance)} (Paga)` : '$0 (Tablas)');
+        html += `
+          <tr>
+            <td><strong>${p.name}</strong></td>
+            <td class="text-amber-300 font-black">${p.wins}</td>
+            <td class="text-slate-300">${p.passesTotal}</td>
+            <td class="${netColor} font-black">${netSign}</td>
+          </tr>
+        `;
+      });
+      html += `</tbody></table>`;
+      netTableEl.innerHTML = html;
+    }
+
+    // Firmas de Conformidad
+    const sigRowEl = document.getElementById('fbSignaturesRow');
+    if (sigRowEl && balance.rankedByWins) {
+      sigRowEl.innerHTML = balance.rankedByWins.map(p => `
+        <div class="flex flex-col items-center">
+          <div class="h-8"></div>
+          <div class="signature-line w-36 text-center">${p.name}</div>
+        </div>
+      `).join('');
+    }
+
+    // Guardar en localStorage
+    try {
+      localStorage.setItem('domino_last_balance', JSON.stringify(balance));
+      const hist = JSON.parse(localStorage.getItem('domino_balance_history') || '[]');
+      hist.unshift(balance);
+      localStorage.setItem('domino_balance_history', JSON.stringify(hist.slice(0, 10)));
+    } catch (e) {
+      console.warn('No se pudo guardar en localStorage:', e);
+    }
+
+    // Mostrar modal
+    scoreboardModal.classList.add('hidden');
+    roundOverModal.classList.add('hidden');
+    finalBalanceModal.classList.remove('hidden');
+  }
+
+  // Socket: Recibir el Balance Final
+  socket.on('session_finished', (balanceData) => {
+    window.soundManager.playRoundWin();
+    renderFinalBalance(balanceData);
+  });
+
+  // Socket: Sesión Reiniciada
+  socket.on('session_restarted', () => {
+    finalBalanceModal.classList.add('hidden');
+    scoreboardModal.classList.add('hidden');
+    roundOverModal.classList.add('hidden');
+    lobbyModal.classList.remove('hidden');
+    window.soundManager.playTileClick();
+  });
+
+  // Botones dentro de #finalBalanceModal
+  const btnCloseFinalBalance = document.getElementById('btnCloseFinalBalance');
+  if (btnCloseFinalBalance) {
+    btnCloseFinalBalance.addEventListener('click', () => {
+      finalBalanceModal.classList.add('hidden');
+    });
+  }
+
+  const btnPrintPDF = document.getElementById('btnPrintPDF');
+  if (btnPrintPDF) {
+    btnPrintPDF.addEventListener('click', () => {
+      window.print();
+    });
+  }
+
+  const btnCopyBalanceSummary = document.getElementById('btnCopyBalanceSummary');
+  if (btnCopyBalanceSummary) {
+    btnCopyBalanceSummary.addEventListener('click', () => {
+      if (!currentSessionBalance) return;
+      const b = currentSessionBalance;
+      let text = `🏆 *BALANCE FINAL DE DOMINÓ (BLOQUEO)* 🀫\n`;
+      text += `📅 Mesa: ${b.roomId} | Fecha: ${b.finishedAt} | Rondas: ${b.totalRounds}\n\n`;
+      text += `👑 *Campeón de la Mesa:* ${b.champion}\n\n`;
+      text += `📊 *Diferencias de Victorias (Juegos Ganados):*\n`;
+      if (b.winDifferences && b.winDifferences.length > 0) {
+        b.winDifferences.forEach(d => {
+          text += `• ${d.summaryText}\n`;
+        });
+      }
+      text += `\n💰 *Liquidación de Dinero Extra por Pasos ($${b.penaltyPerPass} c/u):*\n`;
+      if (b.passSettlements && b.passSettlements.length > 0) {
+        b.passSettlements.forEach(s => {
+          text += `• ${s.summaryText}\n`;
+        });
+      }
+      text += `\n⚖️ *Balance Neto Final:*\n`;
+      b.netFinancialSummary.forEach(p => {
+        const sign = p.passNetBalance > 0 ? `+ $${p.passNetBalance} (Recibe)` : (p.passNetBalance < 0 ? `- $${Math.abs(p.passNetBalance)} (Paga)` : `$0`);
+        text += `• ${p.name}: ${p.wins} victorias | ${p.passesTotal} pasos | Saldo: ${sign}\n`;
+      });
+
+      navigator.clipboard.writeText(text).then(() => {
+        alert('¡Resumen de Balance copiado al portapapeles!\n\nPuedes pegarlo directamente en WhatsApp.');
+      }).catch(() => {
+        alert('Selecciona y copia el texto del resumen en pantalla.');
+      });
+    });
+  }
+
+  const btnSaveBalanceLocal = document.getElementById('btnSaveBalanceLocal');
+  if (btnSaveBalanceLocal) {
+    btnSaveBalanceLocal.addEventListener('click', () => {
+      alert('✅ Balance guardado correctamente en tu navegador.\n\nPuedes volver a consultarlo o imprimirlo en PDF cuando quieras.');
+    });
+  }
+
+  const btnRestartAfterBalance = document.getElementById('btnRestartAfterBalance');
+  if (btnRestartAfterBalance) {
+    btnRestartAfterBalance.addEventListener('click', () => {
+      if (confirm('¿Desean iniciar una nueva partida y reiniciar el marcador a 0?')) {
+        socket.emit('restart_session');
+      }
+    });
+  }
 
 })();

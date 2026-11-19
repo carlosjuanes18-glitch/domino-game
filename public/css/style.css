@@ -966,3 +966,181 @@ body {
   background: #1e3a8a;
 }
 
+/* Botones de acción en cabecera: Acabar de Jugar y Abandonar */
+.btn-finish-session {
+  background: rgba(245, 158, 11, 0.2) !important;
+  border-color: rgba(245, 158, 11, 0.5) !important;
+  color: #fde047 !important;
+}
+.btn-finish-session:hover {
+  background: rgba(245, 158, 11, 0.35) !important;
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.3);
+}
+
+.btn-leave-game {
+  background: rgba(239, 68, 68, 0.18) !important;
+  border-color: rgba(239, 68, 68, 0.45) !important;
+  color: #fca5a5 !important;
+}
+.btn-leave-game:hover {
+  background: rgba(239, 68, 68, 0.35) !important;
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.3);
+}
+
+/* Tablas del Balance Final */
+.balance-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.8rem;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.balance-table th {
+  background: rgba(15, 23, 42, 0.85);
+  color: #94a3b8;
+  padding: 8px 10px;
+  text-align: left;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+.balance-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  color: #e2e8f0;
+}
+.balance-table tr:last-child td {
+  border-bottom: none;
+}
+.balance-table tr.champion-row {
+  background: rgba(245, 158, 11, 0.12);
+  font-weight: 700;
+}
+
+/* Firmas para Acta de Partida */
+.signature-line {
+  border-top: 1px solid #475569;
+  margin-top: 40px;
+  padding-top: 6px;
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+/* ============================================== */
+/* ESTILOS PARA IMPRESIÓN OFICIAL EN PDF */
+/* ============================================== */
+@media print {
+  @page {
+    size: letter portrait;
+    margin: 12mm;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #111827 !important;
+    font-family: Arial, Helvetica, sans-serif !important;
+  }
+
+  /* Ocultar elementos interactivos de la aplicación */
+  .game-container,
+  .table-area,
+  .player-hand-area,
+  .game-header,
+  .modal-backdrop:not(#finalBalanceModal),
+  .modal-close-btn,
+  .no-print,
+  .modal-footer,
+  #btnFloatingViewToggle,
+  .emoji-drawer-container {
+    display: none !important;
+  }
+
+  #finalBalanceModal {
+    position: static !important;
+    display: block !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  #finalBalanceModal .modal-card {
+    position: static !important;
+    transform: none !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    background: #ffffff !important;
+    color: #111827 !important;
+    border: 2px solid #111827 !important;
+    box-shadow: none !important;
+    padding: 20px !important;
+    border-radius: 8px !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  #printableBalanceReport {
+    color: #111827 !important;
+    padding: 0 !important;
+  }
+
+  #printableBalanceReport * {
+    color: #111827 !important;
+    background: transparent !important;
+    border-color: #94a3b8 !important;
+    box-shadow: none !important;
+  }
+
+  #printableBalanceReport .text-emerald-400,
+  #printableBalanceReport .text-emerald-300,
+  #printableBalanceReport .text-amber-400,
+  #printableBalanceReport .text-amber-300,
+  #printableBalanceReport .text-yellow-300,
+  #printableBalanceReport .text-cyan-400 {
+    color: #111827 !important;
+    font-weight: bold !important;
+  }
+
+  #printableBalanceReport .bg-gradient-to-r,
+  #printableBalanceReport .bg-slate-900,
+  #printableBalanceReport .bg-slate-950,
+  #printableBalanceReport .bg-amber-950 {
+    background: #f8fafc !important;
+    border: 1px solid #cbd5e1 !important;
+  }
+
+  .balance-table {
+    border: 1px solid #000000 !important;
+  }
+
+  .balance-table th {
+    background: #e2e8f0 !important;
+    color: #000000 !important;
+    border: 1px solid #94a3b8 !important;
+    font-weight: bold !important;
+  }
+
+  .balance-table td {
+    color: #000000 !important;
+    border: 1px solid #e2e8f0 !important;
+  }
+
+  #printSignaturesArea {
+    display: block !important;
+    page-break-inside: avoid !important;
+    margin-top: 35px !important;
+    border-top: 2px solid #000000 !important;
+  }
+
+  .signature-line {
+    border-top: 1px solid #000000 !important;
+    color: #000000 !important;
+    font-weight: bold !important;
+  }
+}
+

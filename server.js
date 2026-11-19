@@ -49,7 +49,7 @@ function createInitialRoom(roomId, hostSocketId) {
     maxPlayers: 4, // 2, 3 o 4 jugadores elegidos por el anfitrión
     round: 0,
     penaltyPerPass: 1, // Valor de aportación / penalización por cada paso (monedas/puntos)
-    players: [], // { socketId, id, name, avatar, seat, isBot, ready, hand: [], passesTotal: 0, passesRound: 0, wins: 0, points: 0 }
+    players: [], // { socketId, id, name, avatar, seat, isBot, ready, hand: [], passesTotal: 0, passesRound: 0, wins: 0, losses: 0, hasLeft: false, points: 0 }
     board: [], // Fichas jugadas en la mesa
     leftEnd: null,
     rightEnd: null,
@@ -86,6 +86,8 @@ function getSafeRoomData(room, requesterSocketId) {
       passesTotal: p.passesTotal || 0,
       passesRound: p.passesRound || 0,
       wins: p.wins || 0,
+      losses: p.losses || 0,
+      hasLeft: p.hasLeft || false,
       points: p.points || 0,
       // Solo enviamos la mano si es el jugador solicitante
       hand: (p.socketId === requesterSocketId) ? p.hand : undefined
@@ -102,6 +104,13 @@ function broadcastRoom(room) {
 }
 
 function startRound(room) {
+  const activePlayers = room.players.filter(p => !p.hasLeft);
+  if (activePlayers.length < 2) {
+    room.status = 'waiting';
+    broadcastRoom(room);
+    return;
+  }
+
   room.round += 1;
   room.status = 'playing';
   room.board = [];
@@ -109,9 +118,12 @@ function startRound(room) {
   room.rightEnd = null;
   room.consecutivePasses = 0;
 
+  // Limpiar manos previas
+  room.players.forEach(p => { p.hand = []; p.passesRound = 0; });
+
   // Barajar y repartir 7 fichas a cada participante activo (modalidad Bloqueo sin pozo)
   const deck = shuffle(generateDominoSet());
-  room.players.forEach((p, idx) => {
+  activePlayers.forEach((p, idx) => {
     p.hand = deck.slice(idx * 7, (idx + 1) * 7);
     p.passesRound = 0;
   });
@@ -119,11 +131,11 @@ function startRound(room) {
   // Determinar quién inicia:
   // En ronda 1: Quien tenga el doble más alto en mano (preferente [6-6])
   // En rondas siguientes: El ganador de la ronda anterior
-  let startingSeat = 0;
+  let startingSeat = activePlayers[0].seat;
   if (room.round === 1) {
     let highestDouble = -1;
-    room.players.forEach(p => {
-      p.hand.forEach(t => {
+    activePlayers.forEach(p => {
+      (p.hand || []).forEach(t => {
         if (t.left === t.right && t.left > highestDouble) {
           highestDouble = t.left;
           startingSeat = p.seat;
@@ -134,8 +146,8 @@ function startRound(room) {
     // Si nadie tuviese dobles, se toma la ficha con mayor suma de puntos
     if (highestDouble === -1) {
       let maxPips = -1;
-      room.players.forEach(p => {
-        p.hand.forEach(t => {
+      activePlayers.forEach(p => {
+        (p.hand || []).forEach(t => {
           const sum = t.left + t.right;
           if (sum > maxPips) {
             maxPips = sum;
@@ -145,7 +157,11 @@ function startRound(room) {
       });
     }
   } else {
-    startingSeat = (room.starterSeat !== undefined) ? room.starterSeat : 0;
+    if (room.starterSeat !== undefined && activePlayers.some(p => p.seat === room.starterSeat)) {
+      startingSeat = room.starterSeat;
+    } else {
+      startingSeat = activePlayers[0].seat;
+    }
   }
 
   room.currentTurnSeat = startingSeat;
@@ -294,12 +310,39 @@ function handlePlayTile(room, player, tileId, side) {
     return true;
   }
 
-  // Siguiente turno rotativo según la cantidad de jugadores configurada
+  // Siguiente turno rotativo entre jugadores activos
+  advanceTurnToNextActive(room);
+  return true;
+}
+
+function advanceTurnToNextActive(room) {
+  const activePlayers = room.players.filter(p => !p.hasLeft);
+  if (activePlayers.length < 2) {
+    const soleWinner = activePlayers[0];
+    if (soleWinner) {
+      handleRoundEnd(room, {
+        type: 'surrender',
+        winnerSeat: soleWinner.seat,
+        winnerName: soleWinner.name,
+        surrenderedBy: 'Abandono del rival'
+      });
+    }
+    return;
+  }
+
   const maxP = room.maxPlayers || 4;
-  room.currentTurnSeat = (room.currentTurnSeat + 1) % maxP;
+  let nextSeat = room.currentTurnSeat;
+  for (let i = 0; i < 4; i++) {
+    nextSeat = (nextSeat + 1) % maxP;
+    const p = room.players.find(pl => pl.seat === nextSeat && !pl.hasLeft);
+    if (p) {
+      room.currentTurnSeat = nextSeat;
+      break;
+    }
+  }
+
   broadcastRoom(room);
   checkBotTurn(room);
-  return true;
 }
 
 function handlePassTurn(room, player) {
@@ -315,16 +358,14 @@ function handlePassTurn(room, player) {
   });
 
   // Si todos los jugadores activos pasan consecutivamente, el juego está TRANCA / BLOQUEADO
-  const maxP = room.maxPlayers || 4;
-  if (room.consecutivePasses >= maxP) {
+  const activePlayers = room.players.filter(p => !p.hasLeft);
+  if (room.consecutivePasses >= activePlayers.length) {
     handleTranca(room);
     return;
   }
 
   // Siguiente turno
-  room.currentTurnSeat = (room.currentTurnSeat + 1) % maxP;
-  broadcastRoom(room);
-  checkBotTurn(room);
+  advanceTurnToNextActive(room);
 }
 
 function handleTranca(room) {
@@ -332,8 +373,9 @@ function handleTranca(room) {
   let winnerSeat = 0;
   let handPoints = [];
 
-  room.players.forEach(p => {
-    const sum = p.hand.reduce((acc, t) => acc + t.left + t.right, 0);
+  const activePlayers = room.players.filter(p => !p.hasLeft);
+  activePlayers.forEach(p => {
+    const sum = (p.hand || []).reduce((acc, t) => acc + t.left + t.right, 0);
     handPoints.push({ seat: p.seat, name: p.name, points: sum });
     if (sum < minPoints) {
       minPoints = sum;
@@ -359,18 +401,25 @@ function handleRoundEnd(room, outcome) {
     room.starterSeat = winner.seat;
   }
 
+  // Sumar derrota a los jugadores activos que no ganaron
+  room.players.forEach(p => {
+    if (winner && p.seat !== winner.seat && !p.hasLeft) {
+      p.losses = (p.losses || 0) + 1;
+    }
+  });
+
   let totalRemainingPips = 0;
   const playerStatsRound = room.players.map(p => {
-    const pips = p.hand.reduce((acc, t) => acc + t.left + t.right, 0);
+    const pips = (p.hand || []).reduce((acc, t) => acc + t.left + t.right, 0);
     totalRemainingPips += pips;
     return {
       seat: p.seat,
       name: p.name,
       remainingPips: pips,
-      remainingTiles: p.hand.length,
+      remainingTiles: (p.hand || []).length,
       passesRound: p.passesRound || 0,
       passesTotal: p.passesTotal || 0,
-      hand: p.hand
+      hand: p.hand || []
     };
   });
 
@@ -384,6 +433,7 @@ function handleRoundEnd(room, outcome) {
     type: outcome.type,
     winnerSeat: outcome.winnerSeat,
     winnerName: outcome.winnerName,
+    surrenderedBy: outcome.surrenderedBy,
     pointsAwarded: totalRemainingPips,
     playerStats: playerStatsRound
   };
@@ -396,6 +446,131 @@ function handleRoundEnd(room, outcome) {
   });
 
   broadcastRoom(room);
+}
+
+function calculateSessionBalance(room) {
+  const penaltyPerPass = room.penaltyPerPass || 1;
+  const players = room.players.map(p => ({
+    id: p.id,
+    name: p.name,
+    avatar: p.avatar,
+    seat: p.seat,
+    isBot: p.isBot,
+    wins: p.wins || 0,
+    losses: p.losses || 0,
+    passesTotal: p.passesTotal || 0,
+    points: p.points || 0,
+    hasLeft: p.hasLeft || false
+  }));
+
+  // 1. Balance de Victorias (Ordenados de mayor a menor victorias)
+  const rankedByWins = [...players].sort((a, b) => {
+    if (b.wins !== a.wins) return b.wins - a.wins;
+    if (a.passesTotal !== b.passesTotal) return a.passesTotal - b.passesTotal;
+    return b.points - a.points;
+  });
+
+  const champion = rankedByWins[0];
+  const isDraw = rankedByWins.length > 1 && rankedByWins[0].wins === rankedByWins[1].wins && rankedByWins[0].wins > 0;
+
+  // Diferencias de juegos ganados (según Nota de Imagen 2)
+  // "por ejemplo Carlos gano 15 veces y Adela gano 8 veces -> Carlos por 7 juegos"
+  const winDifferences = [];
+  for (let i = 0; i < rankedByWins.length; i++) {
+    for (let j = i + 1; j < rankedByWins.length; j++) {
+      const pA = rankedByWins[i];
+      const pB = rankedByWins[j];
+      const diff = pA.wins - pB.wins;
+      winDifferences.push({
+        leader: pA.name,
+        follower: pB.name,
+        leaderWins: pA.wins,
+        followerWins: pB.wins,
+        diffWins: diff,
+        summaryText: diff > 0 
+          ? `${pA.name} superó a ${pB.name} por ${diff} juego(s) (${pA.wins} vs ${pB.wins} victorias)`
+          : `${pA.name} y ${pB.name} empataron con ${pA.wins} victoria(s)`
+      });
+    }
+  }
+
+  // 2. Balance de Pasos y Dinero Extra (según Nota de Imagen 1)
+  // "la persona que 'pasó' menos recibira dinero extra de la persona que mas paso.
+  // ejemplo Mary 'pasó' 5 veces, Carlo 'pasó' 3 veces -> Carlo recibe dinero extra 2 pesos de Mary"
+  const rankedByPasses = [...players].sort((a, b) => a.passesTotal - b.passesTotal);
+  const minPassPlayer = rankedByPasses[0];
+  const maxPassPlayer = rankedByPasses[rankedByPasses.length - 1];
+
+  const passSettlements = [];
+  if (players.length >= 2) {
+    if (players.length === 2) {
+      const p1 = rankedByPasses[0];
+      const p2 = rankedByPasses[1];
+      const diff = p2.passesTotal - p1.passesTotal;
+      const extraMoney = diff * penaltyPerPass;
+      passSettlements.push({
+        receiver: p1.name,
+        payer: p2.name,
+        receiverPasses: p1.passesTotal,
+        payerPasses: p2.passesTotal,
+        diffPasses: diff,
+        amount: extraMoney,
+        summaryText: diff > 0 
+          ? `${p1.name} recibe dinero extra de $${extraMoney} de ${p2.name} (diferencia de ${diff} pasos menos)`
+          : `Ambos jugadores pasaron la misma cantidad de veces (${p1.passesTotal} pasos)`
+      });
+    } else {
+      for (let i = 1; i < rankedByPasses.length; i++) {
+        const pMore = rankedByPasses[i];
+        const diff = pMore.passesTotal - minPassPlayer.passesTotal;
+        const amount = diff * penaltyPerPass;
+        passSettlements.push({
+          receiver: minPassPlayer.name,
+          payer: pMore.name,
+          receiverPasses: minPassPlayer.passesTotal,
+          payerPasses: pMore.passesTotal,
+          diffPasses: diff,
+          amount: amount,
+          summaryText: diff > 0
+            ? `${minPassPlayer.name} recibe $${amount} de ${pMore.name} (${pMore.passesTotal} vs ${minPassPlayer.passesTotal} pasos, dif: ${diff})`
+            : `${minPassPlayer.name} y ${pMore.name} empataron en pasos (${minPassPlayer.passesTotal})`
+        });
+      }
+    }
+  }
+
+  // 3. Resumen financiero total consolidado
+  const netFinancialSummary = players.map(p => {
+    let passNet = 0;
+    passSettlements.forEach(s => {
+      if (s.receiver === p.name) passNet += s.amount;
+      if (s.payer === p.name) passNet -= s.amount;
+    });
+    return {
+      name: p.name,
+      avatar: p.avatar,
+      wins: p.wins,
+      losses: p.losses,
+      passesTotal: p.passesTotal,
+      passNetBalance: passNet,
+      points: p.points
+    };
+  });
+
+  return {
+    roomId: room.id,
+    finishedAt: new Date().toLocaleString(),
+    totalRounds: room.round,
+    penaltyPerPass,
+    champion: champion ? champion.name : 'Nadie',
+    isDraw,
+    rankedByWins,
+    rankedByPasses,
+    winDifferences,
+    passSettlements,
+    netFinancialSummary,
+    history: room.history || []
+  };
 }
 
 // Configuración de WebSockets
@@ -769,10 +944,115 @@ io.on('connection', (socket) => {
       p.passesTotal = 0;
       p.passesRound = 0;
       p.wins = 0;
+      p.losses = 0;
+      p.hasLeft = false;
       p.points = 0;
       p.ready = p.isBot ? true : false;
     });
 
+    broadcastRoom(room);
+  });
+
+  // Abandonar partida en cualquier momento (se toma como juego perdido)
+  socket.on('leave_game', () => {
+    if (!currentRoomId) return;
+    const room = rooms.get(currentRoomId);
+    if (!room) return;
+
+    const player = room.players.find(p => p.socketId === socket.id);
+    if (!player) return;
+
+    player.losses = (player.losses || 0) + 1;
+    player.hasLeft = true;
+
+    if (room.status === 'playing') {
+      const activePlayers = room.players.filter(p => !p.hasLeft);
+      if (activePlayers.length < 2) {
+        // Solo queda 1 jugador activo: gana por abandono del rival
+        const soleWinner = activePlayers[0];
+        if (soleWinner) {
+          handleRoundEnd(room, {
+            type: 'surrender',
+            winnerSeat: soleWinner.seat,
+            winnerName: soleWinner.name,
+            surrenderedBy: player.name
+          });
+        }
+        io.to(room.id).emit('player_surrendered', {
+          playerName: player.name,
+          roundEnded: true,
+          winnerName: soleWinner ? soleWinner.name : ''
+        });
+      } else {
+        // Siguen al menos 2 personas: el juego continúa para ellas
+        player.hand = [];
+        io.to(room.id).emit('player_surrendered', {
+          playerName: player.name,
+          roundEnded: false,
+          remainingCount: activePlayers.length
+        });
+
+        // Si era el turno del que abandonó, pasar el turno
+        if (room.currentTurnSeat === player.seat) {
+          advanceTurnToNextActive(room);
+        } else {
+          broadcastRoom(room);
+        }
+      }
+    } else if (room.status === 'waiting') {
+      room.players = room.players.filter(p => p.socketId !== socket.id);
+      room.players.forEach((p, idx) => p.seat = idx);
+      broadcastRoom(room);
+    } else {
+      broadcastRoom(room);
+    }
+
+    socket.emit('leave_game_ack', {
+      playerName: player.name,
+      losses: player.losses
+    });
+  });
+
+  // Acabar de jugar todos los jugadores: genera el Balance Final
+  socket.on('finish_session', () => {
+    if (!currentRoomId) return;
+    const room = rooms.get(currentRoomId);
+    if (!room) return;
+
+    const balanceData = calculateSessionBalance(room);
+    room.status = 'session_finished';
+    room.finalBalance = balanceData;
+
+    io.to(room.id).emit('session_finished', balanceData);
+    broadcastRoom(room);
+  });
+
+  // Reiniciar sesión para jugar de nuevo
+  socket.on('restart_session', () => {
+    if (!currentRoomId) return;
+    const room = rooms.get(currentRoomId);
+    if (!room) return;
+
+    room.round = 0;
+    room.status = 'waiting';
+    room.board = [];
+    room.leftEnd = null;
+    room.rightEnd = null;
+    room.consecutivePasses = 0;
+    room.history = [];
+    room.finalBalance = null;
+    room.players.forEach(p => {
+      p.hand = [];
+      p.passesTotal = 0;
+      p.passesRound = 0;
+      p.wins = 0;
+      p.losses = 0;
+      p.hasLeft = false;
+      p.points = 0;
+      p.ready = p.isBot ? true : false;
+    });
+
+    io.to(room.id).emit('session_restarted');
     broadcastRoom(room);
   });
 

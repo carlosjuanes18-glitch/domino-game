@@ -75,6 +75,7 @@ function getSafeRoomData(room, requesterSocketId) {
     currentTurnSeat: room.currentTurnSeat,
     consecutivePasses: room.consecutivePasses,
     history: room.history,
+    finalBalance: room.finalBalance || null,
     players: room.players.map(p => ({
       id: p.id,
       name: p.name,
@@ -1012,15 +1013,27 @@ io.on('connection', (socket) => {
   });
 
   // Acabar de jugar todos los jugadores: genera el Balance Final
-  socket.on('finish_session', () => {
-    if (!currentRoomId) return;
-    const room = rooms.get(currentRoomId);
+  socket.on('finish_session', (data) => {
+    const rId = (data && data.roomId) || currentRoomId;
+    if (!rId) return;
+    const room = rooms.get(rId);
     if (!room) return;
 
     const balanceData = calculateSessionBalance(room);
     room.status = 'session_finished';
     room.finalBalance = balanceData;
 
+    // Emitir directamente al socket solicitante
+    socket.emit('session_finished', balanceData);
+
+    // Emitir a todos los jugadores conectados de la sala
+    room.players.forEach(p => {
+      if (!p.isBot && p.socketId) {
+        io.to(p.socketId).emit('session_finished', balanceData);
+      }
+    });
+
+    // Emitir por canal de sala y actualización general
     io.to(room.id).emit('session_finished', balanceData);
     broadcastRoom(room);
   });

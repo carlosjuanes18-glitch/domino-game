@@ -740,6 +740,11 @@ body {
 .modal-backdrop.hidden {
   opacity: 0;
   pointer-events: none;
+  display: none !important;
+}
+
+#finalBalanceModal {
+  z-index: 99999 !important;
 }
 
 .modal-card {

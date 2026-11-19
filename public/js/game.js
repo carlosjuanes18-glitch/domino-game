@@ -220,6 +220,12 @@
     roundNumHeader.textContent = room.round || 1;
     if (headerPlayerMode) headerPlayerMode.textContent = `${maxP}P`;
 
+    // Si la sesión de juego finalizó, mostrar el Balance Final directamente
+    if (room.status === 'session_finished' && room.finalBalance) {
+      renderFinalBalance(room.finalBalance);
+      return;
+    }
+
     // Actualizar extremos
     leftEndVal.textContent = room.leftEnd !== null ? room.leftEnd : '-';
     rightEndVal.textContent = room.rightEnd !== null ? room.rightEnd : '-';
@@ -858,7 +864,16 @@
     );
     if (ok) {
       window.soundManager.playTileClick();
-      socket.emit('finish_session');
+      // Ocultar modales previos inmediatamente
+      if (roundOverModal) {
+        roundOverModal.classList.add('hidden');
+        roundOverModal.style.display = 'none';
+      }
+      if (scoreboardModal) {
+        scoreboardModal.classList.add('hidden');
+        scoreboardModal.style.display = 'none';
+      }
+      socket.emit('finish_session', { roomId: currentRoom ? currentRoom.id : undefined });
     }
   }
 
@@ -903,7 +918,30 @@
 
   // Renderizar y mostrar el Balance Final (Imágenes 1 y 2)
   function renderFinalBalance(balance) {
+    if (!balance) return;
     currentSessionBalance = balance;
+
+    // Abrir inmediatamente el modal y cerrar los demás
+    try {
+      if (roundOverModal) {
+        roundOverModal.classList.add('hidden');
+        roundOverModal.style.display = 'none';
+      }
+      if (scoreboardModal) {
+        scoreboardModal.classList.add('hidden');
+        scoreboardModal.style.display = 'none';
+      }
+      if (lobbyModal) {
+        lobbyModal.classList.add('hidden');
+        lobbyModal.style.display = 'none';
+      }
+      if (finalBalanceModal) {
+        finalBalanceModal.classList.remove('hidden');
+        finalBalanceModal.style.display = 'flex';
+      }
+    } catch (e) {
+      console.warn(e);
+    }
 
     // Encabezado
     const roomCodeEl = document.getElementById('fbRoomCode');
@@ -1081,8 +1119,11 @@
 
     // Mostrar modal
     scoreboardModal.classList.add('hidden');
+    scoreboardModal.style.display = 'none';
     roundOverModal.classList.add('hidden');
+    roundOverModal.style.display = 'none';
     finalBalanceModal.classList.remove('hidden');
+    finalBalanceModal.style.display = 'flex';
   }
 
   // Socket: Recibir el Balance Final
@@ -1094,9 +1135,11 @@
   // Socket: Sesión Reiniciada
   socket.on('session_restarted', () => {
     finalBalanceModal.classList.add('hidden');
+    finalBalanceModal.style.display = 'none';
     scoreboardModal.classList.add('hidden');
     roundOverModal.classList.add('hidden');
     lobbyModal.classList.remove('hidden');
+    lobbyModal.style.display = 'flex';
     window.soundManager.playTileClick();
   });
 
@@ -1105,6 +1148,7 @@
   if (btnCloseFinalBalance) {
     btnCloseFinalBalance.addEventListener('click', () => {
       finalBalanceModal.classList.add('hidden');
+      finalBalanceModal.style.display = 'none';
     });
   }
 

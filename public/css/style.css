@@ -1168,6 +1168,16 @@ body {
   color: #94a3b8;
 }
 
+/* Tarjeta Destacada de Pago en Pesos */
+#fbTotalPaymentCard {
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.25);
+  border: 2px solid rgba(52, 211, 153, 0.8) !important;
+}
+
+#fbPaymentHeadline {
+  text-shadow: 0 0 12px rgba(251, 191, 36, 0.4);
+}
+
 /* ============================================== */
 /* ESTILOS PARA IMPRESIÓN OFICIAL EN PDF */
 /* ============================================== */
@@ -1244,6 +1254,24 @@ body {
   #printableBalanceReport .bg-amber-950 {
     background: #ffffff !important;
     border: 1px solid #94a3b8 !important;
+  }
+
+  #fbTotalPaymentCard {
+    background: #f8fafc !important;
+    border: 2px solid #047857 !important;
+    color: #111827 !important;
+    box-shadow: none !important;
+  }
+
+  #fbTotalPaymentCard #fbPaymentHeadline {
+    color: #064e3b !important;
+    font-size: 14pt !important;
+    font-weight: 900 !important;
+  }
+
+  #fbTotalPaymentCard #fbPaymentBreakdownText {
+    color: #1e293b !important;
+    font-size: 9.5pt !important;
   }
 
   .balance-table,

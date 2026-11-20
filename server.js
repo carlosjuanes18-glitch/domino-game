@@ -500,7 +500,8 @@ function handleRoundEnd(room, outcome) {
 }
 
 function calculateSessionBalance(room) {
-  const penaltyPerPass = room.penaltyPerPass || 1;
+  const gameRate = 5; // Cada juego vale 5 pesos
+  const penaltyPerPass = room.penaltyPerPass || 1; // Cada pase vale 1 peso
   const players = room.players.map(p => ({
     id: p.id,
     name: p.name,
@@ -524,30 +525,29 @@ function calculateSessionBalance(room) {
   const champion = rankedByWins[0];
   const isDraw = rankedByWins.length > 1 && rankedByWins[0].wins === rankedByWins[1].wins && rankedByWins[0].wins > 0;
 
-  // Diferencias de juegos ganados (según Nota de Imagen 2)
-  // "por ejemplo Carlos gano 15 veces y Adela gano 8 veces -> Carlos por 7 juegos"
+  // Diferencias de juegos ganados (cada juego ganado de diferencia vale $5 pesos)
   const winDifferences = [];
   for (let i = 0; i < rankedByWins.length; i++) {
     for (let j = i + 1; j < rankedByWins.length; j++) {
       const pA = rankedByWins[i];
       const pB = rankedByWins[j];
       const diff = pA.wins - pB.wins;
+      const money = diff * gameRate;
       winDifferences.push({
         leader: pA.name,
         follower: pB.name,
         leaderWins: pA.wins,
         followerWins: pB.wins,
         diffWins: diff,
+        amount: money,
         summaryText: diff > 0
-          ? `${pA.name} superó a ${pB.name} por ${diff} juego(s) (${pA.wins} vs ${pB.wins} victorias)`
-          : `${pA.name} y ${pB.name} empataron con ${pA.wins} victoria(s)`
+          ? `${pA.name} superó a ${pB.name} por ${diff} juego(s) (${pA.wins} vs ${pB.wins}) ➔ $${money} pesos por victorias ($5 c/u)`
+          : `${pA.name} y ${pB.name} empataron con ${pA.wins} victoria(s) ($0 pesos)`
       });
     }
   }
 
-  // 2. Balance de Pasos y Dinero Extra (según Nota de Imagen 1)
-  // "la persona que 'pasó' menos recibira dinero extra de la persona que mas paso.
-  // ejemplo Mary 'pasó' 5 veces, Carlo 'pasó' 3 veces -> Carlo recibe dinero extra 2 pesos de Mary"
+  // 2. Balance de Pasos y Dinero Extra (cada pase de diferencia vale $1 peso)
   const rankedByPasses = [...players].sort((a, b) => a.passesTotal - b.passesTotal);
   const minPassPlayer = rankedByPasses[0];
   const maxPassPlayer = rankedByPasses[rankedByPasses.length - 1];
@@ -567,7 +567,7 @@ function calculateSessionBalance(room) {
         diffPasses: diff,
         amount: extraMoney,
         summaryText: diff > 0
-          ? `${p1.name} recibe dinero extra de $${extraMoney} de ${p2.name} (diferencia de ${diff} pasos menos)`
+          ? `${p1.name} recibe $${extraMoney} pesos de ${p2.name} (diferencia de ${diff} paso(s) menos a $${penaltyPerPass} c/u)`
           : `Ambos jugadores pasaron la misma cantidad de veces (${p1.passesTotal} pasos)`
       });
     } else {
@@ -583,35 +583,134 @@ function calculateSessionBalance(room) {
           diffPasses: diff,
           amount: amount,
           summaryText: diff > 0
-            ? `${minPassPlayer.name} recibe $${amount} de ${pMore.name} (${pMore.passesTotal} vs ${minPassPlayer.passesTotal} pasos, dif: ${diff})`
+            ? `${minPassPlayer.name} recibe $${amount} pesos de ${pMore.name} (${pMore.passesTotal} vs ${minPassPlayer.passesTotal} pasos, dif: ${diff} a $${penaltyPerPass} c/u)`
             : `${minPassPlayer.name} y ${pMore.name} empataron en pasos (${minPassPlayer.passesTotal})`
         });
       }
     }
   }
 
-  // 3. Resumen financiero total consolidado
+  // 3. Resumen financiero total consolidado (Juegos $5 pesos + Pasos $1 peso)
   const netFinancialSummary = players.map(p => {
-    let passNet = 0;
-    passSettlements.forEach(s => {
-      if (s.receiver === p.name) passNet += s.amount;
-      if (s.payer === p.name) passNet -= s.amount;
+    let winNet = 0;
+    players.forEach(other => {
+      if (other.name !== p.name) {
+        winNet += (p.wins - other.wins) * gameRate;
+      }
     });
+
+    let passNet = 0;
+    players.forEach(other => {
+      if (other.name !== p.name) {
+        passNet += (other.passesTotal - p.passesTotal) * penaltyPerPass;
+      }
+    });
+
+    const grandTotal = winNet + passNet;
+
     return {
       name: p.name,
       avatar: p.avatar,
       wins: p.wins,
       losses: p.losses,
       passesTotal: p.passesTotal,
-      passNetBalance: passNet,
-      points: p.points
+      points: p.points,
+      winNet,
+      passNet,
+      grandTotal
     };
   });
+
+  // 4. Instrucción Directa y Definitiva de Pago en Pesos:
+  // "que diga la persona que tiene que pagarle la cantidad que se acumuló a la otra persona en pesos"
+  const finalPayments = [];
+  let primaryPaymentHeadline = '';
+  let primaryPaymentBreakdown = '';
+
+  if (players.length === 2) {
+    const pA = netFinancialSummary[0];
+    const pB = netFinancialSummary[1];
+    if (pA.grandTotal > pB.grandTotal) {
+      // pB le paga a pA
+      const totalAmount = pA.grandTotal;
+      const winPart = (pA.wins - pB.wins) * gameRate;
+      const passPart = (pB.passesTotal - pA.passesTotal) * penaltyPerPass;
+      primaryPaymentHeadline = `${pB.name} debe pagarle $${totalAmount} pesos a ${pA.name}`;
+      primaryPaymentBreakdown = `Desglose: $${winPart} pesos por ${pA.wins - pB.wins} juego(s) ganados de ventaja ($5 c/u) + $${passPart} pesos por ${pB.passesTotal - pA.passesTotal} paso(s) de diferencia ($1 c/u)`;
+      finalPayments.push({
+        payer: pB.name,
+        receiver: pA.name,
+        amount: totalAmount,
+        winPart,
+        passPart,
+        summaryText: primaryPaymentHeadline,
+        breakdownText: primaryPaymentBreakdown
+      });
+    } else if (pB.grandTotal > pA.grandTotal) {
+      // pA le paga a pB
+      const totalAmount = pB.grandTotal;
+      const winPart = (pB.wins - pA.wins) * gameRate;
+      const passPart = (pA.passesTotal - pB.passesTotal) * penaltyPerPass;
+      primaryPaymentHeadline = `${pA.name} debe pagarle $${totalAmount} pesos a ${pB.name}`;
+      primaryPaymentBreakdown = `Desglose: $${winPart} pesos por ${pB.wins - pA.wins} juego(s) ganados de ventaja ($5 c/u) + $${passPart} pesos por ${pA.passesTotal - pB.passesTotal} paso(s) de diferencia ($1 c/u)`;
+      finalPayments.push({
+        payer: pA.name,
+        receiver: pB.name,
+        amount: totalAmount,
+        winPart,
+        passPart,
+        summaryText: primaryPaymentHeadline,
+        breakdownText: primaryPaymentBreakdown
+      });
+    } else {
+      primaryPaymentHeadline = `Ambos jugadores quedaron a mano ($0 pesos). ¡Empate total!`;
+      primaryPaymentBreakdown = `(Juegos: ${pA.wins} vs ${pB.wins} | Pasos: ${pA.passesTotal} vs ${pB.passesTotal})`;
+      finalPayments.push({
+        payer: 'Nadie',
+        receiver: 'Nadie',
+        amount: 0,
+        summaryText: primaryPaymentHeadline,
+        breakdownText: primaryPaymentBreakdown
+      });
+    }
+  } else {
+    // Para 3 o 4 jugadores
+    const debtors = netFinancialSummary.filter(p => p.grandTotal < 0).map(p => ({ ...p, owe: Math.abs(p.grandTotal) }));
+    const creditors = netFinancialSummary.filter(p => p.grandTotal > 0).map(p => ({ ...p, claim: p.grandTotal }));
+
+    let cIdx = 0;
+    debtors.forEach(d => {
+      while (d.owe > 0 && cIdx < creditors.length) {
+        const c = creditors[cIdx];
+        const pay = Math.min(d.owe, c.claim);
+        if (pay > 0) {
+          finalPayments.push({
+            payer: d.name,
+            receiver: c.name,
+            amount: pay,
+            summaryText: `${d.name} debe pagarle $${pay} pesos a ${c.name}`
+          });
+          d.owe -= pay;
+          c.claim -= pay;
+        }
+        if (c.claim === 0) cIdx++;
+      }
+    });
+
+    if (finalPayments.length > 0) {
+      primaryPaymentHeadline = finalPayments.map(fp => fp.summaryText).join(' • ');
+      primaryPaymentBreakdown = `(Valores de liquidación: Cada juego vale $${gameRate} pesos | Cada pase vale $${penaltyPerPass} peso)`;
+    } else {
+      primaryPaymentHeadline = 'Todos los jugadores terminaron a mano ($0 pesos).';
+      primaryPaymentBreakdown = '';
+    }
+  }
 
   return {
     roomId: room.id,
     finishedAt: new Date().toLocaleString(),
     totalRounds: room.round,
+    gameRate,
     penaltyPerPass,
     champion: champion ? champion.name : 'Nadie',
     isDraw,
@@ -620,6 +719,9 @@ function calculateSessionBalance(room) {
     winDifferences,
     passSettlements,
     netFinancialSummary,
+    finalPayments,
+    primaryPaymentHeadline,
+    primaryPaymentBreakdown,
     history: (room.history && room.history.length > 0)
       ? room.history
       : (room.round > 0 ? [{

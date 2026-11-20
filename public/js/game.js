@@ -1257,7 +1257,17 @@
       }
     }
 
-    // 1. Tabla de Victorias
+    // Gran Tarjeta de Liquidación y Pago en Pesos (Juegos $5 + Pasos $1)
+    const paymentHeadlineEl = document.getElementById('fbPaymentHeadline');
+    if (paymentHeadlineEl) {
+      paymentHeadlineEl.textContent = balance.primaryPaymentHeadline || '---';
+    }
+    const paymentBreakdownEl = document.getElementById('fbPaymentBreakdownText');
+    if (paymentBreakdownEl) {
+      paymentBreakdownEl.textContent = balance.primaryPaymentBreakdown || '';
+    }
+
+    // 1. Tabla de Victorias ($5 c/u)
     const winTableEl = document.getElementById('fbWinTable');
     if (winTableEl && balance.rankedByWins) {
       let html = `
@@ -1290,7 +1300,7 @@
       winTableEl.innerHTML = html;
     }
 
-    // Lista de Diferencias de Victorias (Imagen 2)
+    // Lista de Diferencias de Victorias ($5 c/u)
     const winDiffEl = document.getElementById('fbWinDifferencesList');
     if (winDiffEl) {
       if (balance.winDifferences && balance.winDifferences.length > 0) {
@@ -1305,7 +1315,7 @@
       }
     }
 
-    // 2. Tabla de Pasos y Penalizaciones (Imagen 1)
+    // 2. Tabla de Pasos y Penalizaciones ($1 c/u)
     const penaltyRateEl = document.getElementById('fbPenaltyRate');
     if (penaltyRateEl) penaltyRateEl.textContent = balance.penaltyPerPass || 1;
 
@@ -1318,7 +1328,7 @@
               <th>Posición</th>
               <th>Jugador</th>
               <th>Pasos Totales</th>
-              <th>Aportación ($)</th>
+              <th>Aportación ($1 c/u)</th>
             </tr>
           </thead>
           <tbody>
@@ -1339,7 +1349,7 @@
       passTableEl.innerHTML = html;
     }
 
-    // Liquidación de Dinero Extra por Pasos (Imagen 1)
+    // Liquidación de Dinero Extra por Pasos ($1 c/u)
     const passSetEl = document.getElementById('fbPassSettlementsList');
     if (passSetEl) {
       if (balance.passSettlements && balance.passSettlements.length > 0) {
@@ -1354,7 +1364,7 @@
       }
     }
 
-    // 3. Resumen y Saldo Neto Final
+    // 3. Liquidación Total y Saldo Neto en Pesos (Juegos $5 + Pasos $1)
     const netTableEl = document.getElementById('fbNetTable');
     if (netTableEl && balance.netFinancialSummary) {
       let html = `
@@ -1362,27 +1372,70 @@
           <thead>
             <tr>
               <th>Jugador</th>
-              <th>Victorias</th>
+              <th>Juegos</th>
               <th>Pasos</th>
-              <th>Liquidación de Pasos</th>
+              <th>Por Juegos ($5 c/u)</th>
+              <th>Por Pasos ($1 c/u)</th>
+              <th>Total Neto ($)</th>
+              <th>Estado</th>
             </tr>
           </thead>
           <tbody>
       `;
       balance.netFinancialSummary.forEach(p => {
-        const netColor = p.passNetBalance > 0 ? 'text-emerald-400' : (p.passNetBalance < 0 ? 'text-rose-400' : 'text-slate-300');
-        const netSign = p.passNetBalance > 0 ? `+ $${p.passNetBalance} (Recibe)` : (p.passNetBalance < 0 ? `- $${Math.abs(p.passNetBalance)} (Paga)` : '$0 (Tablas)');
+        const winPart = (typeof p.winNet === 'number') ? p.winNet : 0;
+        const passPart = (typeof p.passNet === 'number') ? p.passNet : (p.passNetBalance || 0);
+        const total = (typeof p.grandTotal === 'number') ? p.grandTotal : (winPart + passPart);
+
+        const winSign = winPart > 0 ? `+ $${winPart}` : (winPart < 0 ? `- $${Math.abs(winPart)}` : '$0');
+        const passSign = passPart > 0 ? `+ $${passPart}` : (passPart < 0 ? `- $${Math.abs(passPart)}` : '$0');
+        
+        let statusTag = '';
+        let totalColor = 'text-slate-300';
+        if (total > 0) {
+          totalColor = 'text-emerald-400';
+          statusTag = `<span class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 font-extrabold text-[10px] border border-emerald-500/40">🟢 COBRA</span>`;
+        } else if (total < 0) {
+          totalColor = 'text-rose-400';
+          statusTag = `<span class="px-2 py-0.5 rounded bg-rose-950 text-rose-300 font-extrabold text-[10px] border border-rose-500/40">🔴 PAGA</span>`;
+        } else {
+          statusTag = `<span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-bold text-[10px]">⚪ A MANO</span>`;
+        }
+
+        const totalDisplay = total > 0 ? `+ $${total} pesos` : (total < 0 ? `- $${Math.abs(total)} pesos` : '$0 pesos');
+
         html += `
           <tr>
             <td><strong>${p.name}</strong></td>
             <td class="text-amber-300 font-black">${p.wins}</td>
             <td class="text-slate-300">${p.passesTotal}</td>
-            <td class="${netColor} font-black">${netSign}</td>
+            <td class="${winPart >= 0 ? 'text-amber-300' : 'text-rose-400'} font-bold">${winSign}</td>
+            <td class="${passPart >= 0 ? 'text-emerald-300' : 'text-rose-400'} font-bold">${passSign}</td>
+            <td class="${totalColor} font-black text-sm">${totalDisplay}</td>
+            <td>${statusTag}</td>
           </tr>
         `;
       });
       html += `</tbody></table>`;
       netTableEl.innerHTML = html;
+    }
+
+    // Lista de Pagos Directos en Pesos
+    const finalPaymentsEl = document.getElementById('fbFinalPaymentsList');
+    if (finalPaymentsEl) {
+      if (balance.finalPayments && balance.finalPayments.length > 0) {
+        finalPaymentsEl.innerHTML = balance.finalPayments.map(p => `
+          <div class="flex flex-col gap-1 py-2 border-b border-cyan-800/40 last:border-none">
+            <div class="flex items-center gap-2">
+              <span class="text-amber-400 font-black text-base">💵</span>
+              <span class="text-sm font-extrabold text-amber-200">${p.summaryText}</span>
+            </div>
+            ${p.breakdownText ? `<div class="text-[11px] text-slate-400 pl-6">${p.breakdownText}</div>` : ''}
+          </div>
+        `).join('');
+      } else {
+        finalPaymentsEl.innerHTML = '<div class="text-slate-400">Todos los jugadores quedaron a mano ($0 pesos).</div>';
+      }
     }
 
     // 4. Planilla y Desglose Detallado Partida por Partida (En cada partida)
@@ -1593,22 +1646,35 @@
       let text = `🏆 *BALANCE FINAL DE DOMINÓ (BLOQUEO)* 🀫\n`;
       text += `📅 Mesa: ${b.roomId} | Fecha: ${b.finishedAt} | Rondas: ${b.totalRounds}\n\n`;
       text += `👑 *Campeón de la Mesa:* ${b.champion}\n\n`;
-      text += `📊 *Diferencias de Victorias (Juegos Ganados):*\n`;
+      
+      text += `💵 *TOTAL ACUMULADO A PAGAR EN PESOS:*\n`;
+      if (b.primaryPaymentHeadline) {
+        text += `👉 *${b.primaryPaymentHeadline}*\n`;
+      }
+      if (b.primaryPaymentBreakdown) {
+        text += `   _${b.primaryPaymentBreakdown}_\n`;
+      }
+      text += `\n`;
+
+      text += `📊 *Diferencias de Victorias (Juegos $5 c/u):*\n`;
       if (b.winDifferences && b.winDifferences.length > 0) {
         b.winDifferences.forEach(d => {
           text += `• ${d.summaryText}\n`;
         });
       }
-      text += `\n💰 *Liquidación de Dinero Extra por Pasos ($${b.penaltyPerPass} c/u):*\n`;
+      text += `\n💰 *Liquidación por Pasos ($1 c/u):*\n`;
       if (b.passSettlements && b.passSettlements.length > 0) {
         b.passSettlements.forEach(s => {
           text += `• ${s.summaryText}\n`;
         });
       }
-      text += `\n⚖️ *Balance Neto Final:*\n`;
+      text += `\n⚖️ *Liquidación Total y Saldo Neto en Pesos:*\n`;
       b.netFinancialSummary.forEach(p => {
-        const sign = p.passNetBalance > 0 ? `+ $${p.passNetBalance} (Recibe)` : (p.passNetBalance < 0 ? `- $${Math.abs(p.passNetBalance)} (Paga)` : `$0`);
-        text += `• ${p.name}: ${p.wins} victorias | ${p.passesTotal} pasos | Saldo: ${sign}\n`;
+        const winPart = (typeof p.winNet === 'number') ? p.winNet : 0;
+        const passPart = (typeof p.passNet === 'number') ? p.passNet : (p.passNetBalance || 0);
+        const total = (typeof p.grandTotal === 'number') ? p.grandTotal : (winPart + passPart);
+        const status = total > 0 ? `🟢 COBRA $${total} pesos` : (total < 0 ? `🔴 PAGA $${Math.abs(total)} pesos` : `⚪ A MANO ($0 pesos)`);
+        text += `• *${p.name}*: ${p.wins} victorias ($${winPart >= 0 ? '+' : ''}${winPart}) | ${p.passesTotal} pasos ($${passPart >= 0 ? '+' : ''}${passPart}) ➔ *${status}*\n`;
       });
 
       if (b.history && b.history.length > 0) {

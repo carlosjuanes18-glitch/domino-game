@@ -48,7 +48,7 @@ class SoundManager {
       sound.volume = volume;
       const p = sound.play();
       if (p !== undefined) {
-        p.catch(() => {});
+        p.catch(() => { });
       }
     } catch (e) {
       console.warn('Audio play error:', e);

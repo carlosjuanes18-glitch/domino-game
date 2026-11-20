@@ -11,7 +11,7 @@
   <!-- Socket.io -->
   <script src="/socket.io/socket.io.js"></script>
   <!-- Estilos personalizados -->
-  <link rel="stylesheet" href="/css/style.css?v=5.2">
+  <link rel="stylesheet" href="/css/style.css?v=5.3">
 </head>
 
 <body>
@@ -520,7 +520,7 @@
 
         <!-- Tarjeta de Campeón y Diferencia de Victorias (IMAGEN 2) -->
         <div
-          class="bg-gradient-to-r from-amber-950/70 via-slate-900 to-amber-950/70 border-2 border-amber-500/60 rounded-2xl p-4 mb-4 text-center shadow-lg">
+          class="bg-gradient-to-r from-amber-950/70 via-slate-900 to-amber-950/70 border-2 border-amber-500/60 rounded-2xl p-4 mb-3 text-center shadow-lg">
           <div class="text-[11px] font-extrabold text-amber-300 uppercase tracking-widest mb-1">👑 Ganador de Más
             Partidas</div>
           <div id="fbChampionName" class="text-2xl sm:text-3xl font-black text-yellow-300 mb-2">---</div>
@@ -530,22 +530,37 @@
           </div>
         </div>
 
-        <!-- SECCIÓN 1: Balance de Victorias y Comparativa (IMAGEN 2) -->
+        <!-- GRAN TARJETA DE LIQUIDACIÓN Y PAGO EN PESOS (Juegos $5 + Pasos $1) -->
+        <div id="fbTotalPaymentCard"
+          class="bg-gradient-to-r from-emerald-950 via-slate-900 to-emerald-950 border-2 border-emerald-400 rounded-2xl p-4 mb-4 text-center shadow-xl">
+          <div class="text-[11px] font-black text-emerald-400 uppercase tracking-widest mb-1">
+            💵 TOTAL ACUMULADO A PAGAR EN PESOS (Juegos $5 + Pasos $1)
+          </div>
+          <div id="fbPaymentHeadline" class="text-xl sm:text-2xl font-black text-amber-300 my-1.5">
+            ---
+          </div>
+          <div id="fbPaymentBreakdownText" class="text-xs sm:text-sm font-semibold text-slate-300">
+            ---
+          </div>
+        </div>
+
+        <!-- SECCIÓN 1: Balance de Victorias y Comparativa ($5 por juego ganado) -->
         <div class="bg-slate-900/90 border border-slate-700/80 rounded-xl p-3.5 mb-4">
-          <div class="text-xs font-black text-emerald-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-            <span>📊</span> 1. Balance de Victorias (Juegos Ganados):
+          <div class="text-xs font-black text-emerald-400 uppercase tracking-wider mb-2 flex items-center justify-between">
+            <span class="flex items-center gap-1.5"><span>📊</span> 1. Balance de Victorias (Juegos Ganados):</span>
+            <span class="text-[10px] text-amber-300 font-bold">$5 por juego de diferencia</span>
           </div>
           <div id="fbWinTable" class="overflow-x-auto mb-2.5">
             <!-- Tabla de Victorias -->
           </div>
-          <div class="text-[11px] font-bold text-slate-300 mb-1">Diferencia de juegos entre participantes:</div>
+          <div class="text-[11px] font-bold text-slate-300 mb-1">Diferencia de juegos y dinero acumulado ($5 c/u):</div>
           <div id="fbWinDifferencesList"
             class="flex flex-col gap-1.5 text-xs text-slate-200 bg-slate-950/60 p-2.5 rounded-lg border border-slate-800">
             <!-- Diferencias de juegos ganados -->
           </div>
         </div>
 
-        <!-- SECCIÓN 2: Balance de Pasos y Dinero Extra (IMAGEN 1) -->
+        <!-- SECCIÓN 2: Balance de Pasos y Dinero Extra ($1 por paso) -->
         <div class="bg-slate-900/90 border border-slate-700/80 rounded-xl p-3.5 mb-4">
           <div
             class="text-xs font-black text-amber-400 uppercase tracking-wider mb-2 flex items-center justify-between">
@@ -564,13 +579,19 @@
           </div>
         </div>
 
-        <!-- SECCIÓN 3: Liquidación Final Neta -->
+        <!-- SECCIÓN 3: Liquidación Final Neta Consolidada -->
         <div class="bg-slate-900/90 border border-slate-700/80 rounded-xl p-3.5 mb-4">
-          <div class="text-xs font-black text-cyan-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-            <span>⚖️</span> 3. Resumen y Balance Neto Final:
+          <div class="text-xs font-black text-cyan-400 uppercase tracking-wider mb-2 flex items-center justify-between">
+            <span class="flex items-center gap-1.5"><span>⚖️</span> 3. Liquidación Total y Saldo Neto en Pesos:</span>
+            <span class="text-[10px] text-amber-300 font-bold">Juegos $5 + Pasos $1</span>
           </div>
-          <div id="fbNetTable">
+          <div id="fbNetTable" class="overflow-x-auto mb-3">
             <!-- Tabla de saldo neto -->
+          </div>
+          <div class="text-[11px] font-bold text-slate-300 mb-1.5">Instrucción oficial de pago en pesos:</div>
+          <div id="fbFinalPaymentsList"
+            class="flex flex-col gap-2 text-xs text-emerald-200 bg-emerald-950/50 p-3 rounded-lg border border-emerald-500/60 font-bold">
+            <!-- Pagos directos -->
           </div>
         </div>
 
@@ -637,10 +658,10 @@
   </div>
 
   <!-- Scripts -->
-  <script src="/js/avatars.js?v=5.2"></script>
-  <script src="/js/audio.js?v=5.2"></script>
-  <script src="/js/domino-renderer.js?v=5.2"></script>
-  <script src="/js/game.js?v=5.2"></script>
+  <script src="/js/avatars.js?v=5.3"></script>
+  <script src="/js/audio.js?v=5.3"></script>
+  <script src="/js/domino-renderer.js?v=5.3"></script>
+  <script src="/js/game.js?v=5.3"></script>
 </body>
 
 </html>

@@ -1215,4 +1215,166 @@ body {
   .round-detail-card * {
     color: #111827 !important;
   }
+
+  .print-official-credit {
+    display: block !important;
+    margin-top: 20px !important;
+    border-top: 1.5px solid #000000 !important;
+    padding-top: 8px !important;
+    text-align: center !important;
+  }
+
+  .print-official-credit .neon-credit-banner {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+
+  .print-official-credit .neon-author {
+    color: #000000 !important;
+    text-shadow: none !important;
+    font-size: 11pt !important;
+    font-weight: 900 !important;
+    letter-spacing: 1px !important;
+  }
+
+  .print-official-credit .neon-location {
+    color: #334155 !important;
+    text-shadow: none !important;
+    font-size: 9pt !important;
+    font-weight: 700 !important;
+    letter-spacing: 2px !important;
+  }
+}
+
+/* ========================================= */
+/* CRÉDITOS Y SELLO NEÓN FOSFORESCENTE       */
+/* ========================================= */
+.neon-credit-banner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin: 10px auto 2px auto;
+  padding: 6px 16px;
+  background: rgba(3, 22, 16, 0.82);
+  border: 1.5px solid #39ff14;
+  border-radius: 14px;
+  box-shadow: 
+    0 0 10px rgba(57, 255, 20, 0.45),
+    0 0 25px rgba(57, 255, 20, 0.2),
+    inset 0 0 10px rgba(57, 255, 20, 0.15);
+  backdrop-filter: blur(6px);
+  width: fit-content;
+  max-width: 95%;
+  pointer-events: none;
+  animation: neonBorderPulse 3s infinite alternate ease-in-out;
+}
+
+.neon-author {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 0.82rem;
+  font-weight: 900;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  color: #39ff14; /* Verde neón fosforescente brillante */
+  text-shadow:
+    0 0 4px #39ff14,
+    0 0 10px #39ff14,
+    0 0 20px #00ff88,
+    0 0 35px #00e676;
+  line-height: 1.2;
+  animation: neonTextPulse 2.8s infinite alternate ease-in-out;
+}
+
+.neon-location {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 0.70rem;
+  font-weight: 800;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: #00ffff; /* Cian neón fosforescente */
+  text-shadow:
+    0 0 3px #00ffff,
+    0 0 8px #00e5ff,
+    0 0 18px #00b0ff,
+    0 0 30px #0084ff;
+  line-height: 1.2;
+  margin-top: 2px;
+}
+
+/* Sello flotante permanente en la esquina de la mesa de juego */
+.table-neon-badge {
+  position: absolute;
+  bottom: 8px;
+  right: 10px;
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+  padding: 4px 10px;
+  background: rgba(2, 20, 14, 0.75);
+  border: 1px solid rgba(57, 255, 20, 0.6);
+  border-radius: 10px;
+  box-shadow: 
+    0 0 8px rgba(57, 255, 20, 0.35),
+    inset 0 0 6px rgba(0, 255, 255, 0.15);
+  backdrop-filter: blur(4px);
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.table-neon-badge .neon-author {
+  font-size: 0.68rem;
+  letter-spacing: 1px;
+}
+
+.table-neon-badge .neon-location {
+  font-size: 0.58rem;
+  letter-spacing: 1.8px;
+}
+
+@keyframes neonTextPulse {
+  0% {
+    text-shadow:
+      0 0 3px #39ff14,
+      0 0 8px #39ff14,
+      0 0 16px #00ffaa,
+      0 0 25px #00e676;
+    filter: brightness(0.98);
+  }
+  50% {
+    text-shadow:
+      0 0 6px #39ff14,
+      0 0 14px #39ff14,
+      0 0 28px #00ff88,
+      0 0 45px #39ff14,
+      0 0 60px #00e676;
+    filter: brightness(1.15);
+  }
+  100% {
+    text-shadow:
+      0 0 4px #39ff14,
+      0 0 10px #39ff14,
+      0 0 20px #00ffaa,
+      0 0 32px #00e676;
+    filter: brightness(1.02);
+  }
+}
+
+@keyframes neonBorderPulse {
+  0% {
+    border-color: rgba(57, 255, 20, 0.45);
+    box-shadow: 0 0 8px rgba(57, 255, 20, 0.3), inset 0 0 6px rgba(0, 255, 204, 0.15);
+  }
+  50% {
+    border-color: rgba(57, 255, 20, 0.9);
+    box-shadow: 0 0 16px rgba(57, 255, 20, 0.6), inset 0 0 12px rgba(0, 255, 204, 0.3);
+  }
+  100% {
+    border-color: rgba(57, 255, 20, 0.55);
+    box-shadow: 0 0 10px rgba(57, 255, 20, 0.35), inset 0 0 8px rgba(0, 255, 204, 0.2);
+  }
 }

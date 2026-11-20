@@ -1465,6 +1465,8 @@
         });
       }
 
+      text += `\n✨ *Creado por Von Carloo MC* - Veracruz, México 🇲🇽\n`;
+
       navigator.clipboard.writeText(text).then(() => {
         alert('¡Resumen de Balance copiado al portapapeles!\n\nPuedes pegarlo directamente en WhatsApp.');
       }).catch(() => {

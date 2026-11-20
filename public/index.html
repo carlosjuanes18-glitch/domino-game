@@ -11,7 +11,7 @@
   <!-- Socket.io -->
   <script src="/socket.io/socket.io.js"></script>
   <!-- Estilos personalizados -->
-  <link rel="stylesheet" href="/css/style.css?v=4.6">
+  <link rel="stylesheet" href="/css/style.css?v=4.7">
 </head>
 
 <body>
@@ -135,6 +135,12 @@
       <div id="boardContainer" class="board-container">
         <!-- Renderizado dinámico de fichas -->
       </div>
+
+      <!-- Sello Neón Fosforescente de Autoría en la Mesa -->
+      <div class="table-neon-badge">
+        <div class="neon-author">Creado por Von Carloo MC</div>
+        <div class="neon-location">Veracruz, México</div>
+      </div>
     </main>
 
     <!-- Rack de Mano del Jugador (Inferior) -->
@@ -237,6 +243,12 @@
         class="secondary-btn w-full !py-2.5 mt-2.5 !bg-emerald-950/70 !border-emerald-500/50 !text-emerald-300 font-bold text-xs flex items-center justify-center gap-2">
         <span>✨ Crear Mesa Nueva Limpia (Automática)</span>
       </button>
+
+      <!-- Sello Neón Fosforescente de Autoría -->
+      <div class="neon-credit-banner">
+        <div class="neon-author">Creado por Von Carloo MC</div>
+        <div class="neon-location">Veracruz, México</div>
+      </div>
     </div>
   </div>
 
@@ -330,6 +342,12 @@
           class="text-xs text-amber-300/80 hover:text-amber-300 underline font-semibold text-center mt-1 py-1">
           🔄 ¿Hay jugadores fantasma o quieres reiniciar la mesa? Toca aquí
         </button>
+      </div>
+
+      <!-- Sello Neón Fosforescente de Autoría -->
+      <div class="neon-credit-banner">
+        <div class="neon-author">Creado por Von Carloo MC</div>
+        <div class="neon-location">Veracruz, México</div>
       </div>
     </div>
   </div>
@@ -442,6 +460,12 @@
           class="secondary-btn !py-2.5 !text-xs !text-amber-300 !border-amber-500/50 font-bold">
           🏁 Acabar de Jugar (Cerrar Sesión y Ver Balance Final)
         </button>
+      </div>
+
+      <!-- Sello Neón Fosforescente de Autoría -->
+      <div class="neon-credit-banner">
+        <div class="neon-author">Creado por Von Carloo MC</div>
+        <div class="neon-location">Veracruz, México</div>
       </div>
     </div>
   </div>
@@ -561,6 +585,14 @@
             <!-- Firmas generadas dinámicamente -->
           </div>
         </div>
+
+        <!-- Sello Oficial Neón de Autoría (Visible en Pantalla y PDF) -->
+        <div class="print-official-credit text-center mt-6 pt-3 border-t border-slate-700/60">
+          <div class="neon-credit-banner">
+            <div class="neon-author">Creado por Von Carloo MC</div>
+            <div class="neon-location">Veracruz, México</div>
+          </div>
+        </div>
       </div>
 
       <!-- Barra de Botones de Acción (no se imprime en PDF) -->
@@ -584,10 +616,10 @@
   </div>
 
   <!-- Scripts -->
-  <script src="/js/avatars.js?v=4.6"></script>
-  <script src="/js/audio.js?v=4.6"></script>
-  <script src="/js/domino-renderer.js?v=4.6"></script>
-  <script src="/js/game.js?v=4.6"></script>
+  <script src="/js/avatars.js?v=4.7"></script>
+  <script src="/js/audio.js?v=4.7"></script>
+  <script src="/js/domino-renderer.js?v=4.7"></script>
+  <script src="/js/game.js?v=4.7"></script>
 </body>
 
 </html>

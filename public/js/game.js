@@ -591,14 +591,19 @@
 
   // Botón de Paso
   passBtn.addEventListener('click', () => {
-    if (!latestRoomData || latestRoomData.currentTurnSeat !== mySeat) {
+    if (!currentRoom || currentRoom.currentTurnSeat !== mySeat) {
       showToast('⏳ Espera tu turno para jugar o pasar.');
       return;
     }
-    const myPlayer = latestRoomData.players ? latestRoomData.players.find(p => p.seat === mySeat) : null;
-    const playable = getPlayableTilesClient(myPlayer ? myPlayer.hand : [], latestRoomData.leftEnd, latestRoomData.rightEnd);
-    if (playable.length > 0) {
-      showToast('⚠️ Tienes fichas para jugar. En dominó no se puede pasar si tienes jugada.');
+    const myPlayer = currentRoom.players ? currentRoom.players.find(p => p.seat === mySeat) : null;
+    const hand = (myPlayer && myPlayer.hand) ? myPlayer.hand : [];
+    const canPlay = hand.some(t =>
+      currentRoom.leftEnd === null ||
+      t.left === currentRoom.leftEnd || t.right === currentRoom.leftEnd ||
+      t.left === currentRoom.rightEnd || t.right === currentRoom.rightEnd
+    );
+    if (canPlay) {
+      showToast('⚠️ Tienes fichas disponibles para jugar. En dominó no se puede pasar si tienes jugada.');
       return;
     }
     window.soundManager.playPassKnock();

@@ -175,7 +175,9 @@
   socket.on('joined_successfully', (data) => {
     mySeat = data.playerSeat;
     setupModal.classList.add('hidden');
+    setupModal.style.display = 'none';
     lobbyModal.classList.remove('hidden');
+    lobbyModal.style.display = 'flex';
   });
 
   // Botón Reclamar Anfitrión
@@ -217,6 +219,9 @@
   // Botón Comenzar Partida desde el Lobby
   document.getElementById('btnStartGame').addEventListener('click', () => {
     window.soundManager.playTileClick();
+    // Ocultar modal del lobby de inmediato para evitar que quede congelado en pantalla
+    lobbyModal.classList.add('hidden');
+    lobbyModal.style.display = 'none';
     socket.emit('start_game');
   });
 
@@ -262,9 +267,15 @@
     // Si estamos en la sala de espera (Lobby)
     if (room.status === 'waiting') {
       lobbyModal.classList.remove('hidden');
+      lobbyModal.style.display = 'flex';
+      setupModal.classList.add('hidden');
+      setupModal.style.display = 'none';
       updateLobbySeats(room);
     } else {
       lobbyModal.classList.add('hidden');
+      lobbyModal.style.display = 'none';
+      setupModal.classList.add('hidden');
+      setupModal.style.display = 'none';
     }
 
     // Actualizar Pods de Jugadores alrededor de la mesa

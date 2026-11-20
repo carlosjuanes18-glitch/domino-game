@@ -10,7 +10,8 @@ class SoundManager {
       laughter: new Audio('/audio/freesound_community-laughter3-43820.mp3'),
       scream: new Audio('/audio/freesound_community-terror-scream-grito-terror-101302.mp3'),
       no: new Audio('/audio/freesound_community-no-96018.mp3'),
-      failureTrumpet: new Audio('/audio/universfield-failure-trumpet-242645.mp3')
+      failureTrumpet: new Audio('/audio/universfield-failure-trumpet-242645.mp3'),
+      angry: new Audio('/audio/whatsapp-angry.mpeg')
     };
 
     // Precarga automática de audios
@@ -67,6 +68,11 @@ class SoundManager {
   // Grito de desesperación y terror para el emoji 😱 o 💀
   playScream() {
     this.playAudio('scream', 0.88);
+  }
+
+  // Audio de WhatsApp de Muy Enojado (😡 / 🤬)
+  playAngry() {
+    this.playAudio('angry', 0.95);
   }
 
   // Exclamación "¡No!" para "¡No llevo!" / 🚫

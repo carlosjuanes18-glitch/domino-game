@@ -11,7 +11,7 @@
   <!-- Socket.io -->
   <script src="/socket.io/socket.io.js"></script>
   <!-- Estilos personalizados -->
-  <link rel="stylesheet" href="/css/style.css?v=5.1">
+  <link rel="stylesheet" href="/css/style.css?v=5.2">
 </head>
 
 <body>
@@ -29,7 +29,9 @@
 
       <div class="header-actions">
         <!-- Indicador de Sala y Ronda (Tocar para sincronizar/destrabar) -->
-        <div id="btnSyncRoomHeader" class="bg-emerald-950/80 border border-emerald-600/40 rounded-lg px-2 py-1 text-center cursor-pointer active:scale-95 transition-transform" title="Toca aquí para sincronizar/destrabar la mesa">
+        <div id="btnSyncRoomHeader"
+          class="bg-emerald-950/80 border border-emerald-600/40 rounded-lg px-2 py-1 text-center cursor-pointer active:scale-95 transition-transform"
+          title="Toca aquí para sincronizar/destrabar la mesa">
           <div class="text-[9px] text-emerald-400 font-bold uppercase flex items-center justify-center gap-1">
             <span>Sala: <span id="roomCodeHeader">---</span></span>
             <span class="text-[9px] text-emerald-300 opacity-80">🔄</span>
@@ -190,10 +192,16 @@
         <div class="col-span-4 grid grid-cols-2 gap-1.5 pt-2 border-t border-slate-700/60">
           <button class="quick-phrase-btn secondary-btn !py-1 !text-[10px]" data-text="¡Dominó!">🀫 ¡Dominó!</button>
           <button class="quick-phrase-btn secondary-btn !py-1 !text-[10px]" data-text="¡Tranca!">🔒 ¡Tranca!</button>
-          <button class="quick-phrase-btn secondary-btn !py-1 !text-[10px]" data-text="¡No llevo!">🚫 ¡No llevo!</button>
-          <button class="quick-phrase-btn secondary-btn !py-1 !text-[10px]" data-text="¡Abran paso!">⚡ ¡Abran paso!</button>
-          <button class="quick-phrase-btn secondary-btn !py-1.5 !text-[10px] !bg-amber-950/80 !text-amber-300 !border-amber-500/50 font-bold" data-text="¡Te voy a volar la papada! 💣💥">💣 ¡Te voy a volar la papada!</button>
-          <button class="quick-phrase-btn secondary-btn !py-1.5 !text-[10px] !bg-rose-950/80 !text-rose-300 !border-rose-500/50 font-bold" data-text="¡Ya me volaste la papada! 🤯💥">🤯 ¡Ya me volaste la papada!</button>
+          <button class="quick-phrase-btn secondary-btn !py-1 !text-[10px]" data-text="¡No llevo!">🚫 ¡No
+            llevo!</button>
+          <button class="quick-phrase-btn secondary-btn !py-1 !text-[10px]" data-text="¡Abran paso!">⚡ ¡Abran
+            paso!</button>
+          <button
+            class="quick-phrase-btn secondary-btn !py-1.5 !text-[10px] !bg-amber-950/80 !text-amber-300 !border-amber-500/50 font-bold"
+            data-text="¡Te voy a volar la papada! 💣💥">💣 ¡Te voy a volar la papada!</button>
+          <button
+            class="quick-phrase-btn secondary-btn !py-1.5 !text-[10px] !bg-rose-950/80 !text-rose-300 !border-rose-500/50 font-bold"
+            data-text="¡Ya me volaste la papada! 🤯💥">🤯 ¡Ya me volaste la papada!</button>
         </div>
       </div>
     </footer>
@@ -629,10 +637,10 @@
   </div>
 
   <!-- Scripts -->
-  <script src="/js/avatars.js?v=5.1"></script>
-  <script src="/js/audio.js?v=5.1"></script>
-  <script src="/js/domino-renderer.js?v=5.1"></script>
-  <script src="/js/game.js?v=5.1"></script>
+  <script src="/js/avatars.js?v=5.2"></script>
+  <script src="/js/audio.js?v=5.2"></script>
+  <script src="/js/domino-renderer.js?v=5.2"></script>
+  <script src="/js/game.js?v=5.2"></script>
 </body>
 
 </html>

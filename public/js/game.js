@@ -913,7 +913,7 @@
     } else if (data.emoji === '😱' || data.emoji === '💀') {
       window.soundManager.playScream();
     } else if (data.emoji === '😡' || data.emoji === '🤬') {
-      window.soundManager.playNo();
+      window.soundManager.playAngry();
     } else if (data.emoji === '💣' || (data.text && data.text.includes('volar la papada'))) {
       window.soundManager.playScream();
     } else if (data.emoji === '🤯' || (data.text && data.text.includes('volaste la papada'))) {

@@ -3,6 +3,20 @@ class SoundManager {
   constructor() {
     this.ctx = null;
     this.muted = false;
+
+    // Archivos de audio reales personalizados
+    this.audioFiles = {
+      snareReveal: new Audio('/audio/snare-roll-reveal.v4.mp3'),
+      laughter: new Audio('/audio/freesound_community-laughter3-43820.mp3'),
+      scream: new Audio('/audio/freesound_community-terror-scream-grito-terror-101302.mp3'),
+      no: new Audio('/audio/freesound_community-no-96018.mp3'),
+      failureTrumpet: new Audio('/audio/universfield-failure-trumpet-242645.mp3')
+    };
+
+    // Precarga automática de audios
+    Object.values(this.audioFiles).forEach(a => {
+      a.preload = 'auto';
+    });
   }
 
   init() {
@@ -20,6 +34,49 @@ class SoundManager {
   toggleMute() {
     this.muted = !this.muted;
     return this.muted;
+  }
+
+  playAudio(key, volume = 0.9) {
+    if (this.muted) return;
+    this.init();
+    const sound = this.audioFiles[key];
+    if (!sound) return;
+    try {
+      sound.pause();
+      sound.currentTime = 0;
+      sound.volume = volume;
+      const p = sound.play();
+      if (p !== undefined) {
+        p.catch(() => {});
+      }
+    } catch (e) {
+      console.warn('Audio play error:', e);
+    }
+  }
+
+  // Redoble de tambor con revelación triunfal al cerrar el juego / final de sesión / tranca
+  playSnareRollReveal() {
+    this.playAudio('snareReveal', 0.95);
+  }
+
+  // Risas épicas para el emoji 😂
+  playLaughter() {
+    this.playAudio('laughter', 0.92);
+  }
+
+  // Grito de desesperación y terror para el emoji 😱 o 💀
+  playScream() {
+    this.playAudio('scream', 0.88);
+  }
+
+  // Exclamación "¡No!" para "¡No llevo!" / 🚫
+  playNo() {
+    this.playAudio('no', 0.85);
+  }
+
+  // Trompeta de derrota
+  playFailureTrumpet() {
+    this.playAudio('failureTrumpet', 0.85);
   }
 
   // Sonido de colocar ficha de dominó (impacto nítido de marfil/madera)

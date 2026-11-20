@@ -727,7 +727,11 @@
 
   // Final de Ronda / Dominó / Tranca
   socket.on('round_ended', (data) => {
-    window.soundManager.playWinFanfare();
+    if (data.outcome && data.outcome.type === 'tranca') {
+      window.soundManager.playSnareRollReveal();
+    } else {
+      window.soundManager.playWinFanfare();
+    }
     showRoundOverModal(data);
   });
 
@@ -891,7 +895,6 @@
       const emoji = btn.getAttribute('data-emoji');
       socket.emit('send_reaction', { emoji });
       emojiDrawer.classList.add('hidden');
-      window.soundManager.playPop();
     });
   });
 
@@ -900,16 +903,26 @@
       const text = btn.getAttribute('data-text');
       socket.emit('send_reaction', { text });
       emojiDrawer.classList.add('hidden');
-      window.soundManager.playPop();
     });
   });
 
   socket.on('reaction_received', (data) => {
-    window.soundManager.playPop();
+    // Sonidos temáticos según el emoji enviado
+    if (data.emoji === '😂') {
+      window.soundManager.playLaughter();
+    } else if (data.emoji === '😱' || data.emoji === '💀') {
+      window.soundManager.playScream();
+    } else if (data.text === '¡No llevo!' || data.emoji === '🚫') {
+      window.soundManager.playNo();
+    } else {
+      window.soundManager.playPop();
+    }
+
     triggerFloatingReaction(data.seat, data.emoji || data.text);
   });
 
   function triggerFloatingReaction(seat, content) {
+    if (!content) return;
     const maxP = (currentRoom && currentRoom.maxPlayers) ? currentRoom.maxPlayers : 4;
     let targetPos = 'south';
 
@@ -929,23 +942,66 @@
     }
 
     const pod = document.getElementById(`pod_${targetPos}`);
-    if (!pod) return;
+    const rect = pod ? pod.getBoundingClientRect() : {
+      left: window.innerWidth / 2,
+      top: window.innerHeight * 0.75,
+      width: 40
+    };
 
-    const reactionEl = document.createElement('div');
-    reactionEl.className = 'floating-reaction';
-    reactionEl.textContent = content;
+    const startX = rect.left + rect.width / 2;
+    const startY = rect.top + 10;
 
-    const rect = pod.getBoundingClientRect();
-    reactionEl.style.left = `${rect.left + rect.width / 2 - 20}px`;
-    reactionEl.style.top = `${rect.top - 10}px`;
+    // Detectar si es un emoji o una frase de texto
+    const isSingleEmoji = content.length <= 4 && !content.includes(' ');
 
-    document.body.appendChild(reactionEl);
+    if (isSingleEmoji) {
+      // Caravana de 7 emojis que recorren lentamente toda la pantalla (de abajo hacia arriba)
+      const count = 7;
+      for (let i = 0; i < count; i++) {
+        setTimeout(() => {
+          createSlowScreenEmoji(content, startX, startY, i);
+        }, i * 220);
+      }
+    } else {
+      // Frase de texto flotante destacada (¡Dominó!, ¡Tranca!, 🚫 ¡PASO!)
+      const badge = document.createElement('div');
+      badge.className = 'floating-phrase-badge';
+      badge.textContent = content;
+      badge.style.left = `${Math.max(80, Math.min(window.innerWidth - 80, startX))}px`;
+      badge.style.top = `${startY}px`;
+      document.body.appendChild(badge);
+
+      setTimeout(() => {
+        if (badge.parentNode) badge.parentNode.removeChild(badge);
+      }, 3600);
+    }
+  }
+
+  function createSlowScreenEmoji(emoji, startX, startY, index) {
+    const el = document.createElement('div');
+    el.className = 'slow-screen-emoji';
+    el.textContent = emoji;
+
+    const screenW = window.innerWidth;
+    const randomOffset = (Math.random() - 0.5) * (screenW * 0.45);
+    const posX = Math.max(25, Math.min(screenW - 65, startX + randomOffset));
+
+    // Variaciones de tamaño, deriva horizontal y viaje lento (5.2 a 7 segundos)
+    const size = 2.4 + Math.random() * 1.5;
+    const duration = 5.2 + Math.random() * 1.8;
+    const driftX = (Math.random() - 0.5) * 130;
+
+    el.style.left = `${posX}px`;
+    el.style.top = `${startY}px`;
+    el.style.fontSize = `${size}rem`;
+    el.style.setProperty('--drift-x', `${driftX}px`);
+    el.style.animationDuration = `${duration}s`;
+
+    document.body.appendChild(el);
 
     setTimeout(() => {
-      if (reactionEl.parentNode) {
-        reactionEl.parentNode.removeChild(reactionEl);
-      }
-    }, 1800);
+      if (el.parentNode) el.parentNode.removeChild(el);
+    }, (duration + 0.5) * 1000);
   }
 
   // Alternar Modo Pantalla Completa / Vista Normal
@@ -1067,7 +1123,7 @@
       '• Listo para imprimir o guardar en PDF.'
     );
     if (ok) {
-      window.soundManager.playTileClick();
+      window.soundManager.playSnareRollReveal();
       // Ocultar modales previos inmediatamente
       if (roundOverModal) {
         roundOverModal.classList.add('hidden');
@@ -1475,7 +1531,7 @@
 
   // Socket: Recibir el Balance Final
   socket.on('session_finished', (balanceData) => {
-    window.soundManager.playRoundWin();
+    window.soundManager.playSnareRollReveal();
     renderFinalBalance(balanceData);
   });
 

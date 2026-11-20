@@ -506,8 +506,52 @@
     }
   }
 
+  // Notificación tipo Toast no intrusiva (nunca saca al jugador de la partida)
+  function showToast(message) {
+    let toast = document.getElementById('gameToast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'gameToast';
+      toast.style.cssText = `
+        position: fixed;
+        top: 65px;
+        left: 50%;
+        transform: translateX(-50%) translateY(-20px);
+        background: rgba(15, 23, 42, 0.95);
+        color: #fef08a;
+        border: 1.5px solid #eab308;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.7);
+        padding: 9px 18px;
+        border-radius: 9999px;
+        font-size: 13px;
+        font-weight: 800;
+        z-index: 999999;
+        pointer-events: none;
+        opacity: 0;
+        transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        text-align: center;
+        max-width: 90vw;
+      `;
+      document.body.appendChild(toast);
+    }
+
+    toast.textContent = message;
+    toast.style.opacity = '1';
+    toast.style.transform = 'translateX(-50%) translateY(0)';
+
+    clearTimeout(toast._timer);
+    toast._timer = setTimeout(() => {
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateX(-50%) translateY(-20px)';
+    }, 2500);
+  }
+
   // Manejador al hacer clic en una ficha válida
   function onPlayerSelectTile(tile, room) {
+    if (room.currentTurnSeat !== mySeat) {
+      showToast('⏳ Espera tu turno para tirar ficha.');
+      return;
+    }
     window.soundManager.playTileClick();
 
     if (room.leftEnd === null) {
@@ -547,6 +591,16 @@
 
   // Botón de Paso
   passBtn.addEventListener('click', () => {
+    if (!latestRoomData || latestRoomData.currentTurnSeat !== mySeat) {
+      showToast('⏳ Espera tu turno para jugar o pasar.');
+      return;
+    }
+    const myPlayer = latestRoomData.players ? latestRoomData.players.find(p => p.seat === mySeat) : null;
+    const playable = getPlayableTilesClient(myPlayer ? myPlayer.hand : [], latestRoomData.leftEnd, latestRoomData.rightEnd);
+    if (playable.length > 0) {
+      showToast('⚠️ Tienes fichas para jugar. En dominó no se puede pasar si tienes jugada.');
+      return;
+    }
     window.soundManager.playPassKnock();
     socket.emit('pass_turn');
   });
@@ -870,21 +924,9 @@
     });
   });
 
-  // Errores
+  // Errores de jugada o turno (Notificación flotante no intrusiva que nunca saca de la partida)
   socket.on('error_message', (msg) => {
-    const rand = Math.floor(Math.random() * 90) + 10;
-    const suggested = `MESA-${rand}`;
-    if (confirm(`${msg}\n\n¿Deseas entrar a la mesa limpia ${suggested} automáticamente?`)) {
-      const inputRoom = document.getElementById('inputRoomId');
-      if (inputRoom) inputRoom.value = suggested;
-      socket.emit('join_room', {
-        roomId: suggested,
-        playerName: document.getElementById('inputPlayerName').value.trim() || 'Jugador',
-        avatar: selectedAvatar,
-        clientId: myClientId,
-        forceReset: true
-      });
-    }
+    showToast(`⚠️ ${msg}`);
   });
 
   // ==========================================

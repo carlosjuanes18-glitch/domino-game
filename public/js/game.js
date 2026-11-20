@@ -912,6 +912,8 @@
       window.soundManager.playLaughter();
     } else if (data.emoji === '😱' || data.emoji === '💀') {
       window.soundManager.playScream();
+    } else if (data.emoji === '😡' || data.emoji === '🤬') {
+      window.soundManager.playNo();
     } else if (data.text === '¡No llevo!' || data.emoji === '🚫') {
       window.soundManager.playNo();
     } else {

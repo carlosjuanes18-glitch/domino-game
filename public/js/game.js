@@ -907,15 +907,21 @@
   });
 
   socket.on('reaction_received', (data) => {
-    // Sonidos temáticos según el emoji enviado
-    if (data.emoji === '😂') {
+    // Sonidos temáticos según el emoji o frase enviada
+    if (data.emoji === '💣') {
+      // Bomba clásica en forma de bola negra -> Efecto Bomba de Tiempo
+      window.soundManager.playTimeBomb();
+    } else if (data.emoji === 'DOMINO_PSYCHO' || (data.text && data.text.includes('Psicópata'))) {
+      // Dominó Psicópata con cuchillo -> Tema de Psicosis
+      window.soundManager.playPsychosis();
+    } else if (data.emoji === '😂') {
       window.soundManager.playLaughter();
     } else if (data.emoji === '😱' || data.emoji === '💀') {
       window.soundManager.playScream();
     } else if (data.emoji === '😡' || data.emoji === '🤬') {
       window.soundManager.playAngry();
-    } else if (data.emoji === '💣' || (data.text && data.text.includes('volar la papada'))) {
-      window.soundManager.playScream();
+    } else if (data.text && data.text.includes('volar la papada')) {
+      window.soundManager.playTimeBomb();
     } else if (data.emoji === '🤯' || (data.text && data.text.includes('volaste la papada'))) {
       window.soundManager.playFailureTrumpet();
     } else if (data.text === '¡No llevo!' || data.emoji === '🚫') {
@@ -952,15 +958,19 @@
       // Mostrar globito de reacción sobre el avatar del jugador que reaccionó
       const miniBubble = document.createElement('div');
       miniBubble.className = 'avatar-reaction-bubble';
-      miniBubble.textContent = content;
+      if (content === 'DOMINO_PSYCHO') {
+        miniBubble.innerHTML = `<img src="/images/domino-psycho.svg" class="w-8 h-8 inline-block object-contain" alt="Dominó Psicópata">`;
+      } else {
+        miniBubble.textContent = content;
+      }
       pod.appendChild(miniBubble);
       setTimeout(() => {
         if (miniBubble.parentNode) miniBubble.parentNode.removeChild(miniBubble);
       }, 3500);
     }
 
-    // Detectar si es un emoji o una frase de texto
-    const isSingleEmoji = content.length <= 4 && !content.includes(' ');
+    // Detectar si es un emoji individual o una frase de texto
+    const isSingleEmoji = (content.length <= 4 && !content.includes(' ')) || content === 'DOMINO_PSYCHO';
 
     if (isSingleEmoji) {
       // Caravana de 12 emojis que recorren lentamente toda la pantalla (de abajo hacia arriba, cubriendo todo el ancho)
@@ -979,7 +989,9 @@
 
       // Acompañar con emojis temáticos flotando lentamente por toda la pantalla
       let thematicIcons = ['💬', '🗣️', '💭'];
-      if (content.includes('volar la papada')) {
+      if (content.includes('Psicópata')) {
+        thematicIcons = ['DOMINO_PSYCHO', '🔪', '🩸', 'DOMINO_PSYCHO', '🔪', '🩸', 'DOMINO_PSYCHO', '🔪', '🩸', 'DOMINO_PSYCHO', '🔪', 'DOMINO_PSYCHO'];
+      } else if (content.includes('volar la papada')) {
         thematicIcons = ['💣', '💥', '🔥', '💣', '💥', '🔥', '💣', '💥', '🔥', '💣', '💥', '🔥'];
       } else if (content.includes('volaste la papada')) {
         thematicIcons = ['🤯', '💥', '😵', '🤕', '🤯', '💥', '😵', '🤕', '🤯', '💥', '😵', '🤕'];
@@ -1006,7 +1018,11 @@
   function createSlowScreenEmoji(emoji, index, total) {
     const el = document.createElement('div');
     el.className = 'slow-screen-emoji';
-    el.textContent = emoji;
+    if (emoji === 'DOMINO_PSYCHO') {
+      el.innerHTML = `<img src="/images/domino-psycho.svg" class="slow-psycho-domino-img" alt="Dominó Psicópata">`;
+    } else {
+      el.textContent = emoji;
+    }
 
     const screenW = window.innerWidth || document.documentElement.clientWidth || 360;
     // Dividir en 5 carriles que cubren de borde a borde toda la pantalla
@@ -1617,6 +1633,9 @@
     roundOverModal.style.display = 'none';
     finalBalanceModal.classList.remove('hidden');
     finalBalanceModal.style.display = 'flex';
+
+    // Reproducir la canción de Queen - We Are The Champions al salir la pantalla de Balance
+    window.soundManager.playChampions();
   }
 
   // Socket: Recibir el Balance Final
@@ -1627,6 +1646,7 @@
 
   // Socket: Sesión Reiniciada
   socket.on('session_restarted', () => {
+    window.soundManager.stopChampions();
     finalBalanceModal.classList.add('hidden');
     finalBalanceModal.style.display = 'none';
     scoreboardModal.classList.add('hidden');
@@ -1644,6 +1664,8 @@
   const btnCloseFinalBalance = document.getElementById('btnCloseFinalBalance');
   if (btnCloseFinalBalance) {
     btnCloseFinalBalance.addEventListener('click', () => {
+      // Detener la canción de Champions inmediatamente al cerrar esta pantalla
+      window.soundManager.stopChampions();
       finalBalanceModal.classList.add('hidden');
       finalBalanceModal.style.display = 'none';
     });
@@ -1730,9 +1752,19 @@
   if (btnRestartAfterBalance) {
     btnRestartAfterBalance.addEventListener('click', () => {
       if (confirm('¿Desean iniciar una nueva partida y reiniciar el marcador a 0?')) {
+        window.soundManager.stopChampions();
         socket.emit('restart_session');
       }
     });
   }
+
+  // Si se cierra el modal con Escape o click en backdrop
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && finalBalanceModal && !finalBalanceModal.classList.contains('hidden')) {
+      window.soundManager.stopChampions();
+      finalBalanceModal.classList.add('hidden');
+      finalBalanceModal.style.display = 'none';
+    }
+  });
 
 })();

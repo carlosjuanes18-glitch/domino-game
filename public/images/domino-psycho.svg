@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 170 185" width="100%" height="100%">
+  <defs>
+    <!-- Gradiente marfil para el cuerpo de ficha -->
+    <linearGradient id="dominoBone" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="60%" stop-color="#f8fafc"/>
+      <stop offset="100%" stop-color="#e2e8f0"/>
+    </linearGradient>
+    <!-- Brillo metálico para el cuchillo -->
+    <linearGradient id="knifeSteel" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="40%" stop-color="#e2e8f0"/>
+      <stop offset="80%" stop-color="#94a3b8"/>
+      <stop offset="100%" stop-color="#64748b"/>
+    </linearGradient>
+    <!-- Sombra suave general -->
+    <filter id="psychoShadow" x="-20%" y="-20%" width="150%" height="150%">
+      <feDropShadow dx="0" dy="6" stdDeviation="4" flood-color="#000" flood-opacity="0.5"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#psychoShadow)">
+    <!-- Patitas (piernas y zapatitos agresivos) -->
+    <!-- Pierna izquierda -->
+    <path d="M 58 135 L 50 162 L 36 166" stroke="#cbd5e1" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <path d="M 58 135 L 50 162 L 36 166" stroke="#f8fafc" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <ellipse cx="36" cy="166" rx="10" ry="6" fill="#0f172a" stroke="#1e293b" stroke-width="1.5"/>
+
+    <!-- Pierna derecha -->
+    <path d="M 94 135 L 102 162 L 118 166" stroke="#cbd5e1" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <path d="M 94 135 L 102 162 L 118 166" stroke="#f8fafc" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <ellipse cx="118" cy="166" rx="10" ry="6" fill="#0f172a" stroke="#1e293b" stroke-width="1.5"/>
+
+    <!-- Brazo izquierdo listo para atacar -->
+    <path d="M 40 68 Q 14 78 20 102" stroke="#cbd5e1" stroke-width="9" stroke-linecap="round" fill="none"/>
+    <path d="M 40 68 Q 14 78 20 102" stroke="#f8fafc" stroke-width="6" stroke-linecap="round" fill="none"/>
+    <circle cx="20" cy="104" r="8" fill="#f8fafc" stroke="#334155" stroke-width="2"/>
+
+    <!-- CUERPO PRINCIPAL: FICHA DE DOMINÓ -->
+    <rect x="38" y="24" width="76" height="120" rx="12" ry="12" fill="url(#dominoBone)" stroke="#0f172a" stroke-width="3.5"/>
+    
+    <!-- Línea divisoria central con remache dorado -->
+    <line x1="42" y1="84" x2="110" y2="84" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round"/>
+    <circle cx="76" cy="84" r="3.5" fill="#f59e0b" stroke="#78350f" stroke-width="1"/>
+
+    <!-- Puntos de dominó (Pips) en mitad inferior (ej. 3 puntos) -->
+    <circle cx="54" cy="100" r="5" fill="#0f172a"/>
+    <circle cx="76" cy="114" r="5" fill="#0f172a"/>
+    <circle cx="98" cy="128" r="5" fill="#0f172a"/>
+
+    <!-- CARA DE PSICÓPATA EN MITAD SUPERIOR -->
+    <!-- Venas rojas de locura en los ojos -->
+    <path d="M 52 42 Q 56 46 58 48" stroke="#ef4444" stroke-width="1" fill="none"/>
+    <path d="M 98 42 Q 95 46 93 48" stroke="#ef4444" stroke-width="1" fill="none"/>
+
+    <!-- Cejas furiosas / desquiciadas -->
+    <path d="M 47 43 L 67 52" stroke="#dc2626" stroke-width="4" stroke-linecap="round"/>
+    <path d="M 105 43 L 85 52" stroke="#dc2626" stroke-width="4" stroke-linecap="round"/>
+
+    <!-- Ojos saltones de psicópata desquiciado -->
+    <!-- Ojo izquierdo -->
+    <ellipse cx="58" cy="54" rx="10.5" ry="12" fill="#ffffff" stroke="#0f172a" stroke-width="2.5"/>
+    <ellipse cx="61" cy="55" rx="5" ry="6" fill="#dc2626"/>
+    <circle cx="61" cy="55" r="2.5" fill="#000000"/>
+    <circle cx="58" cy="51" r="1.8" fill="#ffffff"/>
+
+    <!-- Ojo derecho -->
+    <ellipse cx="94" cy="54" rx="10.5" ry="12" fill="#ffffff" stroke="#0f172a" stroke-width="2.5"/>
+    <ellipse cx="91" cy="55" rx="5" ry="6" fill="#dc2626"/>
+    <circle cx="91" cy="55" r="2.5" fill="#000000"/>
+    <circle cx="88" cy="51" r="1.8" fill="#ffffff"/>
+
+    <!-- Sonrisa siniestra maníaca con colmillos filosos -->
+    <path d="M 50 68 Q 76 88 102 68 Q 76 80 50 68 Z" fill="#7f1d1d" stroke="#0f172a" stroke-width="2"/>
+    <!-- Dientes afilados -->
+    <path d="M 52 69 L 56 74 L 60 69 L 65 75 L 70 69 L 76 75 L 82 69 L 88 75 L 94 69 L 98 73 L 100 69" stroke="#ffffff" stroke-width="2.2" stroke-linejoin="round" fill="#ffffff"/>
+
+    <!-- Brazo derecho levantado empuñando el cuchillo -->
+    <path d="M 112 68 Q 132 58 128 36" stroke="#cbd5e1" stroke-width="9" stroke-linecap="round" fill="none"/>
+    <path d="M 112 68 Q 132 58 128 36" stroke="#f8fafc" stroke-width="6" stroke-linecap="round" fill="none"/>
+    <!-- Mano / Puño apretando el mango -->
+    <circle cx="127" cy="35" r="8.5" fill="#f8fafc" stroke="#334155" stroke-width="2"/>
+
+    <!-- EL CUCHILLO DE PSICÓPATA DISPUESTO A ATACAR -->
+    <!-- Mango del cuchillo de madera marrón -->
+    <rect x="122" y="31" width="10" height="24" rx="3" transform="rotate(-38 127 43)" fill="#78350f" stroke="#0f172a" stroke-width="2"/>
+    <!-- Remaches dorados del mango -->
+    <circle cx="123" cy="41" r="1.5" fill="#f59e0b"/>
+    <circle cx="129" cy="48" r="1.5" fill="#f59e0b"/>
+
+    <!-- Hoja afilada y brillante del cuchillo apuntando lista para clavar -->
+    <path d="M 132 30 L 160 5 Q 166 12 161 24 L 140 43 Z" fill="url(#knifeSteel)" stroke="#0f172a" stroke-width="2" stroke-linejoin="round"/>
+    
+    <!-- Filo brillante del cuchillo -->
+    <line x1="133" y1="31" x2="160" y2="5" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round"/>
+
+    <!-- Sangre fresca goteando de la punta del cuchillo -->
+    <path d="M 158 5 Q 166 12 160 20 Q 155 12 158 5 Z" fill="#dc2626"/>
+    <!-- Gota de sangre cayendo en el aire -->
+    <ellipse cx="163" cy="27" rx="2.5" ry="3.5" fill="#dc2626"/>
+  </g>
+</svg>

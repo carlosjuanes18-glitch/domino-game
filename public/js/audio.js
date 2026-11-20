@@ -11,7 +11,10 @@ class SoundManager {
       scream: new Audio('/audio/freesound_community-terror-scream-grito-terror-101302.mp3'),
       no: new Audio('/audio/freesound_community-no-96018.mp3'),
       failureTrumpet: new Audio('/audio/universfield-failure-trumpet-242645.mp3'),
-      angry: new Audio('/audio/whatsapp-angry.mpeg')
+      angry: new Audio('/audio/whatsapp-angry.mpeg'),
+      champions: new Audio('/audio/queen-champions.mp3'),
+      timeBomb: new Audio('/audio/bomba-tiempo.mp3'),
+      psychosis: new Audio('/audio/psicosis.mp3')
     };
 
     // Precarga automática de audios
@@ -83,6 +86,34 @@ class SoundManager {
   // Trompeta de derrota
   playFailureTrumpet() {
     this.playAudio('failureTrumpet', 0.85);
+  }
+
+  // Canción de Queen - We Are The Champions para la pantalla de Balance Final
+  playChampions() {
+    this.playAudio('champions', 0.95);
+  }
+
+  // Detener la canción de Champions al cerrar la pantalla de Balance Final
+  stopChampions() {
+    const sound = this.audioFiles['champions'];
+    if (sound) {
+      try {
+        sound.pause();
+        sound.currentTime = 0;
+      } catch (e) {
+        console.warn(e);
+      }
+    }
+  }
+
+  // Efecto de sonido Bomba de Tiempo (para el emoji de bomba clásica 💣)
+  playTimeBomb() {
+    this.playAudio('timeBomb', 0.95);
+  }
+
+  // Tema de Psicosis (para el emoji de Dominó Psicópata con cuchillo)
+  playPsychosis() {
+    this.playAudio('psychosis', 0.95);
   }
 
   // Sonido de colocar ficha de dominó (impacto nítido de marfil/madera)

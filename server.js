@@ -591,8 +591,8 @@ function calculateSessionBalance(room) {
         diffPasses: diff,
         amount: extraMoney,
         summaryText: diff > 0
-          ? `${p1.name} recibe $${extraMoney} pesos de ${p2.name} (diferencia de ${diff} paso(s) menos a $${penaltyPerPass} c/u)`
-          : `Ambos jugadores pasaron la misma cantidad de veces (${p1.passesTotal} pasos)`
+          ? `${p1.name} recibe $${extraMoney} pesos de ${p2.name} (diferencia de ${diff} pase(s) menos a $${penaltyPerPass} c/u)`
+          : `Ambos jugadores pasaron la misma cantidad de veces (${p1.passesTotal} pases)`
       });
     } else {
       for (let i = 1; i < rankedByPasses.length; i++) {
@@ -607,14 +607,14 @@ function calculateSessionBalance(room) {
           diffPasses: diff,
           amount: amount,
           summaryText: diff > 0
-            ? `${minPassPlayer.name} recibe $${amount} pesos de ${pMore.name} (${pMore.passesTotal} vs ${minPassPlayer.passesTotal} pasos, dif: ${diff} a $${penaltyPerPass} c/u)`
-            : `${minPassPlayer.name} y ${pMore.name} empataron en pasos (${minPassPlayer.passesTotal})`
+            ? `${minPassPlayer.name} recibe $${amount} pesos de ${pMore.name} (${pMore.passesTotal} vs ${minPassPlayer.passesTotal} pases, dif: ${diff} a $${penaltyPerPass} c/u)`
+            : `${minPassPlayer.name} y ${pMore.name} empataron en pases (${minPassPlayer.passesTotal})`
         });
       }
     }
   }
 
-  // 3. Resumen financiero total consolidado (Juegos $5 pesos + Pasos $1 peso)
+  // 3. Resumen financiero total consolidado (Juegos $5 pesos + Pases $1 peso)
   const netFinancialSummary = players.map(p => {
     let winNet = 0;
     players.forEach(other => {
@@ -660,7 +660,7 @@ function calculateSessionBalance(room) {
       const winPart = (pA.wins - pB.wins) * gameRate;
       const passPart = (pB.passesTotal - pA.passesTotal) * penaltyPerPass;
       primaryPaymentHeadline = `${pB.name} debe pagarle $${totalAmount} pesos a ${pA.name}`;
-      primaryPaymentBreakdown = `Desglose: $${winPart} pesos por ${pA.wins - pB.wins} juego(s) ganados de ventaja ($5 c/u) + $${passPart} pesos por ${pB.passesTotal - pA.passesTotal} paso(s) de diferencia ($1 c/u)`;
+      primaryPaymentBreakdown = `Desglose: $${winPart} pesos por ${pA.wins - pB.wins} juego(s) ganados de ventaja ($5 c/u) + $${passPart} pesos por ${pB.passesTotal - pA.passesTotal} pase(s) de diferencia ($1 c/u)`;
       finalPayments.push({
         payer: pB.name,
         receiver: pA.name,
@@ -676,7 +676,7 @@ function calculateSessionBalance(room) {
       const winPart = (pB.wins - pA.wins) * gameRate;
       const passPart = (pA.passesTotal - pB.passesTotal) * penaltyPerPass;
       primaryPaymentHeadline = `${pA.name} debe pagarle $${totalAmount} pesos a ${pB.name}`;
-      primaryPaymentBreakdown = `Desglose: $${winPart} pesos por ${pB.wins - pA.wins} juego(s) ganados de ventaja ($5 c/u) + $${passPart} pesos por ${pA.passesTotal - pB.passesTotal} paso(s) de diferencia ($1 c/u)`;
+      primaryPaymentBreakdown = `Desglose: $${winPart} pesos por ${pB.wins - pA.wins} juego(s) ganados de ventaja ($5 c/u) + $${passPart} pesos por ${pA.passesTotal - pB.passesTotal} pase(s) de diferencia ($1 c/u)`;
       finalPayments.push({
         payer: pA.name,
         receiver: pB.name,
@@ -688,7 +688,7 @@ function calculateSessionBalance(room) {
       });
     } else {
       primaryPaymentHeadline = `Ambos jugadores quedaron a mano ($0 pesos). ¡Empate total!`;
-      primaryPaymentBreakdown = `(Juegos: ${pA.wins} vs ${pB.wins} | Pasos: ${pA.passesTotal} vs ${pB.passesTotal})`;
+      primaryPaymentBreakdown = `(Juegos: ${pA.wins} vs ${pB.wins} | Pases: ${pA.passesTotal} vs ${pB.passesTotal})`;
       finalPayments.push({
         payer: 'Nadie',
         receiver: 'Nadie',
@@ -1237,6 +1237,17 @@ io.on('connection', (socket) => {
       playerName: player.name,
       losses: player.losses
     });
+  });
+
+  // Solicitar corte de balance en vivo provisional (sin finalizar la sesión)
+  socket.on('get_live_balance', (data) => {
+    const rId = (data && data.roomId) || currentRoomId;
+    if (!rId) return;
+    const room = rooms.get(rId);
+    if (!room) return;
+
+    const liveSnapshot = calculateSessionBalance(room);
+    socket.emit('live_balance_snapshot', liveSnapshot);
   });
 
   // Acabar de jugar todos los jugadores: genera el Balance Final

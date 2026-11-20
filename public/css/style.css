@@ -1199,6 +1199,78 @@ body {
   box-shadow: 0 0 10px rgba(239, 68, 68, 0.3);
 }
 
+/* Botón Rojo con Luz Parpadeante: Corte de Balance en Vivo */
+.live-beacon-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: linear-gradient(135deg, rgba(127, 29, 29, 0.9), rgba(69, 10, 10, 0.95)) !important;
+  border: 1.5px solid #ef4444 !important;
+  border-radius: 8px;
+  padding: 4px 8px;
+  color: #fef2f2 !important;
+  font-size: 0.72rem;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.35);
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.live-beacon-btn:hover {
+  background: linear-gradient(135deg, rgba(153, 27, 27, 0.95), rgba(88, 28, 28, 0.98)) !important;
+  border-color: #f87171 !important;
+  box-shadow: 0 0 16px rgba(239, 68, 68, 0.75);
+}
+
+.live-beacon-btn:active {
+  transform: scale(0.94);
+}
+
+/* Luz roja que parpadea visiblemente */
+.beacon-light {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background-color: #ef4444;
+  box-shadow: 0 0 8px #ef4444, 0 0 14px #ff0000;
+  animation: redBlinkPulse 1.1s infinite alternate ease-in-out;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+@keyframes redBlinkPulse {
+  0% {
+    background-color: #7f1d1d;
+    box-shadow: 0 0 2px #7f1d1d;
+    opacity: 0.35;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 0.75;
+  }
+  100% {
+    background-color: #ff2222;
+    box-shadow: 0 0 10px #ff2222, 0 0 18px #ef4444, 0 0 25px rgba(239, 68, 68, 0.85);
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
+@media (max-width: 480px) {
+  .live-beacon-btn .beacon-label {
+    display: none;
+  }
+  .live-beacon-btn {
+    padding: 6px;
+    width: 32px;
+    height: 32px;
+    justify-content: center;
+    border-radius: 50%;
+  }
+}
+
 /* Tablas del Balance Final */
 .balance-table {
   width: 100%;
@@ -1436,61 +1508,46 @@ body {
 }
 
 /* ========================================= */
-/* CRÉDITOS Y SELLO NEÓN FOSFORESCENTE       */
+/* CRÉDITOS Y SELLO DISCRETO (10 VECES MÁS PEQUEÑO) */
 /* ========================================= */
 .neon-credit-banner {
-  display: flex;
-  flex-direction: column;
+  display: inline-flex;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
-  margin: 10px auto 2px auto;
-  padding: 6px 16px;
-  background: rgba(3, 22, 16, 0.82);
-  border: 1.5px solid #39ff14;
-  border-radius: 14px;
-  box-shadow:
-    0 0 10px rgba(57, 255, 20, 0.45),
-    0 0 25px rgba(57, 255, 20, 0.2),
-    inset 0 0 10px rgba(57, 255, 20, 0.15);
-  backdrop-filter: blur(6px);
+  gap: 5px;
+  margin: 6px auto 2px auto;
+  padding: 2px 8px;
+  background: rgba(3, 22, 16, 0.45);
+  border: 1px solid rgba(57, 255, 20, 0.3);
+  border-radius: 6px;
+  box-shadow: none;
+  backdrop-filter: blur(4px);
   width: fit-content;
   max-width: 95%;
   pointer-events: none;
-  animation: neonBorderPulse 3s infinite alternate ease-in-out;
+  opacity: 0.8;
 }
 
 .neon-author {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  font-size: 0.82rem;
-  font-weight: 900;
-  letter-spacing: 1.6px;
+  font-size: 0.50rem; /* 10 veces más pequeño, súper discreto */
+  font-weight: 700;
+  letter-spacing: 0.5px;
   text-transform: uppercase;
-  color: #39ff14;
-  /* Verde neón fosforescente brillante */
-  text-shadow:
-    0 0 4px #39ff14,
-    0 0 10px #39ff14,
-    0 0 20px #00ff88,
-    0 0 35px #00e676;
+  color: #4ade80;
   line-height: 1.2;
-  animation: neonTextPulse 2.8s infinite alternate ease-in-out;
 }
 
 .neon-location {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  font-size: 0.70rem;
-  font-weight: 800;
-  letter-spacing: 2.5px;
+  font-size: 0.45rem; /* 10 veces más pequeño */
+  font-weight: 600;
+  letter-spacing: 0.8px;
   text-transform: uppercase;
-  color: #00ffff;
-  /* Cian neón fosforescente */
-  text-shadow:
-    0 0 3px #00ffff,
-    0 0 8px #00e5ff,
-    0 0 18px #00b0ff,
-    0 0 30px #0084ff;
+  color: #38bdf8;
   line-height: 1.2;
-  margin-top: 2px;
+  margin-top: 0;
 }
 
 /* Ocultar cualquier anuncio o recuadro anterior dentro de la mesa */

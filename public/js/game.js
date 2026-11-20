@@ -73,6 +73,7 @@
   const setupModal = document.getElementById('setupModal');
   const lobbyModal = document.getElementById('lobbyModal');
   const scoreboardModal = document.getElementById('scoreboardModal');
+  const liveBalanceModal = document.getElementById('liveBalanceModal');
   const endChoiceModal = document.getElementById('endChoiceModal');
   const roundOverModal = document.getElementById('roundOverModal');
   const finalBalanceModal = document.getElementById('finalBalanceModal');
@@ -882,6 +883,229 @@
   });
 
   // ==========================================
+  // CORTE DE BALANCE EN VIVO (BOTÓN ROJO PARPADEANTE)
+  // ==========================================
+  const btnLiveBalanceCheck = document.getElementById('btnLiveBalanceCheck');
+  const btnCloseLiveBalance = document.getElementById('btnCloseLiveBalance');
+  const btnDismissLiveBalance = document.getElementById('btnDismissLiveBalance');
+
+  function getClientComputedLiveBalance() {
+    if (!currentRoom || !currentRoom.players) return null;
+    const gameRate = 5;
+    const penaltyPerPass = 1;
+    const players = currentRoom.players.map(p => ({
+      name: p.name,
+      wins: p.wins || 0,
+      passesTotal: p.passesTotal || 0,
+      points: p.points || 0
+    }));
+
+    const netFinancialSummary = players.map(p => {
+      let winNet = 0;
+      players.forEach(other => {
+        if (other.name !== p.name) winNet += (p.wins - other.wins) * gameRate;
+      });
+      let passNet = 0;
+      players.forEach(other => {
+        if (other.name !== p.name) passNet += (other.passesTotal - p.passesTotal) * penaltyPerPass;
+      });
+      return {
+        name: p.name,
+        wins: p.wins,
+        passesTotal: p.passesTotal,
+        points: p.points,
+        winNet,
+        passNet,
+        grandTotal: winNet + passNet
+      };
+    });
+
+    netFinancialSummary.sort((a, b) => b.grandTotal - a.grandTotal);
+
+    return {
+      totalRounds: currentRoom.round || 1,
+      gameRate,
+      penaltyPerPass,
+      netFinancialSummary
+    };
+  }
+
+  function renderLiveBalance(data) {
+    if (!data || !data.netFinancialSummary || data.netFinancialSummary.length === 0) return;
+    const summary = [...data.netFinancialSummary].sort((a, b) => b.grandTotal - a.grandTotal);
+    const roundNumberEl = document.getElementById('lbRoundNumber');
+    if (roundNumberEl) roundNumberEl.textContent = data.totalRounds || (currentRoom ? currentRoom.round : 1);
+
+    const headlineEl = document.getElementById('lbHeadlineText');
+    const badgeEl = document.getElementById('lbTotalMoneyBadge');
+    const paymentEl = document.getElementById('lbPaymentPreviewText');
+    const winMoneyEl = document.getElementById('lbWinMoneyText');
+    const winDetailsEl = document.getElementById('lbWinDetailsText');
+    const passMoneyEl = document.getElementById('lbPassMoneyText');
+    const passDetailsEl = document.getElementById('lbPassDetailsText');
+    const tableContainer = document.getElementById('lbPlayersTableContainer');
+
+    const gameRate = data.gameRate || 5;
+    const penaltyPerPass = data.penaltyPerPass || 1;
+
+    if (summary.length === 2) {
+      const pA = summary[0]; // Mayor o empatado
+      const pB = summary[1]; // Menor o empatado
+
+      if (pA.grandTotal > pB.grandTotal) {
+        const totalWon = pA.grandTotal;
+        const winsDiff = pA.wins - pB.wins;
+        const winMoney = winsDiff * gameRate;
+        const passDiff = pB.passesTotal - pA.passesTotal;
+        const passMoney = passDiff * penaltyPerPass;
+
+        if (headlineEl) {
+          headlineEl.innerHTML = `Si en este momento dejáramos de jugar, la ganadora sería <span class="text-yellow-300 font-black underline underline-offset-4 decoration-yellow-400">${pA.name}</span>.`;
+        }
+        if (badgeEl) {
+          badgeEl.textContent = `💰 Va ganando un total de $${totalWon} pesos`;
+        }
+        if (paymentEl) {
+          paymentEl.innerHTML = `👉 <span class="text-rose-300 font-extrabold">${pB.name}</span> le tendría que pagar <span class="text-emerald-300 font-black">$${totalWon} pesos</span> a <span class="text-yellow-300 font-extrabold">${pA.name}</span>`;
+        }
+
+        if (winMoneyEl) winMoneyEl.textContent = `${winMoney >= 0 ? '+' : ''}$${winMoney} pesos`;
+        if (winDetailsEl) winDetailsEl.textContent = `(${winsDiff} juego(s) de ventaja a $${gameRate} c/u: ${pA.wins} de ${pA.name} vs ${pB.wins} de ${pB.name})`;
+
+        if (passMoneyEl) passMoneyEl.textContent = `${passMoney >= 0 ? '+' : ''}$${passMoney} pesos`;
+        if (passDetailsEl) passDetailsEl.textContent = `(${passDiff} pase(s) de diferencia a $${penaltyPerPass} c/u: ${pB.passesTotal} de ${pB.name} vs ${pA.passesTotal} de ${pA.name})`;
+      } else {
+        // Empate total
+        if (headlineEl) {
+          headlineEl.innerHTML = `Si en este momento dejáramos de jugar, habría un <span class="text-yellow-300 font-black">EMPATE TOTAL ($0 pesos)</span>.`;
+        }
+        if (badgeEl) {
+          badgeEl.textContent = `⚪ Ambos jugadores van a mano ($0 pesos)`;
+        }
+        if (paymentEl) {
+          paymentEl.textContent = `Nadie le debe dinero a nadie en este momento. ¡La partida está totalmente empatada!`;
+        }
+
+        if (winMoneyEl) winMoneyEl.textContent = `$0 pesos`;
+        if (winDetailsEl) winDetailsEl.textContent = `(Mismo número de victorias: ${pA.wins} vs ${pB.wins})`;
+
+        if (passMoneyEl) passMoneyEl.textContent = `$0 pesos`;
+        if (passDetailsEl) passDetailsEl.textContent = `(Mismo número de pases: ${pA.passesTotal} vs ${pB.passesTotal})`;
+      }
+    } else {
+      // 3 o 4 jugadores
+      const leader = summary[0];
+      if (leader.grandTotal > 0) {
+        if (headlineEl) {
+          headlineEl.innerHTML = `Si en este momento dejáramos de jugar, el primer lugar sería <span class="text-yellow-300 font-black underline underline-offset-4 decoration-yellow-400">${leader.name}</span>.`;
+        }
+        if (badgeEl) {
+          badgeEl.textContent = `💰 Lleva acumulados +$${leader.grandTotal} pesos a su favor`;
+        }
+        if (paymentEl) {
+          paymentEl.textContent = data.primaryPaymentHeadline || `Líder con ${leader.wins} victorias y ${leader.passesTotal} pases.`;
+        }
+      } else {
+        if (headlineEl) {
+          headlineEl.textContent = `Si en este momento dejáramos de jugar, todos los jugadores estarían empatados ($0 pesos).`;
+        }
+        if (badgeEl) {
+          badgeEl.textContent = `⚪ Marcador a mano ($0 pesos)`;
+        }
+        if (paymentEl) {
+          paymentEl.textContent = `Sin deudas pendientes en este momento.`;
+        }
+      }
+
+      if (winMoneyEl) winMoneyEl.textContent = `$${leader.winNet >= 0 ? '+' : ''}${leader.winNet} pesos`;
+      if (winDetailsEl) winDetailsEl.textContent = `(Balance neto por victorias para ${leader.name})`;
+
+      if (passMoneyEl) passMoneyEl.textContent = `$${leader.passNet >= 0 ? '+' : ''}${leader.passNet} pesos`;
+      if (passDetailsEl) passDetailsEl.textContent = `(Balance neto por pases para ${leader.name})`;
+    }
+
+    // Tabla rápida de saldos en vivo
+    if (tableContainer) {
+      let tbl = `
+        <table class="balance-table w-full text-xs">
+          <thead>
+            <tr>
+              <th>Jugador</th>
+              <th>Juegos</th>
+              <th>Pases</th>
+              <th>Juegos ($5)</th>
+              <th>Pases ($1)</th>
+              <th>Total Neto</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+      summary.forEach(p => {
+        const isLead = p.grandTotal > 0;
+        const isDebt = p.grandTotal < 0;
+        const color = isLead ? 'text-emerald-400 font-black' : (isDebt ? 'text-rose-400 font-black' : 'text-slate-300 font-bold');
+        const sign = isLead ? `+ $${p.grandTotal}` : (isDebt ? `- $${Math.abs(p.grandTotal)}` : '$0');
+        const tag = isLead
+          ? '<span class="px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 font-extrabold text-[9px] border border-emerald-500/40">🟢 COBRA</span>'
+          : (isDebt ? '<span class="px-1.5 py-0.5 rounded bg-rose-950 text-rose-300 font-extrabold text-[9px] border border-rose-500/40">🔴 PAGA</span>' : '<span class="text-[9px] text-slate-400 font-bold">⚪ A MANO</span>');
+
+        tbl += `
+          <tr class="${isLead ? 'champion-row' : ''}">
+            <td><strong>${p.name}</strong></td>
+            <td class="text-amber-300 font-bold">${p.wins}</td>
+            <td class="text-slate-300">${p.passesTotal}</td>
+            <td class="${p.winNet >= 0 ? 'text-amber-300' : 'text-rose-400'} font-bold">${p.winNet >= 0 ? '+' : ''}$${p.winNet}</td>
+            <td class="${p.passNet >= 0 ? 'text-emerald-300' : 'text-rose-400'} font-bold">${p.passNet >= 0 ? '+' : ''}$${p.passNet}</td>
+            <td class="${color} text-sm">${sign}</td>
+            <td>${tag}</td>
+          </tr>
+        `;
+      });
+      tbl += `</tbody></table>`;
+      tableContainer.innerHTML = tbl;
+    }
+
+    if (liveBalanceModal) {
+      liveBalanceModal.classList.remove('hidden');
+      liveBalanceModal.style.display = 'flex';
+    }
+  }
+
+  if (btnLiveBalanceCheck) {
+    btnLiveBalanceCheck.addEventListener('click', () => {
+      window.soundManager.playTileClick();
+      // Cálculo inmediato con datos locales
+      const localSnap = getClientComputedLiveBalance();
+      if (localSnap) renderLiveBalance(localSnap);
+      // Solicitud en vivo al servidor para sincronización perfecta
+      socket.emit('get_live_balance', { roomId: currentRoom ? currentRoom.id : undefined });
+    });
+  }
+
+  socket.on('live_balance_snapshot', (snapshot) => {
+    renderLiveBalance(snapshot);
+  });
+
+  if (btnCloseLiveBalance) {
+    btnCloseLiveBalance.addEventListener('click', () => {
+      if (liveBalanceModal) {
+        liveBalanceModal.classList.add('hidden');
+        liveBalanceModal.style.display = 'none';
+      }
+    });
+  }
+
+  if (btnDismissLiveBalance) {
+    btnDismissLiveBalance.addEventListener('click', () => {
+      if (liveBalanceModal) {
+        liveBalanceModal.classList.add('hidden');
+        liveBalanceModal.style.display = 'none';
+      }
+    });
+  }
+
+  // ==========================================
   // PANEL DE REACCIONES Y EMOJIS
   // ==========================================
   const emojiTriggerBtn = document.getElementById('emojiTriggerBtn');
@@ -1373,7 +1597,7 @@
       }
     }
 
-    // 2. Tabla de Pasos y Penalizaciones ($1 c/u)
+    // 2. Tabla de Pases y Penalizaciones ($1 c/u)
     const penaltyRateEl = document.getElementById('fbPenaltyRate');
     if (penaltyRateEl) penaltyRateEl.textContent = balance.penaltyPerPass || 1;
 
@@ -1385,7 +1609,7 @@
             <tr>
               <th>Posición</th>
               <th>Jugador</th>
-              <th>Pasos Totales</th>
+              <th>Pases Totales</th>
               <th>Aportación ($1 c/u)</th>
             </tr>
           </thead>
@@ -1393,12 +1617,12 @@
       `;
       balance.rankedByPasses.forEach((p, idx) => {
         const penaltyCost = p.passesTotal * (balance.penaltyPerPass || 1);
-        const tag = idx === 0 ? '⭐ Menos pasos' : `${idx + 1}º`;
+        const tag = idx === 0 ? '⭐ Menos pases' : `${idx + 1}º`;
         html += `
           <tr class="${idx === 0 ? 'champion-row' : ''}">
             <td>${tag}</td>
             <td><strong>${p.name}</strong></td>
-            <td class="text-amber-300 font-bold">${p.passesTotal} paso(s)</td>
+            <td class="text-amber-300 font-bold">${p.passesTotal} pase(s)</td>
             <td class="text-rose-400 font-bold">$${penaltyCost}</td>
           </tr>
         `;
@@ -1407,7 +1631,7 @@
       passTableEl.innerHTML = html;
     }
 
-    // Liquidación de Dinero Extra por Pasos ($1 c/u)
+    // Liquidación de Dinero Extra por Pases ($1 c/u)
     const passSetEl = document.getElementById('fbPassSettlementsList');
     if (passSetEl) {
       if (balance.passSettlements && balance.passSettlements.length > 0) {
@@ -1418,11 +1642,11 @@
           </div>
         `).join('');
       } else {
-        passSetEl.innerHTML = '<div class="text-slate-400">No hubo diferencias de pasos entre los jugadores.</div>';
+        passSetEl.innerHTML = '<div class="text-slate-400">No hubo diferencias de pases entre los jugadores.</div>';
       }
     }
 
-    // 3. Liquidación Total y Saldo Neto en Pesos (Juegos $5 + Pasos $1)
+    // 3. Liquidación Total y Saldo Neto en Pesos (Juegos $5 + Pases $1)
     const netTableEl = document.getElementById('fbNetTable');
     if (netTableEl && balance.netFinancialSummary) {
       let html = `
@@ -1431,9 +1655,9 @@
             <tr>
               <th>Jugador</th>
               <th>Juegos</th>
-              <th>Pasos</th>
+              <th>Pases</th>
               <th>Por Juegos ($5 c/u)</th>
-              <th>Por Pasos ($1 c/u)</th>
+              <th>Por Pases ($1 c/u)</th>
               <th>Total Neto ($)</th>
               <th>Estado</th>
             </tr>
@@ -1792,12 +2016,18 @@
     });
   }
 
-  // Si se cierra el modal con Escape o click en backdrop
+  // Si se cierra el modal con Escape
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && finalBalanceModal && !finalBalanceModal.classList.contains('hidden')) {
-      window.soundManager.stopChampions();
-      finalBalanceModal.classList.add('hidden');
-      finalBalanceModal.style.display = 'none';
+    if (e.key === 'Escape') {
+      if (finalBalanceModal && !finalBalanceModal.classList.contains('hidden')) {
+        window.soundManager.stopChampions();
+        finalBalanceModal.classList.add('hidden');
+        finalBalanceModal.style.display = 'none';
+      }
+      if (liveBalanceModal && !liveBalanceModal.classList.contains('hidden')) {
+        liveBalanceModal.classList.add('hidden');
+        liveBalanceModal.style.display = 'none';
+      }
     }
   });
 

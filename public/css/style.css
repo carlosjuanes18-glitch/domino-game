@@ -768,26 +768,32 @@ body {
     opacity: 0;
     transform: translateY(0) translateX(0) scale(0.65) rotate(0deg);
   }
+
   6% {
     opacity: 1;
     transform: translateY(-15vh) translateX(calc(var(--drift-x, 25px) * 0.2)) scale(1.15) rotate(var(--rot-1, 6deg));
   }
+
   25% {
     opacity: 1;
     transform: translateY(-35vh) translateX(calc(var(--drift-x, 25px) * -0.5)) scale(1.3) rotate(var(--rot-2, -8deg));
   }
+
   50% {
     opacity: 0.98;
     transform: translateY(-62vh) translateX(calc(var(--drift-x, 25px) * 0.6)) scale(1.22) rotate(var(--rot-1, 9deg));
   }
+
   75% {
     opacity: 0.95;
     transform: translateY(-88vh) translateX(calc(var(--drift-x, 25px) * -0.3)) scale(1.15) rotate(var(--rot-2, -6deg));
   }
+
   92% {
     opacity: 0.85;
     transform: translateY(-108vh) translateX(calc(var(--drift-x, 25px) * 0.8)) scale(1.05) rotate(var(--rot-1, 7deg));
   }
+
   100% {
     opacity: 0;
     transform: translateY(-125vh) translateX(var(--drift-x, 25px)) scale(0.8) rotate(var(--rot-2, -10deg));
@@ -815,11 +821,30 @@ body {
 }
 
 @keyframes bubblePopFade {
-  0% { opacity: 0; transform: translateX(-50%) scale(0.4); }
-  12% { opacity: 1; transform: translateX(-50%) scale(1.15); }
-  22% { opacity: 1; transform: translateX(-50%) scale(1); }
-  82% { opacity: 1; transform: translateX(-50%) scale(1); }
-  100% { opacity: 0; transform: translateX(-50%) translateY(-12px) scale(0.8); }
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.4);
+  }
+
+  12% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1.15);
+  }
+
+  22% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+  }
+
+  82% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-12px) scale(0.8);
+  }
 }
 
 /* Animación de Frases Flotantes (¡Dominó!, ¡Tranca!, 🚫 ¡PASO!) */
@@ -847,18 +872,22 @@ body {
     opacity: 0;
     transform: translate(-50%, -25%) scale(0.6);
   }
+
   14% {
     opacity: 1;
     transform: translate(-50%, -50%) scale(1.12);
   }
+
   24% {
     opacity: 1;
     transform: translate(-50%, -50%) scale(1);
   }
+
   80% {
     opacity: 1;
     transform: translate(-50%, -50%) scale(1);
   }
+
   100% {
     opacity: 0;
     transform: translate(-50%, -85%) scale(0.85);
@@ -1419,7 +1448,7 @@ body {
   background: rgba(3, 22, 16, 0.82);
   border: 1.5px solid #39ff14;
   border-radius: 14px;
-  box-shadow: 
+  box-shadow:
     0 0 10px rgba(57, 255, 20, 0.45),
     0 0 25px rgba(57, 255, 20, 0.2),
     inset 0 0 10px rgba(57, 255, 20, 0.15);
@@ -1436,7 +1465,8 @@ body {
   font-weight: 900;
   letter-spacing: 1.6px;
   text-transform: uppercase;
-  color: #39ff14; /* Verde neón fosforescente brillante */
+  color: #39ff14;
+  /* Verde neón fosforescente brillante */
   text-shadow:
     0 0 4px #39ff14,
     0 0 10px #39ff14,
@@ -1452,7 +1482,8 @@ body {
   font-weight: 800;
   letter-spacing: 2.5px;
   text-transform: uppercase;
-  color: #00ffff; /* Cian neón fosforescente */
+  color: #00ffff;
+  /* Cian neón fosforescente */
   text-shadow:
     0 0 3px #00ffff,
     0 0 8px #00e5ff,
@@ -1462,43 +1493,46 @@ body {
   margin-top: 2px;
 }
 
-/* Sello Neón Discreto Fuera de la Cancha de Juego (3 veces más pequeño) */
+/* Ocultar cualquier anuncio o recuadro anterior dentro de la mesa */
+.table-neon-badge {
+  display: none !important;
+}
+
+/* Sello Neón Discreto Fuera de la Cancha de Juego (10 veces más pequeño, súper sutil) */
 .table-outer-credit {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 3px 0 1px 0;
+  gap: 5px;
+  padding: 1px 0 2px 0;
   text-align: center;
   pointer-events: none;
   user-select: none;
-  opacity: 0.85;
+  opacity: 0.7;
 }
 
 .neon-author-tiny {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  font-size: 0.46rem; /* 3 veces más pequeño que antes (~7.5px) */
-  font-weight: 800;
-  letter-spacing: 0.8px;
+  font-size: 0.35rem; /* 10 veces más pequeño (~5.5px) */
+  font-weight: 700;
+  letter-spacing: 0.5px;
   text-transform: uppercase;
   color: #39ff14;
-  text-shadow: 0 0 3px rgba(57, 255, 20, 0.6);
   line-height: 1;
 }
 
 .neon-separator {
   color: #475569;
-  font-size: 0.45rem;
+  font-size: 0.32rem;
 }
 
 .neon-location-tiny {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  font-size: 0.44rem;
-  font-weight: 700;
-  letter-spacing: 1.2px;
+  font-size: 0.33rem;
+  font-weight: 600;
+  letter-spacing: 0.8px;
   text-transform: uppercase;
   color: #00ffff;
-  text-shadow: 0 0 3px rgba(0, 255, 255, 0.5);
   line-height: 1;
 }
 
@@ -1511,6 +1545,7 @@ body {
       0 0 25px #00e676;
     filter: brightness(0.98);
   }
+
   50% {
     text-shadow:
       0 0 6px #39ff14,
@@ -1520,6 +1555,7 @@ body {
       0 0 60px #00e676;
     filter: brightness(1.15);
   }
+
   100% {
     text-shadow:
       0 0 4px #39ff14,
@@ -1535,10 +1571,12 @@ body {
     border-color: rgba(57, 255, 20, 0.45);
     box-shadow: 0 0 8px rgba(57, 255, 20, 0.3), inset 0 0 6px rgba(0, 255, 204, 0.15);
   }
+
   50% {
     border-color: rgba(57, 255, 20, 0.9);
     box-shadow: 0 0 16px rgba(57, 255, 20, 0.6), inset 0 0 12px rgba(0, 255, 204, 0.3);
   }
+
   100% {
     border-color: rgba(57, 255, 20, 0.55);
     box-shadow: 0 0 10px rgba(57, 255, 20, 0.35), inset 0 0 8px rgba(0, 255, 204, 0.2);

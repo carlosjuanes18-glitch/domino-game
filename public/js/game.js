@@ -914,6 +914,10 @@
       window.soundManager.playScream();
     } else if (data.emoji === '😡' || data.emoji === '🤬') {
       window.soundManager.playNo();
+    } else if (data.emoji === '💣' || (data.text && data.text.includes('volar la papada'))) {
+      window.soundManager.playScream();
+    } else if (data.emoji === '🤯' || (data.text && data.text.includes('volaste la papada'))) {
+      window.soundManager.playFailureTrumpet();
     } else if (data.text === '¡No llevo!' || data.emoji === '🚫') {
       window.soundManager.playNo();
     } else {
@@ -965,13 +969,26 @@
         }, i * 220);
       }
     } else {
-      // Frase de texto flotante destacada (¡Dominó!, ¡Tranca!, 🚫 ¡PASO!)
+      // Frase de texto flotante destacada (¡Dominó!, ¡Tranca!, 🚫 ¡PASO!, etc.)
       const badge = document.createElement('div');
       badge.className = 'floating-phrase-badge';
       badge.textContent = content;
       badge.style.left = `${Math.max(80, Math.min(window.innerWidth - 80, startX))}px`;
       badge.style.top = `${startY}px`;
       document.body.appendChild(badge);
+
+      // Si la frase es de "volar la papada", acompañar con bombas flotantes por toda la pantalla
+      if (content.includes('volar la papada')) {
+        const bombIcons = ['💣', '💥', '🔥', '💣', '💥', '🔥', '💣'];
+        bombIcons.forEach((em, idx) => {
+          setTimeout(() => createSlowScreenEmoji(em, startX, startY, idx), idx * 220);
+        });
+      } else if (content.includes('volaste la papada')) {
+        const mindblownIcons = ['🤯', '💥', '😵', '🤕', '🤯', '💥', '😵'];
+        mindblownIcons.forEach((em, idx) => {
+          setTimeout(() => createSlowScreenEmoji(em, startX, startY, idx), idx * 220);
+        });
+      }
 
       setTimeout(() => {
         if (badge.parentNode) badge.parentNode.removeChild(badge);

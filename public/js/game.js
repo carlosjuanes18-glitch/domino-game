@@ -883,6 +883,50 @@
   });
 
   // ==========================================
+  // DETECTOR INTELIGENTE DE GÉNERO POR NOMBRE
+  // Regla: Si es femenino claro -> mujer ("la ganadora").
+  // Si es masculino, unisex o nombre raro -> hombre ("el ganador").
+  // ==========================================
+  function getGenderForName(name) {
+    if (!name || typeof name !== 'string') return 'male';
+    let clean = name.replace(/\(.*?\)/g, '').trim().toLowerCase();
+    clean = clean.split(/\s+/)[0];
+    clean = clean.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+    if (!clean) return 'male';
+
+    // Nombres femeninos explícitos que no terminan en 'a'
+    const femaleNamesNoA = new Set([
+      'carmen', 'isabel', 'raquel', 'pilar', 'mercedes', 'beatriz', 'ester', 'esther',
+      'ines', 'belen', 'mar', 'rocio', 'rosario', 'consuelo', 'montserrat', 'miriam',
+      'ruth', 'judith', 'guadalupe', 'lourdes', 'sol', 'luz', 'paz', 'socorro', 'amparo',
+      'nieves', 'asuncion', 'concepcion', 'dolores', 'soledad', 'remedios', 'meritxell',
+      'karen', 'sharon', 'ingrid', 'astrid', 'edith', 'nuria', 'iris', 'ivon', 'ivonne',
+      'ade', 'moni', 'vero', 'paty', 'patti', 'gaby', 'gabi', 'lupita', 'mari', 'mary',
+      'susy', 'susi', 'vicky', 'ceci', 'betty', 'katy', 'lucy', 'naty', 'nati', 'lily', 'lili'
+    ]);
+
+    if (femaleNamesNoA.has(clean)) return 'female';
+
+    // Nombres masculinos explícitos que terminan en 'a'
+    const maleNamesWithA = new Set([
+      'luca', 'lucas', 'borja', 'gorka', 'josua', 'joshua', 'elias', 'isaias', 'matias',
+      'tobias', 'bautista', 'dakota', 'andrea', 'ezra', 'noah', 'akira', 'mustafa', 'issa',
+      'sasha'
+    ]);
+
+    if (maleNamesWithA.has(clean)) return 'male';
+
+    // Terminación clásica femenina en español (-a)
+    if (clean.endsWith('a') && clean.length >= 3) {
+      return 'female';
+    }
+
+    // Regla del usuario: si es unisex, desconocido o raro -> 'male'
+    return 'male';
+  }
+
+  // ==========================================
   // CORTE DE BALANCE EN VIVO (BOTÓN ROJO PARPADEANTE)
   // ==========================================
   const btnLiveBalanceCheck = document.getElementById('btnLiveBalanceCheck');
@@ -959,8 +1003,10 @@
         const passDiff = pB.passesTotal - pA.passesTotal;
         const passMoney = passDiff * penaltyPerPass;
 
+        const winnerGender = getGenderForName(pA.name);
+        const winnerArticle = winnerGender === 'female' ? 'la ganadora' : 'el ganador';
         if (headlineEl) {
-          headlineEl.innerHTML = `Si en este momento dejáramos de jugar, la ganadora sería <span class="text-yellow-300 font-black underline underline-offset-4 decoration-yellow-400">${pA.name}</span>.`;
+          headlineEl.innerHTML = `Si en este momento dejáramos de jugar, ${winnerArticle} sería <span class="text-yellow-300 font-black underline underline-offset-4 decoration-yellow-400">${pA.name}</span>.`;
         }
         if (badgeEl) {
           badgeEl.textContent = `💰 Va ganando un total de $${totalWon} pesos`;
@@ -996,8 +1042,10 @@
       // 3 o 4 jugadores
       const leader = summary[0];
       if (leader.grandTotal > 0) {
+        const leaderGender = getGenderForName(leader.name);
+        const leaderArticle = leaderGender === 'female' ? 'la ganadora' : 'el ganador';
         if (headlineEl) {
-          headlineEl.innerHTML = `Si en este momento dejáramos de jugar, el primer lugar sería <span class="text-yellow-300 font-black underline underline-offset-4 decoration-yellow-400">${leader.name}</span>.`;
+          headlineEl.innerHTML = `Si en este momento dejáramos de jugar, ${leaderArticle} sería <span class="text-yellow-300 font-black underline underline-offset-4 decoration-yellow-400">${leader.name}</span>.`;
         }
         if (badgeEl) {
           badgeEl.textContent = `💰 Lleva acumulados +$${leader.grandTotal} pesos a su favor`;
@@ -1525,6 +1573,16 @@
     if (roundsEl) roundsEl.textContent = balance.totalRounds || 0;
 
     // Campeón y Diferencia Destacada (Imagen 2)
+    const champTitleEl = document.getElementById('fbChampionTitle');
+    if (champTitleEl) {
+      if (balance.isDraw) {
+        champTitleEl.textContent = '👑 EMPATE EN PARTIDAS';
+      } else {
+        const champGender = getGenderForName(balance.champion);
+        champTitleEl.textContent = champGender === 'female' ? '👑 Ganadora de Más Partidas' : '👑 Ganador de Más Partidas';
+      }
+    }
+
     const champEl = document.getElementById('fbChampionName');
     if (champEl) {
       champEl.textContent = balance.isDraw ? '¡Empate en Victorias!' : `🥇 ${balance.champion}`;

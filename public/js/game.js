@@ -948,79 +948,97 @@
     }
 
     const pod = document.getElementById(`pod_${targetPos}`);
-    const rect = pod ? pod.getBoundingClientRect() : {
-      left: window.innerWidth / 2,
-      top: window.innerHeight * 0.75,
-      width: 40
-    };
-
-    const startX = rect.left + rect.width / 2;
-    const startY = rect.top + 10;
+    if (pod) {
+      // Mostrar globito de reacción sobre el avatar del jugador que reaccionó
+      const miniBubble = document.createElement('div');
+      miniBubble.className = 'avatar-reaction-bubble';
+      miniBubble.textContent = content;
+      pod.appendChild(miniBubble);
+      setTimeout(() => {
+        if (miniBubble.parentNode) miniBubble.parentNode.removeChild(miniBubble);
+      }, 3500);
+    }
 
     // Detectar si es un emoji o una frase de texto
     const isSingleEmoji = content.length <= 4 && !content.includes(' ');
 
     if (isSingleEmoji) {
-      // Caravana de 7 emojis que recorren lentamente toda la pantalla (de abajo hacia arriba)
-      const count = 7;
+      // Caravana de 12 emojis que recorren lentamente toda la pantalla (de abajo hacia arriba, cubriendo todo el ancho)
+      const count = 12;
       for (let i = 0; i < count; i++) {
         setTimeout(() => {
-          createSlowScreenEmoji(content, startX, startY, i);
-        }, i * 220);
+          createSlowScreenEmoji(content, i, count);
+        }, i * 230);
       }
     } else {
-      // Frase de texto flotante destacada (¡Dominó!, ¡Tranca!, 🚫 ¡PASO!, etc.)
+      // Frase de texto flotante destacada en el centro de la pantalla
       const badge = document.createElement('div');
       badge.className = 'floating-phrase-badge';
       badge.textContent = content;
-      badge.style.left = `${Math.max(80, Math.min(window.innerWidth - 80, startX))}px`;
-      badge.style.top = `${startY}px`;
       document.body.appendChild(badge);
 
-      // Si la frase es de "volar la papada", acompañar con bombas flotantes por toda la pantalla
+      // Acompañar con emojis temáticos flotando lentamente por toda la pantalla
+      let thematicIcons = ['💬', '🗣️', '💭'];
       if (content.includes('volar la papada')) {
-        const bombIcons = ['💣', '💥', '🔥', '💣', '💥', '🔥', '💣'];
-        bombIcons.forEach((em, idx) => {
-          setTimeout(() => createSlowScreenEmoji(em, startX, startY, idx), idx * 220);
-        });
+        thematicIcons = ['💣', '💥', '🔥', '💣', '💥', '🔥', '💣', '💥', '🔥', '💣', '💥', '🔥'];
       } else if (content.includes('volaste la papada')) {
-        const mindblownIcons = ['🤯', '💥', '😵', '🤕', '🤯', '💥', '😵'];
-        mindblownIcons.forEach((em, idx) => {
-          setTimeout(() => createSlowScreenEmoji(em, startX, startY, idx), idx * 220);
-        });
+        thematicIcons = ['🤯', '💥', '😵', '🤕', '🤯', '💥', '😵', '🤕', '🤯', '💥', '😵', '🤕'];
+      } else if (content.includes('Dominó')) {
+        thematicIcons = ['🀫', '🏆', '🎉', '👑', '🀫', '🏆', '🎉', '👑', '🀫', '🏆', '🎉', '👑'];
+      } else if (content.includes('Tranca')) {
+        thematicIcons = ['🔒', '⛔', '🔐', '🔒', '⛔', '🔐', '🔒', '⛔', '🔐', '🔒', '⛔', '🔐'];
+      } else if (content.includes('No llevo') || content.includes('PASO')) {
+        thematicIcons = ['🚫', '🛑', '✋', '🚫', '🛑', '✋', '🚫', '🛑', '✋', '🚫', '🛑', '✋'];
+      } else if (content.includes('Abran paso')) {
+        thematicIcons = ['⚡', '🚀', '💨', '⚡', '🚀', '💨', '⚡', '🚀', '💨', '⚡', '🚀', '💨'];
       }
+
+      thematicIcons.forEach((em, idx) => {
+        setTimeout(() => createSlowScreenEmoji(em, idx, thematicIcons.length), idx * 220);
+      });
 
       setTimeout(() => {
         if (badge.parentNode) badge.parentNode.removeChild(badge);
-      }, 3600);
+      }, 4200);
     }
   }
 
-  function createSlowScreenEmoji(emoji, startX, startY, index) {
+  function createSlowScreenEmoji(emoji, index, total) {
     const el = document.createElement('div');
     el.className = 'slow-screen-emoji';
     el.textContent = emoji;
 
-    const screenW = window.innerWidth;
-    const randomOffset = (Math.random() - 0.5) * (screenW * 0.45);
-    const posX = Math.max(25, Math.min(screenW - 65, startX + randomOffset));
+    const screenW = window.innerWidth || document.documentElement.clientWidth || 360;
+    // Dividir en 5 carriles que cubren de borde a borde toda la pantalla
+    const numLanes = 5;
+    const laneWidth = (screenW - 50) / numLanes;
+    const laneIndex = (index % numLanes);
+    const baseX = 20 + (laneIndex * laneWidth);
+    const jitter = (Math.random() - 0.5) * (laneWidth * 0.65);
+    const posX = Math.max(10, Math.min(screenW - 60, baseX + jitter));
 
-    // Variaciones de tamaño, deriva horizontal y viaje lento (5.2 a 7 segundos)
-    const size = 2.4 + Math.random() * 1.5;
-    const duration = 5.2 + Math.random() * 1.8;
-    const driftX = (Math.random() - 0.5) * 130;
+    // Variaciones de tamaño para que se vean grandes, nítidos y vivos (2.7rem a 4.1rem)
+    const size = 2.7 + Math.random() * 1.4;
+    // Duración de viaje lento por toda la pantalla: 7.0 a 9.5 segundos
+    const duration = 7.0 + Math.random() * 2.5;
+    // Oscilación o deriva horizontal suave
+    const driftX = (Math.random() - 0.5) * 60;
+    const rot1 = (Math.random() > 0.5 ? 1 : -1) * (6 + Math.random() * 8);
+    const rot2 = -rot1 * (0.8 + Math.random() * 0.4);
 
     el.style.left = `${posX}px`;
-    el.style.top = `${startY}px`;
     el.style.fontSize = `${size}rem`;
     el.style.setProperty('--drift-x', `${driftX}px`);
+    el.style.setProperty('--rot-1', `${rot1}deg`);
+    el.style.setProperty('--rot-2', `${rot2}deg`);
+    el.style.setProperty('--anim-duration', `${duration}s`);
     el.style.animationDuration = `${duration}s`;
 
     document.body.appendChild(el);
 
     setTimeout(() => {
       if (el.parentNode) el.parentNode.removeChild(el);
-    }, (duration + 0.5) * 1000);
+    }, (duration + 0.8) * 1000);
   }
 
   // Alternar Modo Pantalla Completa / Vista Normal

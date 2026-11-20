@@ -231,8 +231,24 @@ function checkBotTurn(room) {
   }, delay);
 }
 
-function handlePlayTile(room, player, tileId, side) {
-  const tileIndex = player.hand.findIndex(t => t.id === tileId);
+function handlePlayTile(room, player, tileId, side, fallbackLeft, fallbackRight) {
+  let tileIndex = player.hand.findIndex(t => t.id === tileId);
+  if (tileIndex === -1 && tileId) {
+    const parts = String(tileId).split('-');
+    if (parts.length === 2) {
+      const l = parseInt(parts[0]);
+      const r = parseInt(parts[1]);
+      tileIndex = player.hand.findIndex(t => 
+        (t.left === l && t.right === r) || (t.left === r && t.right === l)
+      );
+    }
+  }
+  if (tileIndex === -1 && fallbackLeft !== undefined && fallbackRight !== undefined) {
+    tileIndex = player.hand.findIndex(t => 
+      (t.left === fallbackLeft && t.right === fallbackRight) || 
+      (t.left === fallbackRight && t.right === fallbackLeft)
+    );
+  }
   if (tileIndex === -1) return false;
   const tile = player.hand[tileIndex];
 
@@ -252,6 +268,16 @@ function handlePlayTile(room, player, tileId, side) {
     room.rightEnd = tile.right;
     room.board.push(placedTile);
   } else {
+    // Failsafe de seguridad: si el cliente pidió un extremo pero solo cabe en el otro, acomodar sin rechazar
+    const fitsLeft = (tile.right === room.leftEnd || tile.left === room.leftEnd);
+    const fitsRight = (tile.left === room.rightEnd || tile.right === room.rightEnd);
+
+    if (side === 'left' && !fitsLeft && fitsRight) {
+      side = 'right';
+    } else if (side === 'right' && !fitsRight && fitsLeft) {
+      side = 'left';
+    }
+
     if (side === 'left') {
       let orientedLeft, orientedRight;
       if (tile.right === room.leftEnd) {
@@ -923,8 +949,16 @@ io.on('connection', (socket) => {
     startRound(room);
   });
 
+  // Sincronizar mesa a petición del cliente (para recuperarse de bloqueos)
+  socket.on('request_room_refresh', () => {
+    if (!currentRoomId) return;
+    const room = rooms.get(currentRoomId);
+    if (!room) return;
+    socket.emit('room_update', getSafeRoomData(room, socket.id));
+  });
+
   // Jugar ficha
-  socket.on('play_tile', ({ tileId, side }) => {
+  socket.on('play_tile', ({ tileId, side, left, right }) => {
     if (!currentRoomId) return;
     const room = rooms.get(currentRoomId);
     if (!room || room.status !== 'playing') return;
@@ -935,7 +969,7 @@ io.on('connection', (socket) => {
       return;
     }
 
-    const success = handlePlayTile(room, player, tileId, side);
+    const success = handlePlayTile(room, player, tileId, side, left, right);
     if (!success) {
       socket.emit('error_message', 'Jugada no válida para ese extremo.');
     }

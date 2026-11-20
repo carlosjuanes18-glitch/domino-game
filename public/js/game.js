@@ -22,8 +22,12 @@
     }
   }, 10000);
 
-  // Auto-recuperar sesión de sala de espera al volver de WhatsApp u otra app
-  socket.on('connect', () => {
+  // Auto-recuperar sesión y sincronizar mesa al reconectar o volver de otra app / desbloquear pantalla
+  function syncSessionWithServer() {
+    if (!socket) return;
+    if (!socket.connected) {
+      socket.connect();
+    }
     const saved = sessionStorage.getItem('domino_active_session');
     if (saved) {
       try {
@@ -31,6 +35,31 @@
         socket.emit('join_room', { ...data, clientId: myClientId });
       } catch (e) {}
     }
+    socket.emit('request_room_refresh');
+  }
+
+  socket.on('connect', () => {
+    syncSessionWithServer();
+  });
+
+  socket.on('reconnect', () => {
+    syncSessionWithServer();
+    showToast('✅ Conexión recuperada con éxito.');
+  });
+
+  socket.on('disconnect', () => {
+    showToast('⚠️ Conexión móvil inestable. Reconectando...');
+  });
+
+  // Cuando el celular se desbloquea, se enciende la pantalla o se vuelve a la pestaña
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      syncSessionWithServer();
+    }
+  });
+
+  window.addEventListener('focus', () => {
+    syncSessionWithServer();
   });
 
   // Estado del Cliente
@@ -578,14 +607,19 @@
 
   // Manejador al hacer clic en una ficha válida
   function onPlayerSelectTile(tile, room) {
-    if (room.currentTurnSeat !== mySeat) {
+    if (!room || room.status !== 'playing' || room.currentTurnSeat !== mySeat) {
       showToast('⏳ Espera tu turno para tirar ficha.');
       return;
     }
     window.soundManager.playTileClick();
 
     if (room.leftEnd === null) {
-      socket.emit('play_tile', { tileId: `${tile.left}-${tile.right}`, side: 'root' });
+      socket.emit('play_tile', { 
+        tileId: tile.id || `${tile.left}-${tile.right}`, 
+        side: 'root',
+        left: tile.left,
+        right: tile.right
+      });
       return;
     }
 
@@ -597,26 +631,67 @@
       document.getElementById('endChoiceLeftVal').textContent = room.leftEnd;
       document.getElementById('endChoiceRightVal').textContent = room.rightEnd;
       endChoiceModal.classList.remove('hidden');
+      endChoiceModal.style.display = 'flex';
     } else if (canLeft) {
-      socket.emit('play_tile', { tileId: `${tile.left}-${tile.right}`, side: 'left' });
-    } else {
-      socket.emit('play_tile', { tileId: `${tile.left}-${tile.right}`, side: 'right' });
+      socket.emit('play_tile', { 
+        tileId: tile.id || `${tile.left}-${tile.right}`, 
+        side: 'left',
+        left: tile.left,
+        right: tile.right
+      });
+    } else if (canRight) {
+      socket.emit('play_tile', { 
+        tileId: tile.id || `${tile.left}-${tile.right}`, 
+        side: 'right',
+        left: tile.left,
+        right: tile.right
+      });
     }
   }
 
-  // Elección de Extremo en el Diálogo Modal
-  document.getElementById('btnChooseLeft').addEventListener('click', () => {
-    if (!selectedTileForChoice) return;
-    socket.emit('play_tile', { tileId: `${selectedTileForChoice.left}-${selectedTileForChoice.right}`, side: 'left' });
+  // Elección de Extremo en el Diálogo Modal con soporte de cancelación y toques móviles
+  function closeEndChoiceModal() {
     endChoiceModal.classList.add('hidden');
+    endChoiceModal.style.display = 'none';
     selectedTileForChoice = null;
-  });
+  }
 
-  document.getElementById('btnChooseRight').addEventListener('click', () => {
+  function handleChoicePlay(side) {
     if (!selectedTileForChoice) return;
-    socket.emit('play_tile', { tileId: `${selectedTileForChoice.left}-${selectedTileForChoice.right}`, side: 'right' });
-    endChoiceModal.classList.add('hidden');
-    selectedTileForChoice = null;
+    const tile = selectedTileForChoice;
+    socket.emit('play_tile', {
+      tileId: tile.id || `${tile.left}-${tile.right}`,
+      side: side,
+      left: tile.left,
+      right: tile.right
+    });
+    closeEndChoiceModal();
+  }
+
+  const btnChooseLeft = document.getElementById('btnChooseLeft');
+  if (btnChooseLeft) {
+    btnChooseLeft.addEventListener('click', () => handleChoicePlay('left'));
+  }
+
+  const btnChooseRight = document.getElementById('btnChooseRight');
+  if (btnChooseRight) {
+    btnChooseRight.addEventListener('click', () => handleChoicePlay('right'));
+  }
+
+  const btnCancelChoice = document.getElementById('btnCancelChoice');
+  if (btnCancelChoice) {
+    btnCancelChoice.addEventListener('click', closeEndChoiceModal);
+  }
+
+  const btnCloseEndChoice = document.getElementById('btnCloseEndChoice');
+  if (btnCloseEndChoice) {
+    btnCloseEndChoice.addEventListener('click', closeEndChoiceModal);
+  }
+
+  endChoiceModal.addEventListener('click', (e) => {
+    if (e.target === endChoiceModal) {
+      closeEndChoiceModal();
+    }
   });
 
   // Botón de Paso
@@ -1022,6 +1097,16 @@
 
   const btnRoundOverFinish = document.getElementById('btnRoundOverFinish');
   if (btnRoundOverFinish) btnRoundOverFinish.addEventListener('click', handleFinishSessionClick);
+
+  // Botón para sincronizar o destrabar la mesa en cualquier momento
+  const btnSyncRoomHeader = document.getElementById('btnSyncRoomHeader');
+  if (btnSyncRoomHeader) {
+    btnSyncRoomHeader.addEventListener('click', () => {
+      window.soundManager.playTileClick();
+      syncSessionWithServer();
+      showToast('🔄 Sincronizando mesa con el servidor...');
+    });
+  }
 
   // Evento cuando un jugador abandona
   socket.on('player_surrendered', (data) => {

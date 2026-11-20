@@ -11,7 +11,7 @@
   <!-- Socket.io -->
   <script src="/socket.io/socket.io.js"></script>
   <!-- Estilos personalizados -->
-  <link rel="stylesheet" href="/css/style.css?v=4.7">
+  <link rel="stylesheet" href="/css/style.css?v=4.8">
 </head>
 
 <body>
@@ -28,9 +28,12 @@
       </div>
 
       <div class="header-actions">
-        <!-- Indicador de Sala y Ronda -->
-        <div class="bg-emerald-950/80 border border-emerald-600/40 rounded-lg px-2 py-1 text-center">
-          <div class="text-[9px] text-emerald-400 font-bold uppercase">Sala: <span id="roomCodeHeader">---</span></div>
+        <!-- Indicador de Sala y Ronda (Tocar para sincronizar/destrabar) -->
+        <div id="btnSyncRoomHeader" class="bg-emerald-950/80 border border-emerald-600/40 rounded-lg px-2 py-1 text-center cursor-pointer active:scale-95 transition-transform" title="Toca aquí para sincronizar/destrabar la mesa">
+          <div class="text-[9px] text-emerald-400 font-bold uppercase flex items-center justify-center gap-1">
+            <span>Sala: <span id="roomCodeHeader">---</span></span>
+            <span class="text-[9px] text-emerald-300 opacity-80">🔄</span>
+          </div>
           <div class="text-[10px] text-amber-300 font-extrabold">Ronda <span id="roundNumHeader">1</span></div>
         </div>
 
@@ -411,7 +414,8 @@
   <!-- MODAL 4: ELECCIÓN DE EXTREMO (IZQUIERDA O DERECHA) -->
   <!-- ============================================== -->
   <div id="endChoiceModal" class="modal-backdrop hidden">
-    <div class="modal-card !max-w-xs text-center">
+    <div class="modal-card !max-w-xs text-center relative">
+      <button id="btnCloseEndChoice" class="modal-close-btn" title="Cerrar">&times;</button>
       <div class="modal-title justify-center mb-1">
         <span>🔄</span> ¿En qué extremo jugar?
       </div>
@@ -420,16 +424,21 @@
       </p>
 
       <div class="ends-choice-container">
-        <button id="btnChooseLeft" class="end-choice-btn">
-          <span class="text-xs text-blue-300">Extremo Izquierdo</span>
-          <span id="endChoiceLeftVal" class="text-xl font-black text-amber-300">0</span>
+        <button id="btnChooseLeft" class="end-choice-btn" type="button">
+          <span class="pointer-events-none text-xs text-blue-300">Extremo Izquierdo</span>
+          <span id="endChoiceLeftVal" class="pointer-events-none text-xl font-black text-amber-300">0</span>
         </button>
 
-        <button id="btnChooseRight" class="end-choice-btn">
-          <span class="text-xs text-blue-300">Extremo Derecho</span>
-          <span id="endChoiceRightVal" class="text-xl font-black text-amber-300">0</span>
+        <button id="btnChooseRight" class="end-choice-btn" type="button">
+          <span class="pointer-events-none text-xs text-blue-300">Extremo Derecho</span>
+          <span id="endChoiceRightVal" class="pointer-events-none text-xl font-black text-amber-300">0</span>
         </button>
       </div>
+
+      <button id="btnCancelChoice" type="button"
+        class="secondary-btn w-full !py-2 mt-3 !text-xs font-bold text-slate-300">
+        ❌ Cancelar / Elegir otra ficha
+      </button>
     </div>
   </div>
 
@@ -616,10 +625,10 @@
   </div>
 
   <!-- Scripts -->
-  <script src="/js/avatars.js?v=4.7"></script>
-  <script src="/js/audio.js?v=4.7"></script>
-  <script src="/js/domino-renderer.js?v=4.7"></script>
-  <script src="/js/game.js?v=4.7"></script>
+  <script src="/js/avatars.js?v=4.8"></script>
+  <script src="/js/audio.js?v=4.8"></script>
+  <script src="/js/domino-renderer.js?v=4.8"></script>
+  <script src="/js/game.js?v=4.8"></script>
 </body>
 
 </html>

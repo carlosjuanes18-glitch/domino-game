@@ -295,14 +295,25 @@
     updateScoreboardUI(room);
 
     // Indicador de Turno
-    const activePlayer = room.players.find(p => p.seat === room.currentTurnSeat);
-    if (activePlayer) {
-      const isMyTurn = activePlayer.seat === mySeat;
-      turnBanner.innerHTML = isMyTurn 
-        ? `<span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span> ¡ES TU TURNO DE JUGAR!`
-        : `Turno de: <strong>${activePlayer.name}</strong> (${activePlayer.tileCount} fichas)`;
-      
-      turnBanner.style.borderColor = isMyTurn ? '#10b981' : 'rgba(254, 240, 138, 0.3)';
+    if (room.status === 'round_end') {
+      turnBanner.innerHTML = '🏁 ¡Ronda Finalizada! (¡Dominó / Tranca!)';
+      turnBanner.style.borderColor = '#eab308';
+      // Failsafe: Asegurar que el modal de fin de ronda esté visible
+      roundOverModal.classList.remove('hidden');
+      roundOverModal.style.display = 'flex';
+    } else if (room.status === 'session_finished') {
+      turnBanner.innerHTML = '🏆 ¡Sesión de Dominó Finalizada!';
+      turnBanner.style.borderColor = '#10b981';
+    } else {
+      const activePlayer = room.players.find(p => p.seat === room.currentTurnSeat);
+      if (activePlayer) {
+        const isMyTurn = activePlayer.seat === mySeat;
+        turnBanner.innerHTML = isMyTurn 
+          ? `<span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span> ¡ES TU TURNO DE JUGAR!`
+          : `Turno de: <strong>${activePlayer.name}</strong> (${activePlayer.tileCount} fichas)`;
+        
+        turnBanner.style.borderColor = isMyTurn ? '#10b981' : 'rgba(254, 240, 138, 0.3)';
+      }
     }
   }
 
@@ -436,7 +447,7 @@
       if (!podEl) return;
 
       podEl.classList.remove('hidden');
-      const isCurrentTurn = room.currentTurnSeat === player.seat;
+      const isCurrentTurn = (room.status === 'playing') && (room.currentTurnSeat === player.seat);
       if (isCurrentTurn) {
         podEl.classList.add('active-turn');
       } else {
@@ -463,6 +474,14 @@
   // Renderizar la Mano del Jugador con Fichas Clásicas Blancas
   function renderPlayerHand(room) {
     playerRack.innerHTML = '';
+
+    if (myHand.length === 0) {
+      playerRack.innerHTML = '<div class="text-xs text-yellow-300 font-extrabold py-3 text-center w-full">🏆 ¡Fichas agotadas! ¡Has hecho Dominó!</div>';
+      passBtn.classList.remove('must-pass');
+      passBtn.setAttribute('disabled', 'true');
+      passBtn.innerHTML = '🏆 ¡Ronda Ganada!';
+      return;
+    }
 
     const isMyTurn = room.status === 'playing' && room.currentTurnSeat === mySeat;
     let playableCount = 0;
@@ -662,11 +681,13 @@
     }
 
     roundOverModal.classList.remove('hidden');
+    roundOverModal.style.display = 'flex';
   }
 
   document.getElementById('btnNextRound').addEventListener('click', () => {
     window.soundManager.playTileClick();
     roundOverModal.classList.add('hidden');
+    roundOverModal.style.display = 'none';
     socket.emit('next_round');
   });
 

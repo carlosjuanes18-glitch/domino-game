@@ -29,6 +29,29 @@ app.use(express.static(path.join(__dirname, 'public'), {
   maxAge: 0
 }));
 
+// Funciones para obtener fecha y hora en la zona horaria local de México (Veracruz / CDMX)
+function getMexicoDateTime() {
+  return new Date().toLocaleString('es-MX', {
+    timeZone: 'America/Mexico_City',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true
+  });
+}
+
+function getMexicoTime() {
+  return new Date().toLocaleTimeString('es-MX', {
+    timeZone: 'America/Mexico_City',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true
+  });
+}
+
 // Generar todas las 28 fichas del dominó tradicional doble-6
 function generateDominoSet() {
   const tiles = [];
@@ -478,7 +501,8 @@ function handleRoundEnd(room, outcome) {
 
   const roundRecord = {
     round: room.round,
-    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    timestamp: getMexicoTime(),
+    timestampMs: Date.now(),
     type: outcome.type,
     winnerSeat: outcome.winnerSeat,
     winnerName: outcome.winnerName || 'Empate',
@@ -708,7 +732,9 @@ function calculateSessionBalance(room) {
 
   return {
     roomId: room.id,
-    finishedAt: new Date().toLocaleString(),
+    finishedAt: getMexicoDateTime(),
+    finishedAtIso: new Date().toISOString(),
+    finishedAtMs: Date.now(),
     totalRounds: room.round,
     gameRate,
     penaltyPerPass,
@@ -726,7 +752,8 @@ function calculateSessionBalance(room) {
       ? room.history
       : (room.round > 0 ? [{
           round: room.round,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          timestamp: getMexicoTime(),
+          timestampMs: Date.now(),
           type: 'domino',
           winnerName: champion ? champion.name : 'Ganador',
           winnerSeat: champion ? champion.seat : 0,

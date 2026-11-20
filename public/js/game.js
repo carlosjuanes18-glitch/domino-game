@@ -1,5 +1,5 @@
 // Lógica del Cliente de Dominó Multijugador en Tiempo Real
-(function() {
+(function () {
   // Identificador único persistente del dispositivo/navegador
   let myClientId = localStorage.getItem('domino_client_id');
   if (!myClientId) {
@@ -33,7 +33,7 @@
       try {
         const data = JSON.parse(saved);
         socket.emit('join_room', { ...data, clientId: myClientId });
-      } catch (e) {}
+      } catch (e) { }
     }
     socket.emit('request_room_refresh');
   }
@@ -337,10 +337,10 @@
       const activePlayer = room.players.find(p => p.seat === room.currentTurnSeat);
       if (activePlayer) {
         const isMyTurn = activePlayer.seat === mySeat;
-        turnBanner.innerHTML = isMyTurn 
+        turnBanner.innerHTML = isMyTurn
           ? `<span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span> ¡ES TU TURNO DE JUGAR!`
           : `Turno de: <strong>${activePlayer.name}</strong> (${activePlayer.tileCount} fichas)`;
-        
+
         turnBanner.style.borderColor = isMyTurn ? '#10b981' : 'rgba(254, 240, 138, 0.3)';
       }
     }
@@ -614,8 +614,8 @@
     window.soundManager.playTileClick();
 
     if (room.leftEnd === null) {
-      socket.emit('play_tile', { 
-        tileId: tile.id || `${tile.left}-${tile.right}`, 
+      socket.emit('play_tile', {
+        tileId: tile.id || `${tile.left}-${tile.right}`,
         side: 'root',
         left: tile.left,
         right: tile.right
@@ -633,15 +633,15 @@
       endChoiceModal.classList.remove('hidden');
       endChoiceModal.style.display = 'flex';
     } else if (canLeft) {
-      socket.emit('play_tile', { 
-        tileId: tile.id || `${tile.left}-${tile.right}`, 
+      socket.emit('play_tile', {
+        tileId: tile.id || `${tile.left}-${tile.right}`,
         side: 'left',
         left: tile.left,
         right: tile.right
       });
     } else if (canRight) {
-      socket.emit('play_tile', { 
-        tileId: tile.id || `${tile.left}-${tile.right}`, 
+      socket.emit('play_tile', {
+        tileId: tile.id || `${tile.left}-${tile.right}`,
         side: 'right',
         left: tile.left,
         right: tile.right
@@ -1271,7 +1271,31 @@
     if (roomCodeEl) roomCodeEl.textContent = balance.roomId || 'MESA-1';
 
     const dateEl = document.getElementById('fbDate');
-    if (dateEl) dateEl.textContent = balance.finishedAt || new Date().toLocaleString();
+    if (dateEl) {
+      let displayDate = '';
+      if (balance.finishedAtIso || balance.finishedAtMs) {
+        displayDate = new Date(balance.finishedAtIso || balance.finishedAtMs).toLocaleString([], {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: true
+        });
+      } else {
+        displayDate = balance.finishedAt || new Date().toLocaleString([], {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: true
+        });
+      }
+      dateEl.textContent = displayDate;
+    }
 
     const roundsEl = document.getElementById('fbTotalRounds');
     if (roundsEl) roundsEl.textContent = balance.totalRounds || 0;
@@ -1423,7 +1447,7 @@
 
         const winSign = winPart > 0 ? `+ $${winPart}` : (winPart < 0 ? `- $${Math.abs(winPart)}` : '$0');
         const passSign = passPart > 0 ? `+ $${passPart}` : (passPart < 0 ? `- $${Math.abs(passPart)}` : '$0');
-        
+
         let statusTag = '';
         let totalColor = 'text-slate-300';
         if (total > 0) {
@@ -1531,11 +1555,15 @@
       } else {
         let roundsHtml = '';
         balance.history.forEach((h, hIdx) => {
-          const typeBadge = h.type === 'domino' 
-            ? '🀫 Ganada por Dominó' 
+          const typeBadge = h.type === 'domino'
+            ? '🀫 Ganada por Dominó'
             : (h.type === 'tranca' ? '🔒 Ganada por Tranca / Cierre' : '🚪 Ganada por Abandono');
           const typeColor = h.type === 'domino' ? 'text-emerald-300' : (h.type === 'tranca' ? 'text-amber-300' : 'text-rose-400');
-          
+
+          const roundTime = h.timestampMs
+            ? new Date(h.timestampMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })
+            : (h.timestamp || '');
+
           roundsHtml += `
             <div class="round-detail-card border border-slate-700/80 rounded-xl p-3 bg-slate-950/70 mb-3">
               <div class="flex flex-wrap items-center justify-between border-b border-slate-800 pb-2 mb-2 gap-2 text-xs">
@@ -1543,7 +1571,7 @@
                   <span class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 font-extrabold border border-emerald-500/40">
                     Partida #${h.round || (hIdx + 1)}
                   </span>
-                  <span class="text-slate-400">🕒 ${h.timestamp || ''}</span>
+                  <span class="text-slate-400">🕒 ${roundTime}</span>
                   <span class="font-bold ${typeColor}">${typeBadge}</span>
                 </div>
                 <div class="text-yellow-300 font-black">
@@ -1569,9 +1597,9 @@
             h.playerStats.forEach(ps => {
               const isWinner = ps.isWinner || (h.winnerName && ps.name === h.winnerName);
               const isSurrender = ps.isSurrender || (h.surrenderedBy && ps.name === h.surrenderedBy);
-              
-              let statusLabel = isWinner 
-                ? '<strong class="text-yellow-400">🏆 Ganó</strong>' 
+
+              let statusLabel = isWinner
+                ? '<strong class="text-yellow-400">🏆 Ganó</strong>'
                 : (isSurrender ? '<span class="text-rose-400 font-bold">🚪 Abandonó</span>' : '<span class="text-slate-400">Derrota</span>');
 
               let tilesDesc = '';
@@ -1683,10 +1711,16 @@
     btnCopyBalanceSummary.addEventListener('click', () => {
       if (!currentSessionBalance) return;
       const b = currentSessionBalance;
+      const displayDate = (b.finishedAtIso || b.finishedAtMs)
+        ? new Date(b.finishedAtIso || b.finishedAtMs).toLocaleString([], {
+            year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true
+          })
+        : (b.finishedAt || new Date().toLocaleString());
+
       let text = `🏆 *BALANCE FINAL DE DOMINÓ (BLOQUEO)* 🀫\n`;
-      text += `📅 Mesa: ${b.roomId} | Fecha: ${b.finishedAt} | Rondas: ${b.totalRounds}\n\n`;
+      text += `📅 Mesa: ${b.roomId} | Fecha: ${displayDate} | Rondas: ${b.totalRounds}\n\n`;
       text += `👑 *Campeón de la Mesa:* ${b.champion}\n\n`;
-      
+
       text += `💵 *TOTAL ACUMULADO A PAGAR EN PESOS:*\n`;
       if (b.primaryPaymentHeadline) {
         text += `👉 *${b.primaryPaymentHeadline}*\n`;

@@ -274,19 +274,25 @@
     });
   });
 
-  // Configuración de Pago por Partida y por Pase en Lobby
+  // Configuración de Pago por Partida y por Pase en Lobby (Solo Anfitrión)
   const lobbyGameRateEl = document.getElementById('lobbyGameRateInput');
   if (lobbyGameRateEl) {
-    lobbyGameRateEl.addEventListener('change', (e) => {
+    const handleGameRateChange = (e) => {
+      if (!currentRoom || currentRoom.hostId !== socket.id) return;
       socket.emit('set_game_rate', { gameRate: e.target.value });
-    });
+    };
+    lobbyGameRateEl.addEventListener('change', handleGameRateChange);
+    lobbyGameRateEl.addEventListener('input', handleGameRateChange);
   }
 
   const penaltyInputEl = document.getElementById('penaltyInput');
   if (penaltyInputEl) {
-    penaltyInputEl.addEventListener('change', (e) => {
+    const handlePenaltyChange = (e) => {
+      if (!currentRoom || currentRoom.hostId !== socket.id) return;
       socket.emit('set_penalty_value', { penaltyValue: e.target.value });
-    });
+    };
+    penaltyInputEl.addEventListener('change', handlePenaltyChange);
+    penaltyInputEl.addEventListener('input', handlePenaltyChange);
   }
 
   // Actualización Global de la Sala
@@ -390,20 +396,26 @@
       }
     }
 
-    // Sincronizar ajustes de pago por partida y por pase en el Lobby
+    // Sincronizar ajustes de pago por partida y por pase en el Lobby (EXCLUSIVO DEL ANFITRIÓN)
     const lobbyGameRateInput = document.getElementById('lobbyGameRateInput');
     const penaltyInput = document.getElementById('penaltyInput');
     const lobbyBetHostBadge = document.getElementById('lobbyBetHostBadge');
+    const lobbyBetNotice = document.getElementById('lobbyBetNotice');
+    const lobbyGameRateLockIcon = document.getElementById('lobbyGameRateLockIcon');
+    const lobbyPenaltyLockIcon = document.getElementById('lobbyPenaltyLockIcon');
 
     if (lobbyGameRateInput) {
       if (document.activeElement !== lobbyGameRateInput) {
         lobbyGameRateInput.value = (typeof room.gameRate === 'number') ? room.gameRate : 5;
       }
       lobbyGameRateInput.disabled = !isHost;
+      lobbyGameRateInput.readOnly = !isHost;
       if (!isHost) {
-        lobbyGameRateInput.classList.add('opacity-70', 'cursor-not-allowed');
+        lobbyGameRateInput.classList.add('opacity-60', 'cursor-not-allowed', 'bg-slate-900');
+        lobbyGameRateInput.classList.remove('bg-slate-950');
       } else {
-        lobbyGameRateInput.classList.remove('opacity-70', 'cursor-not-allowed');
+        lobbyGameRateInput.classList.remove('opacity-60', 'cursor-not-allowed', 'bg-slate-900');
+        lobbyGameRateInput.classList.add('bg-slate-950');
       }
     }
 
@@ -412,27 +424,62 @@
         penaltyInput.value = (typeof room.penaltyPerPass === 'number') ? room.penaltyPerPass : 1;
       }
       penaltyInput.disabled = !isHost;
+      penaltyInput.readOnly = !isHost;
       if (!isHost) {
-        penaltyInput.classList.add('opacity-70', 'cursor-not-allowed');
+        penaltyInput.classList.add('opacity-60', 'cursor-not-allowed', 'bg-slate-900');
+        penaltyInput.classList.remove('bg-slate-950');
       } else {
-        penaltyInput.classList.remove('opacity-70', 'cursor-not-allowed');
+        penaltyInput.classList.remove('opacity-60', 'cursor-not-allowed', 'bg-slate-900');
+        penaltyInput.classList.add('bg-slate-950');
+      }
+    }
+
+    if (lobbyGameRateLockIcon) {
+      if (!isHost) {
+        lobbyGameRateLockIcon.classList.remove('hidden');
+      } else {
+        lobbyGameRateLockIcon.classList.add('hidden');
+      }
+    }
+
+    if (lobbyPenaltyLockIcon) {
+      if (!isHost) {
+        lobbyPenaltyLockIcon.classList.remove('hidden');
+      } else {
+        lobbyPenaltyLockIcon.classList.add('hidden');
       }
     }
 
     if (lobbyBetHostBadge) {
-      lobbyBetHostBadge.textContent = isHost ? '👑 Eres el Anfitrión' : 'Definido por el anfitrión';
+      lobbyBetHostBadge.textContent = isHost ? '👑 Eres el Anfitrión (Editable)' : '🔒 Definido por el Anfitrión';
       lobbyBetHostBadge.className = isHost
-        ? 'text-[9px] bg-amber-500/20 text-amber-300 font-bold px-1.5 py-0.5 rounded border border-amber-500/40'
-        : 'text-[9px] bg-slate-800 text-slate-400 font-bold px-1.5 py-0.5 rounded border border-slate-700';
+        ? 'text-[9px] bg-amber-500/25 text-amber-300 font-extrabold px-1.5 py-0.5 rounded border border-amber-500/40 shadow-sm'
+        : 'text-[9px] bg-rose-950/80 text-rose-300 font-extrabold px-1.5 py-0.5 rounded border border-rose-500/50 shadow-sm';
     }
 
-    // Botones de cantidad de jugadores activa
+    if (lobbyBetNotice) {
+      if (isHost) {
+        lobbyBetNotice.innerHTML = '👑 <strong>Tú eres el Anfitrión:</strong> Define cuánto cuesta la partida y los pases.';
+        lobbyBetNotice.className = 'text-[9px] text-amber-300 font-medium mt-1.5 text-center';
+      } else {
+        lobbyBetNotice.innerHTML = '🔒 <strong>Valores fijados por el Anfitrión:</strong> Puedes ver las tarifas pero solo el anfitrión puede modificarlas.';
+        lobbyBetNotice.className = 'text-[9px] text-rose-300 font-semibold mt-1.5 text-center bg-rose-950/40 py-1 px-2 rounded border border-rose-500/30';
+      }
+    }
+
+    // Botones de cantidad de jugadores activa (Solo editable por el anfitrión)
     document.querySelectorAll('.player-count-btn').forEach(btn => {
       const cnt = parseInt(btn.getAttribute('data-count'));
       if (cnt === maxP) {
         btn.classList.add('active');
       } else {
         btn.classList.remove('active');
+      }
+      btn.disabled = !isHost;
+      if (!isHost) {
+        btn.classList.add('opacity-60', 'cursor-not-allowed');
+      } else {
+        btn.classList.remove('opacity-60', 'cursor-not-allowed');
       }
     });
 
@@ -482,14 +529,40 @@
     }
 
     const startBtn = document.getElementById('btnStartGame');
-    if (room.players.length === maxP) {
-      startBtn.removeAttribute('disabled');
-      startBtn.classList.remove('opacity-50');
-      startBtn.innerHTML = `🚀 ¡Comenzar Partida (${maxP}/${maxP})!`;
+    const addBotBtn = document.getElementById('btnAddBot');
+
+    if (isHost) {
+      if (room.players.length === maxP) {
+        startBtn.removeAttribute('disabled');
+        startBtn.classList.remove('opacity-50', 'opacity-60', 'cursor-not-allowed');
+        startBtn.innerHTML = `🚀 ¡Comenzar Partida (${maxP}/${maxP})!`;
+      } else {
+        startBtn.setAttribute('disabled', 'true');
+        startBtn.classList.add('opacity-50');
+        startBtn.classList.remove('cursor-not-allowed');
+        startBtn.innerHTML = `Faltan ${maxP - room.players.length} jugadores...`;
+      }
+      if (addBotBtn) {
+        if (room.players.length >= maxP) {
+          addBotBtn.setAttribute('disabled', 'true');
+          addBotBtn.classList.add('opacity-50');
+        } else {
+          addBotBtn.removeAttribute('disabled');
+          addBotBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+      }
     } else {
       startBtn.setAttribute('disabled', 'true');
-      startBtn.classList.add('opacity-50');
-      startBtn.innerHTML = `Faltan ${maxP - room.players.length} jugadores...`;
+      startBtn.classList.add('opacity-60', 'cursor-not-allowed');
+      if (room.players.length === maxP) {
+        startBtn.innerHTML = `⏳ Esperando que el Anfitrión comience (${maxP}/${maxP})`;
+      } else {
+        startBtn.innerHTML = `Faltan ${maxP - room.players.length} jugadores...`;
+      }
+      if (addBotBtn) {
+        addBotBtn.setAttribute('disabled', 'true');
+        addBotBtn.classList.add('opacity-50', 'cursor-not-allowed');
+      }
     }
   }
 

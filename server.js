@@ -983,8 +983,11 @@ io.on('connection', (socket) => {
     const room = rooms.get(currentRoomId);
     if (!room || room.status !== 'waiting') return;
 
-    // Quien configure la cantidad de jugadores toma la capitanía/anfitrión de la mesa
-    room.hostId = socket.id;
+    // Solo el anfitrión puede cambiar el número de jugadores
+    if (room.hostId && room.hostId !== socket.id) {
+      socket.emit('error_message', 'Solo el anfitrión puede configurar la mesa.');
+      return;
+    }
 
     const num = parseInt(count);
     if (![2, 3, 4].includes(num)) return;
@@ -1015,6 +1018,11 @@ io.on('connection', (socket) => {
     const room = rooms.get(currentRoomId);
     const maxP = room ? (room.maxPlayers || 4) : 4;
     if (!room || room.players.length >= maxP || room.status !== 'waiting') return;
+
+    if (room.hostId && room.hostId !== socket.id) {
+      socket.emit('error_message', 'Solo el anfitrión puede agregar bots.');
+      return;
+    }
 
     const botNames = ['Mateo Bot', 'Sofía Bot', 'Carlos Bot', 'Valentina Bot', 'Lucas Bot', 'Camila Bot'];
     const botAvatars = ['male_2', 'female_2', 'male_3', 'female_3', 'male_4', 'female_4'];
@@ -1056,6 +1064,11 @@ io.on('connection', (socket) => {
     const room = rooms.get(currentRoomId);
     if (!room || room.status !== 'waiting') return;
 
+    if (room.hostId && room.hostId !== socket.id) {
+      socket.emit('error_message', 'Solo el anfitrión puede remover bots.');
+      return;
+    }
+
     room.players = room.players.filter(p => !(p.seat === seat && p.isBot));
     // Reasignar asientos
     room.players.forEach((p, idx) => p.seat = idx);
@@ -1067,6 +1080,11 @@ io.on('connection', (socket) => {
     if (!currentRoomId) return;
     const room = rooms.get(currentRoomId);
     if (!room || room.status === 'playing') return;
+
+    if (room.hostId && room.hostId !== socket.id) {
+      socket.emit('error_message', 'Solo el anfitrión puede iniciar la partida.');
+      return;
+    }
 
     const maxP = room.maxPlayers || 4;
     if (room.players.length !== maxP) {
@@ -1133,31 +1151,52 @@ io.on('connection', (socket) => {
     handlePassTurn(room, player);
   });
 
-  // Configurar valor de penalización / aportación por paso
+  // Configurar valor de penalización / aportación por paso (EXCLUSIVO DEL ANFITRIÓN)
   socket.on('set_penalty_value', ({ penaltyValue }) => {
     if (!currentRoomId) return;
     const room = rooms.get(currentRoomId);
     if (!room) return;
+
+    // Solo el anfitrión tiene permiso de definir el costo por pase
+    if (room.hostId && room.hostId !== socket.id) {
+      socket.emit('error_message', 'Solo el anfitrión de la sala puede modificar el costo por pase.');
+      return;
+    }
+
     const num = Math.max(0, parseInt(penaltyValue) || 0);
     room.penaltyPerPass = num;
     broadcastRoom(room);
   });
 
-  // Configurar valor de pago por partida
+  // Configurar valor de pago por partida (EXCLUSIVO DEL ANFITRIÓN)
   socket.on('set_game_rate', ({ gameRate }) => {
     if (!currentRoomId) return;
     const room = rooms.get(currentRoomId);
     if (!room) return;
+
+    // Solo el anfitrión tiene permiso de definir el costo por partida
+    if (room.hostId && room.hostId !== socket.id) {
+      socket.emit('error_message', 'Solo el anfitrión de la sala puede modificar el costo por partida.');
+      return;
+    }
+
     const num = Math.max(0, parseInt(gameRate) || 0);
     room.gameRate = num;
     broadcastRoom(room);
   });
 
-  // Configurar ambos valores de una vez (Partida y Pases)
+  // Configurar ambos valores de una vez (Partida y Pases - EXCLUSIVO DEL ANFITRIÓN)
   socket.on('set_bet_settings', ({ gameRate, penaltyValue }) => {
     if (!currentRoomId) return;
     const room = rooms.get(currentRoomId);
     if (!room) return;
+
+    // Solo el anfitrión tiene permiso de definir las apuestas
+    if (room.hostId && room.hostId !== socket.id) {
+      socket.emit('error_message', 'Solo el anfitrión de la sala puede modificar las apuestas.');
+      return;
+    }
+
     if (gameRate !== undefined && !isNaN(parseInt(gameRate))) {
       room.gameRate = Math.max(0, parseInt(gameRate));
     }

@@ -11,7 +11,7 @@
   <!-- Socket.io -->
   <script src="/socket.io/socket.io.js"></script>
   <!-- Estilos personalizados -->
-  <link rel="stylesheet" href="/css/style.css?v=9.0">
+  <link rel="stylesheet" href="/css/style.css?v=10.0">
 </head>
 
 <body>
@@ -24,7 +24,8 @@
         <div>
           <div class="leading-tight">DOMINÓ <span id="headerPlayerMode">4P</span></div>
           <div class="text-[8px] font-semibold text-emerald-300 uppercase tracking-wider">Bloqueo (Sin Pozo)</div>
-          <div class="text-[6.5px] text-emerald-400/70 font-bold uppercase tracking-wider">Por Von Carloo MC • Veracruz</div>
+          <div class="text-[6.5px] text-emerald-400/70 font-bold uppercase tracking-wider">Por Von Carloo MC • Veracruz
+          </div>
         </div>
       </div>
 
@@ -240,90 +241,87 @@
         <span class="text-xs bg-emerald-900/60 text-emerald-300 font-bold px-2 py-1 rounded">4 Jugadores</span>
       </div>
 
-      <div class="text-xs text-slate-300 mb-3">
+      <div class="text-[11px] text-slate-300 mb-2 leading-tight">
         Modalidad <strong>Bloqueo (sin pozo)</strong>: 28 fichas clásicas repartidas equitativamente (7 a cada uno).
       </div>
 
       <!-- Nombre del Jugador -->
-      <label class="text-xs font-bold text-slate-300 mb-1 block">Tu Nombre o Apodo:</label>
+      <label class="text-[11px] font-bold text-slate-300 mb-0.5 block">Tu Nombre o Apodo:</label>
       <input id="inputPlayerName" type="text" maxlength="15" placeholder="Ej: Roberto, Carmen, Alex..."
-        class="w-full bg-slate-900 border border-emerald-500/40 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-400 mb-3" />
+        class="w-full bg-slate-900 border border-emerald-500/40 rounded-xl px-3 py-1.5 text-sm text-white focus:outline-none focus:border-emerald-400 mb-2" />
 
       <!-- Selección de Avatar Personalizable -->
-      <label class="text-xs font-bold text-slate-300 block">Elige tu Avatar (Masculinos y Femeninos):</label>
-      <div id="avatarGrid" class="avatar-grid">
+      <label class="text-[11px] font-bold text-slate-300 block mb-1">Elige tu Avatar (Masculinos y Femeninos):</label>
+      <div id="avatarGrid" class="avatar-grid mb-2">
         <!-- Poblado por JS -->
       </div>
 
       <!-- Código de Sala -->
-      <label class="text-xs font-bold text-slate-300 mb-1 block">Código de Sala:</label>
-      <div class="flex gap-2 mb-4">
+      <label class="text-[11px] font-bold text-slate-300 mb-0.5 block">Código de Sala:</label>
+      <div class="flex gap-2 mb-2">
         <input id="inputRoomId" type="text" maxlength="8" value="MESA-1" placeholder="MESA-1"
-          class="flex-1 bg-slate-900 border border-emerald-500/40 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-400 uppercase font-mono tracking-wider" />
-        <button id="btnRandomRoom" type="button" class="secondary-btn !py-2 !px-3 text-xs font-bold"
+          class="flex-1 bg-slate-900 border border-emerald-500/40 rounded-xl px-3 py-1.5 text-sm text-white focus:outline-none focus:border-emerald-400 uppercase font-mono tracking-wider" />
+        <button id="btnRandomRoom" type="button" class="secondary-btn !py-1.5 !px-3 text-xs font-bold"
           title="Generar otra sala">
           🎲 Otra
         </button>
         <button id="btnResetRoom" type="button"
-          class="secondary-btn !py-2 !px-3 text-xs font-bold !text-amber-300 !border-amber-500/40"
+          class="secondary-btn !py-1.5 !px-3 text-xs font-bold !text-amber-300 !border-amber-500/40"
           title="Reiniciar esta sala si quedó ocupada">
           🔄 Reiniciar
         </button>
       </div>
 
       <!-- Ajustes de Apuesta / Valor del Juego (Configurado por el Anfitrión) -->
-      <div class="bg-gradient-to-r from-emerald-950/80 via-slate-900 to-amber-950/60 border border-emerald-500/40 rounded-xl p-2.5 mb-3.5 shadow">
-        <div class="text-[11px] font-black text-amber-300 uppercase tracking-wide flex items-center justify-between mb-2">
+      <div
+        class="bg-gradient-to-r from-emerald-950/80 via-slate-900 to-amber-950/60 border border-emerald-500/40 rounded-xl p-2 mb-2.5 shadow">
+        <div
+          class="text-[11px] font-black text-amber-300 uppercase tracking-wide flex items-center justify-between mb-1.5">
           <span class="flex items-center gap-1.5"><span>💵</span> ¿De cuánto se va a jugar?</span>
-          <span class="text-[9px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded border border-amber-500/40 font-bold">👑 Anfitrión</span>
+          <span
+            class="text-[9px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded border border-amber-500/40 font-bold">👑
+            Anfitrión</span>
         </div>
-        
+
         <div class="grid grid-cols-2 gap-2 text-xs">
           <!-- Pago por cada Partida -->
-          <div class="bg-slate-900/90 border border-emerald-500/40 rounded-lg p-2">
-            <label class="text-[10px] font-bold text-emerald-300 block mb-1">
+          <div class="bg-slate-900/90 border border-emerald-500/40 rounded-lg p-1.5">
+            <label class="text-[9.5px] font-bold text-emerald-300 block mb-0.5">
               🏆 Por cada "Partida":
             </label>
             <div class="flex items-center gap-1">
-              <span class="text-emerald-400 font-black text-sm">$</span>
+              <span class="text-emerald-400 font-black text-xs">$</span>
               <input id="setupGameRateInput" type="number" min="0" max="10000" value="5"
-                class="w-full bg-slate-950 border border-emerald-500/50 rounded px-1.5 py-1 text-sm font-black text-emerald-300 text-center focus:outline-none focus:border-emerald-400" />
-              <span class="text-[9.5px] text-slate-400 font-semibold">pesos</span>
+                class="w-full bg-slate-950 border border-emerald-500/50 rounded px-1.5 py-0.5 text-xs font-black text-emerald-300 text-center focus:outline-none focus:border-emerald-400" />
+              <span class="text-[9px] text-slate-400 font-semibold">pesos</span>
             </div>
           </div>
 
           <!-- Pago por cada Pase -->
-          <div class="bg-slate-900/90 border border-amber-500/40 rounded-lg p-2">
-            <label class="text-[10px] font-bold text-amber-300 block mb-1">
+          <div class="bg-slate-900/90 border border-amber-500/40 rounded-lg p-1.5">
+            <label class="text-[9.5px] font-bold text-amber-300 block mb-0.5">
               🚫 Por cada "Pase":
             </label>
             <div class="flex items-center gap-1">
-              <span class="text-amber-400 font-black text-sm">$</span>
+              <span class="text-amber-400 font-black text-xs">$</span>
               <input id="setupPenaltyInput" type="number" min="0" max="10000" value="1"
-                class="w-full bg-slate-950 border border-amber-500/50 rounded px-1.5 py-1 text-sm font-black text-amber-300 text-center focus:outline-none focus:border-amber-400" />
-              <span class="text-[9.5px] text-slate-400 font-semibold">pesos</span>
+                class="w-full bg-slate-950 border border-amber-500/50 rounded px-1.5 py-0.5 text-xs font-black text-amber-300 text-center focus:outline-none focus:border-amber-400" />
+              <span class="text-[9px] text-slate-400 font-semibold">pesos</span>
             </div>
           </div>
         </div>
-        <div class="text-[9.5px] text-slate-400 mt-1.5 text-center">
-          💡 Puedes ajustar estos valores aquí o en la sala de espera.
-        </div>
       </div>
 
-      <button id="btnJoinGame" class="primary-btn">
+      <button id="btnJoinGame" class="primary-btn !py-2.5 text-sm font-bold">
         <span>Entrar a la Sala de Espera</span> ➔
       </button>
 
       <button id="btnCreateCleanRoom" type="button"
-        class="secondary-btn w-full !py-2.5 mt-2.5 !bg-emerald-950/70 !border-emerald-500/50 !text-emerald-300 font-bold text-xs flex items-center justify-center gap-2">
+        class="secondary-btn w-full !py-2 mt-2 !bg-emerald-950/70 !border-emerald-500/50 !text-emerald-300 font-bold text-xs flex items-center justify-center gap-2">
         <span>✨ Crear Mesa Nueva Limpia (Automática)</span>
       </button>
 
-      <!-- Sello Neón Fosforescente de Autoría -->
-      <div class="neon-credit-banner">
-        <div class="neon-author">Creado por Von Carloo MC</div>
-        <div class="neon-location">Veracruz, México</div>
-      </div>
+      <div class="text-[7.5px] text-emerald-400/60 text-center mt-1">Por Von Carloo MC • Veracruz</div>
     </div>
   </div>
 
@@ -342,49 +340,49 @@
         </div>
       </div>
 
-      <div class="bg-slate-900/80 border border-slate-700/60 rounded-xl p-3 mb-3 flex items-center justify-between">
+      <div class="bg-slate-900/80 border border-slate-700/60 rounded-xl p-2 mb-2 flex items-center justify-between">
         <div>
-          <div class="text-[10px] text-slate-400 uppercase font-bold">Código de Sala</div>
-          <div id="lobbyRoomCode" class="text-base font-black text-amber-300 font-mono tracking-wider">MESA-1</div>
+          <div class="text-[9.5px] text-slate-400 uppercase font-bold">Código de Sala</div>
+          <div id="lobbyRoomCode" class="text-sm sm:text-base font-black text-amber-300 font-mono tracking-wider">MESA-1</div>
         </div>
-        <button id="btnCopyInvite" class="secondary-btn text-xs">
+        <button id="btnCopyInvite" class="secondary-btn !py-1 !px-2.5 text-xs">
           📋 Copiar Enlace
         </button>
       </div>
 
       <!-- Selector de Jugadores (Configurado por el Anfitrión) -->
-      <div class="bg-slate-900/90 border border-emerald-500/40 rounded-xl p-3 mb-3">
-        <div class="flex items-center justify-between mb-2">
-          <label class="text-xs font-bold text-emerald-300 flex items-center gap-1.5">
+      <div class="bg-slate-900/90 border border-emerald-500/40 rounded-xl p-2 mb-2">
+        <div class="flex items-center justify-between mb-1.5">
+          <label class="text-[11px] font-bold text-emerald-300 flex items-center gap-1">
             👥 Jugadores en la partida:
           </label>
           <span id="hostStatusTag"
-            class="text-[10px] bg-amber-500/20 text-amber-300 font-extrabold px-2 py-0.5 rounded border border-amber-500/40">
+            class="text-[9px] bg-amber-500/20 text-amber-300 font-extrabold px-1.5 py-0.5 rounded border border-amber-500/40">
             👑 Eres el Anfitrión
           </span>
         </div>
-        <div id="playerCountButtons" class="grid grid-cols-3 gap-2">
-          <button type="button" class="player-count-btn secondary-btn !py-2 !text-xs font-bold" data-count="2">
+        <div id="playerCountButtons" class="grid grid-cols-3 gap-1.5">
+          <button type="button" class="player-count-btn secondary-btn !py-1.5 !text-xs font-bold" data-count="2">
             2 Jugadores
           </button>
-          <button type="button" class="player-count-btn secondary-btn !py-2 !text-xs font-bold" data-count="3">
+          <button type="button" class="player-count-btn secondary-btn !py-1.5 !text-xs font-bold" data-count="3">
             3 Jugadores
           </button>
-          <button type="button" class="player-count-btn secondary-btn !py-2 !text-xs font-bold active" data-count="4">
+          <button type="button" class="player-count-btn secondary-btn !py-1.5 !text-xs font-bold active" data-count="4">
             4 Jugadores
           </button>
         </div>
         <div id="nonHostNotice"
-          class="text-[10px] text-slate-400 mt-2 hidden flex items-center justify-between bg-slate-800/80 p-2 rounded-lg border border-slate-700">
+          class="text-[9.5px] text-slate-400 mt-1 hidden flex items-center justify-between bg-slate-800/80 p-1.5 rounded-lg border border-slate-700">
           <span>(Estás como invitado)</span>
           <button id="btnClaimHost" type="button"
-            class="text-xs bg-amber-500/20 text-amber-300 border border-amber-500/50 px-2.5 py-1 rounded-full font-bold hover:bg-amber-500/30">
+            class="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/50 px-2 py-0.5 rounded-full font-bold hover:bg-amber-500/30">
             👑 Reclamar Anfitrión
           </button>
         </div>
       </div>
 
-      <div class="text-xs text-slate-300 font-bold mb-1">
+      <div class="text-[10.5px] text-slate-300 font-bold mb-0.5">
         Jugadores en la mesa (se requieren <span id="lobbyNeededPlayers">4</span> para iniciar):
       </div>
 
@@ -394,63 +392,61 @@
       </div>
 
       <!-- Ajustes de Cuánto se Juega (Partida y Pases - Configurado por el Anfitrión) -->
-      <div id="lobbyBetSettingsCard" class="bg-gradient-to-r from-emerald-950/80 via-slate-900 to-amber-950/60 border border-emerald-500/40 rounded-xl p-2.5 mb-3 shadow">
-        <div class="flex items-center justify-between mb-2">
-          <label class="text-[11px] font-black text-amber-300 flex items-center gap-1.5 uppercase tracking-wide">
+      <div id="lobbyBetSettingsCard"
+        class="bg-gradient-to-r from-emerald-950/80 via-slate-900 to-amber-950/60 border border-emerald-500/40 rounded-xl p-2 mb-2 shadow">
+        <div class="flex items-center justify-between mb-1.5">
+          <label class="text-[10.5px] font-black text-amber-300 flex items-center gap-1 uppercase tracking-wide">
             💵 ¿De cuánto se va a jugar?
           </label>
-          <span id="lobbyBetHostBadge" class="text-[9px] bg-amber-500/20 text-amber-300 font-bold px-1.5 py-0.5 rounded border border-amber-500/40">
+          <span id="lobbyBetHostBadge"
+            class="text-[9px] bg-amber-500/20 text-amber-300 font-bold px-1.5 py-0.5 rounded border border-amber-500/40">
             👑 Anfitrión
           </span>
         </div>
         <div class="grid grid-cols-2 gap-2 text-xs">
           <!-- Pago por cada Partida -->
-          <div class="bg-slate-900/90 border border-emerald-500/40 rounded-lg p-2">
-            <label class="text-[10px] font-bold text-emerald-300 block mb-1">
+          <div class="bg-slate-900/90 border border-emerald-500/40 rounded-lg p-1.5">
+            <label class="text-[9.5px] font-bold text-emerald-300 block mb-0.5">
               🏆 Por cada "Partida":
             </label>
             <div class="flex items-center gap-1">
-              <span class="text-emerald-400 font-black text-sm">$</span>
+              <span class="text-emerald-400 font-black text-xs">$</span>
               <input id="lobbyGameRateInput" type="number" min="0" max="10000" value="5"
-                class="w-full bg-slate-950 border border-emerald-500/50 rounded px-1.5 py-1 text-sm font-black text-emerald-300 text-center focus:outline-none focus:border-emerald-400" />
-              <span class="text-[9.5px] text-slate-400 font-semibold">pesos</span>
+                class="w-full bg-slate-950 border border-emerald-500/50 rounded px-1.5 py-0.5 text-xs font-black text-emerald-300 text-center focus:outline-none focus:border-emerald-400" />
+              <span class="text-[9px] text-slate-400 font-semibold">pesos</span>
             </div>
           </div>
 
           <!-- Pago por cada Pase -->
-          <div class="bg-slate-900/90 border border-amber-500/40 rounded-lg p-2">
-            <label class="text-[10px] font-bold text-amber-300 block mb-1">
+          <div class="bg-slate-900/90 border border-amber-500/40 rounded-lg p-1.5">
+            <label class="text-[9.5px] font-bold text-amber-300 block mb-0.5">
               🚫 Por cada "Pase":
             </label>
             <div class="flex items-center gap-1">
-              <span class="text-amber-400 font-black text-sm">$</span>
+              <span class="text-amber-400 font-black text-xs">$</span>
               <input id="penaltyInput" type="number" min="0" max="10000" value="1"
-                class="w-full bg-slate-950 border border-amber-500/50 rounded px-1.5 py-1 text-sm font-black text-amber-300 text-center focus:outline-none focus:border-amber-400" />
-              <span class="text-[9.5px] text-slate-400 font-semibold">pesos</span>
+                class="w-full bg-slate-950 border border-amber-500/50 rounded px-1.5 py-0.5 text-xs font-black text-amber-300 text-center focus:outline-none focus:border-amber-400" />
+              <span class="text-[9px] text-slate-400 font-semibold">pesos</span>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Botones de Acción del Lobby -->
-      <div class="flex flex-col gap-2">
-        <button id="btnAddBot" class="secondary-btn">
-          <span>🤖 Añadir Bot Inteligente (Completar asiento)</span>
-        </button>
-        <button id="btnStartGame" class="primary-btn opacity-50" disabled>
+      <!-- Botones de Acción del Lobby (EL BOTÓN COMENZAR ARRIBA PARA QUE NUNCA SE OCULTE) -->
+      <div class="flex flex-col gap-1.5 mt-1">
+        <button id="btnStartGame" class="primary-btn !py-2.5 text-sm sm:text-base font-black shadow-lg" disabled>
           <span>🚀 ¡Comenzar Partida (4/4)!</span>
         </button>
+        <button id="btnAddBot" class="secondary-btn !py-2 text-xs font-bold">
+          <span>🤖 Añadir Bot Inteligente (Completar asiento)</span>
+        </button>
         <button id="btnResetLobby" type="button"
-          class="text-xs text-amber-300/80 hover:text-amber-300 underline font-semibold text-center mt-1 py-1">
+          class="text-[10px] text-amber-300/80 hover:text-amber-300 underline font-semibold text-center py-0.5">
           🔄 ¿Hay jugadores fantasma o quieres reiniciar la mesa? Toca aquí
         </button>
       </div>
 
-      <!-- Sello Neón Fosforescente de Autoría -->
-      <div class="neon-credit-banner">
-        <div class="neon-author">Creado por Von Carloo MC</div>
-        <div class="neon-location">Veracruz, México</div>
-      </div>
+      <div class="text-[7.5px] text-emerald-400/60 text-center mt-1">Por Von Carloo MC • Veracruz</div>
     </div>
   </div>
 
@@ -476,12 +472,14 @@
         </div>
 
         <!-- Gran Tarjeta con el Mensaje Principal Requerido -->
-        <div class="bg-gradient-to-br from-red-950/85 via-slate-900 to-red-950/85 border-2 border-red-500/70 rounded-2xl p-4 mb-3 text-center shadow-lg">
+        <div
+          class="bg-gradient-to-br from-red-950/85 via-slate-900 to-red-950/85 border-2 border-red-500/70 rounded-2xl p-4 mb-3 text-center shadow-lg">
           <div id="lbHeadlineText" class="text-lg sm:text-xl font-black text-amber-300 leading-snug mb-2">
             <!-- Si en este momento dejáramos de jugar, la ganadora sería... -->
           </div>
 
-          <div id="lbTotalMoneyBadge" class="inline-block bg-emerald-950/90 text-emerald-300 border border-emerald-400 px-3.5 py-1.5 rounded-xl text-base sm:text-lg font-black my-1 shadow">
+          <div id="lbTotalMoneyBadge"
+            class="inline-block bg-emerald-950/90 text-emerald-300 border border-emerald-400 px-3.5 py-1.5 rounded-xl text-base sm:text-lg font-black my-1 shadow">
             <!-- Va ganando un total de $X pesos -->
           </div>
 
@@ -703,7 +701,8 @@
         <!-- Tarjeta de Campeón y Diferencia de Victorias (IMAGEN 2) -->
         <div
           class="bg-gradient-to-r from-amber-950/70 via-slate-900 to-amber-950/70 border-2 border-amber-500/60 rounded-2xl p-4 mb-3 text-center shadow-lg">
-          <div id="fbChampionTitle" class="text-[11px] font-extrabold text-amber-300 uppercase tracking-widest mb-1">👑 Ganador de Más Partidas</div>
+          <div id="fbChampionTitle" class="text-[11px] font-extrabold text-amber-300 uppercase tracking-widest mb-1">👑
+            Ganador de Más Partidas</div>
           <div id="fbChampionName" class="text-2xl sm:text-3xl font-black text-yellow-300 mb-2">---</div>
           <div id="fbWinDiffHighlight"
             class="text-xs sm:text-sm font-bold text-emerald-300 bg-slate-950/80 py-1.5 px-3 rounded-xl border border-emerald-500/40 inline-block">
@@ -840,10 +839,10 @@
   </div>
 
   <!-- Scripts -->
-  <script src="/js/avatars.js?v=9.0"></script>
-  <script src="/js/audio.js?v=9.0"></script>
-  <script src="/js/domino-renderer.js?v=9.0"></script>
-  <script src="/js/game.js?v=9.0"></script>
+  <script src="/js/avatars.js?v=10.0"></script>
+  <script src="/js/audio.js?v=10.0"></script>
+  <script src="/js/domino-renderer.js?v=10.0"></script>
+  <script src="/js/game.js?v=10.0"></script>
 </body>
 
 </html>

@@ -443,7 +443,7 @@
 
     // Ajustar grid visual
     if (maxP === 3) {
-      seatsContainer.className = 'grid grid-cols-3 gap-2 my-3';
+      seatsContainer.className = 'grid grid-cols-3 gap-1.5 my-1.5';
     } else {
       seatsContainer.className = 'lobby-seats-grid';
     }
@@ -456,26 +456,26 @@
       if (player) {
         const avatarObj = window.AVATARS[player.avatar] || window.AVATARS.male_1;
         card.innerHTML = `
-          <div class="w-12 h-12 rounded-full overflow-hidden border border-emerald-400">
+          <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden border border-emerald-400 flex-shrink-0">
             ${avatarObj.svg}
           </div>
-          <div class="text-xs font-bold text-slate-100 text-center">${player.name}</div>
-          <div class="text-[10px] text-emerald-300">${player.isBot ? '🤖 Bot Inteligente' : (player.seat === mySeat ? '⭐ Tú' : '🟢 Conectado')}</div>
+          <div class="text-[11px] sm:text-xs font-bold text-slate-100 text-center leading-tight truncate max-w-[85px]">${player.name}</div>
+          <div class="text-[9px] text-emerald-300 leading-none">${player.isBot ? '🤖 Bot' : (player.seat === mySeat ? '⭐ Tú' : '🟢 Conectado')}</div>
         `;
         if (player.isBot && isHost) {
           const removeBtn = document.createElement('button');
-          removeBtn.className = 'text-[10px] text-red-400 hover:text-red-300 underline mt-1';
+          removeBtn.className = 'text-[9.5px] text-red-400 hover:text-red-300 underline mt-0.5';
           removeBtn.textContent = 'Quitar bot';
           removeBtn.addEventListener('click', () => socket.emit('remove_bot', { seat: s }));
           card.appendChild(removeBtn);
         }
       } else {
         card.innerHTML = `
-          <div class="w-10 h-10 rounded-full border border-dashed border-slate-500 flex items-center justify-center text-slate-400 text-lg">
+          <div class="w-8 h-8 rounded-full border border-dashed border-slate-500 flex items-center justify-center text-slate-400 text-sm">
             +
           </div>
-          <div class="text-xs text-slate-400">Asiento ${s + 1}</div>
-          <div class="text-[10px] text-slate-500">Esperando...</div>
+          <div class="text-[10.5px] text-slate-400 leading-tight">Asiento ${s + 1}</div>
+          <div class="text-[8.5px] text-slate-500 leading-none">Esperando...</div>
         `;
       }
       seatsContainer.appendChild(card);
@@ -2106,8 +2106,8 @@
       const b = currentSessionBalance;
       const displayDate = (b.finishedAtIso || b.finishedAtMs)
         ? new Date(b.finishedAtIso || b.finishedAtMs).toLocaleString([], {
-            year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true
-          })
+          year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true
+        })
         : (b.finishedAt || new Date().toLocaleString());
 
       let text = `🏆 *BALANCE FINAL DE DOMINÓ (BLOQUEO)* 🀫\n`;

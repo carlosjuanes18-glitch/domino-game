@@ -4,6 +4,15 @@ class SoundManager {
     this.ctx = null;
     this.muted = false;
 
+    // Música de Fondo Durante Partida: Super Mario Bros (NES) Underground Theme
+    this.bgm = new Audio('/audio/mario-underground.mp3');
+    this.bgm.loop = true;
+    this.bgm.volume = 0.35; // Nivel de fondo agradable para no tapar efectos
+    this.bgm.preload = 'auto';
+    this.bgmDesired = false;
+    this.bgmInterrupted = false;
+    this.bgmInterruptionTimeout = null;
+
     // Archivos de audio reales personalizados
     this.audioFiles = {
       snareReveal: new Audio('/audio/snare-roll-reveal.v4.mp3'),
@@ -38,14 +47,43 @@ class SoundManager {
 
   toggleMute() {
     this.muted = !this.muted;
+    if (this.muted) {
+      try { this.bgm.pause(); } catch (e) { }
+      Object.values(this.audioFiles).forEach(s => {
+        try { s.pause(); } catch (e) { }
+      });
+    } else {
+      if (this.bgmDesired && !this.bgmInterrupted) {
+        this.init();
+        try { this.bgm.play().catch(() => { }); } catch (e) { }
+      }
+    }
     return this.muted;
   }
 
-  playAudio(key, volume = 0.9) {
+  // Reproducir sonido de intervención pausando temporalmente la música de fondo
+  playAudio(key, volume = 0.9, isIntervention = true) {
     if (this.muted) return;
     this.init();
     const sound = this.audioFiles[key];
     if (!sound) return;
+
+    // Si la música de fondo está activa y suena una intervención (pase, risas, bomba, etc.)
+    if (isIntervention && this.bgmDesired && !this.bgm.paused) {
+      this.pauseBgmForIntervention();
+
+      sound.onended = () => {
+        this.resumeBgmAfterIntervention();
+      };
+
+      // Failsafe en caso de que onended no se dispare
+      if (this.bgmInterruptionTimeout) clearTimeout(this.bgmInterruptionTimeout);
+      const safetyDuration = (sound.duration && !isNaN(sound.duration) && sound.duration > 0) ? sound.duration : 3.5;
+      this.bgmInterruptionTimeout = setTimeout(() => {
+        this.resumeBgmAfterIntervention();
+      }, (safetyDuration + 0.3) * 1000);
+    }
+
     try {
       sound.pause();
       sound.currentTime = 0;
@@ -56,6 +94,64 @@ class SoundManager {
       }
     } catch (e) {
       console.warn('Audio play error:', e);
+    }
+  }
+
+  // Iniciar / Continuar la música de fondo de Mario Underground durante la partida
+  startBgm() {
+    this.bgmDesired = true;
+    if (this.muted) return;
+    if (this.bgmInterrupted) return; // Si hay una intervención activa, esperar que termine
+    this.init();
+    try {
+      const p = this.bgm.play();
+      if (p !== undefined) {
+        p.catch(() => { });
+      }
+    } catch (e) {
+      console.warn('BGM play error:', e);
+    }
+  }
+
+  // Detener la música de fondo (al finalizar ronda, sesión o en lobby)
+  stopBgm(reset = false) {
+    this.bgmDesired = false;
+    this.bgmInterrupted = false;
+    if (this.bgmInterruptionTimeout) {
+      clearTimeout(this.bgmInterruptionTimeout);
+      this.bgmInterruptionTimeout = null;
+    }
+    try {
+      this.bgm.pause();
+      if (reset) {
+        this.bgm.currentTime = 0;
+      }
+    } catch (e) { }
+  }
+
+  // Pausa temporal por intervención de un sonido (pase, bomba, risas, etc.)
+  pauseBgmForIntervention() {
+    this.bgmInterrupted = true;
+    try {
+      this.bgm.pause();
+    } catch (e) { }
+  }
+
+  // Reanudar la música de fondo continuando la secuencia desde donde se pausó
+  resumeBgmAfterIntervention() {
+    this.bgmInterrupted = false;
+    if (this.bgmInterruptionTimeout) {
+      clearTimeout(this.bgmInterruptionTimeout);
+      this.bgmInterruptionTimeout = null;
+    }
+    if (this.bgmDesired && !this.muted) {
+      this.init();
+      try {
+        const p = this.bgm.play();
+        if (p !== undefined) {
+          p.catch(() => { });
+        }
+      } catch (e) { }
     }
   }
 

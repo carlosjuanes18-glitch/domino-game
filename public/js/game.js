@@ -348,6 +348,13 @@
     // Actualizar Cuaderno de Puntuaciones
     updateScoreboardUI(room);
 
+    // Música de Fondo Durante la Partida (Super Mario Bros Underground)
+    if (room.status === 'playing') {
+      window.soundManager.startBgm();
+    } else {
+      window.soundManager.stopBgm();
+    }
+
     // Indicador de Turno
     if (room.status === 'round_end') {
       turnBanner.innerHTML = '🏁 ¡Ronda Finalizada! (¡Dominó / Tranca!)';
@@ -923,6 +930,7 @@
 
   // Final de Ronda / Dominó / Tranca
   socket.on('round_ended', (data) => {
+    window.soundManager.stopBgm();
     if (data.outcome && data.outcome.type === 'tranca') {
       window.soundManager.playSnareRollReveal();
     } else {
@@ -2281,6 +2289,14 @@
         liveBalanceModal.classList.add('hidden');
         liveBalanceModal.style.display = 'none';
       }
+    }
+  });
+
+  // Desbloqueo de audio y arranque de música de fondo en la primera interacción
+  document.addEventListener('click', () => {
+    window.soundManager.init();
+    if (currentRoom && currentRoom.status === 'playing') {
+      window.soundManager.startBgm();
     }
   });
 

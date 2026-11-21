@@ -24,7 +24,8 @@ class SoundManager {
       champions: new Audio('/audio/queen-champions.mp3'),
       timeBomb: new Audio('/audio/bomba-tiempo.mp3'),
       psychosis: new Audio('/audio/psicosis.mp3'),
-      marioPass: new Audio('/audio/mariobros_pasar.mp3')
+      marioPass: new Audio('/audio/mariobros_pasar.mp3'),
+      marioCastleClear: new Audio('/audio/mario-castle-clear.mp3')
     };
 
     // Precarga automática de audios
@@ -281,38 +282,17 @@ class SoundManager {
     }
   }
 
-  // Sonido de victoria / Dominó / Tranca
-  playWinFanfare() {
-    if (this.muted) return;
-    this.init();
-    if (!this.ctx) return;
-
-    try {
-      const notes = [523.25, 659.25, 783.99, 1046.5]; // C5, E5, G5, C6
-      notes.forEach((freq, i) => {
-        const now = this.ctx.currentTime + i * 0.11;
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(freq, now);
-
-        gain.gain.setValueAtTime(0.4, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
-
-        osc.connect(gain);
-        gain.connect(this.ctx.destination);
-
-        osc.start(now);
-        osc.stop(now + 0.45);
-      });
-
-      if (navigator.vibrate) {
-        navigator.vibrate([70, 50, 100, 50, 150]);
-      }
-    } catch (e) {
-      console.warn('Audio error', e);
+  // Sonido de victoria cuando un jugador pone la última ficha y gana ("¡Dominó!"): Super Mario Bros Castle Clear
+  playMarioCastleClear() {
+    this.playAudio('marioCastleClear', 0.95);
+    if (navigator.vibrate) {
+      navigator.vibrate([70, 50, 100, 50, 150]);
     }
+  }
+
+  // Sonido de victoria / Dominó
+  playWinFanfare() {
+    this.playMarioCastleClear();
   }
 
   // Sonido de emoji pop

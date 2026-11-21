@@ -934,7 +934,8 @@
     if (data.outcome && data.outcome.type === 'tranca') {
       window.soundManager.playSnareRollReveal();
     } else {
-      window.soundManager.playWinFanfare();
+      // Cuando un jugador pone la última ficha y gana ("¡Dominó!"): Castle Clear de Super Mario Bros
+      window.soundManager.playMarioCastleClear();
     }
     showRoundOverModal(data);
   });

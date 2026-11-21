@@ -14,7 +14,8 @@ class SoundManager {
       angry: new Audio('/audio/whatsapp-angry.mpeg'),
       champions: new Audio('/audio/queen-champions.mp3'),
       timeBomb: new Audio('/audio/bomba-tiempo.mp3'),
-      psychosis: new Audio('/audio/psicosis.mp3')
+      psychosis: new Audio('/audio/psicosis.mp3'),
+      marioPass: new Audio('/audio/mariobros_pasar.mp3')
     };
 
     // Precarga automática de audios
@@ -168,40 +169,19 @@ class SoundManager {
     }
   }
 
-  // Sonido de "Paso" (Doble toque sobre la mesa de madera / 'toc-toc')
+  // Sonido de "Paso" con audio de Mario Bros (mariobros_pasar.mp3)
   playPassKnock() {
+    this.playMarioPass();
+  }
+
+  // Sonido de pasar turno de Mario Bros (mariobros_pasar.mp3)
+  playMarioPass() {
     if (this.muted) return;
     this.init();
-    if (!this.ctx) return;
+    this.playAudio('marioPass', 0.95);
 
-    try {
-      const playKnock = (delay) => {
-        const now = this.ctx.currentTime + delay;
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(180, now);
-        osc.frequency.exponentialRampToValueAtTime(50, now + 0.09);
-
-        gain.gain.setValueAtTime(0.8, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
-
-        osc.connect(gain);
-        gain.connect(this.ctx.destination);
-
-        osc.start(now);
-        osc.stop(now + 0.09);
-      };
-
-      playKnock(0);
-      playKnock(0.12);
-
-      if (navigator.vibrate) {
-        navigator.vibrate([40, 60, 40]);
-      }
-    } catch (e) {
-      console.warn('Audio error', e);
+    if (navigator.vibrate) {
+      navigator.vibrate([40, 60, 40]);
     }
   }
 

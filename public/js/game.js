@@ -907,7 +907,7 @@
       showToast('⚠️ Tienes fichas disponibles para jugar. En dominó no se puede pasar si tienes jugada.');
       return;
     }
-    window.soundManager.playPassKnock();
+    window.soundManager.playMarioPass();
     socket.emit('pass_turn');
   });
 
@@ -917,7 +917,7 @@
   });
 
   socket.on('player_passed', (data) => {
-    window.soundManager.playPassKnock();
+    window.soundManager.playMarioPass();
     triggerFloatingReaction(data.seat, '🚫 ¡PASO!');
   });
 

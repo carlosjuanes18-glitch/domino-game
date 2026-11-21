@@ -25,7 +25,8 @@ class SoundManager {
       timeBomb: new Audio('/audio/bomba-tiempo.mp3'),
       psychosis: new Audio('/audio/psicosis.mp3'),
       marioPass: new Audio('/audio/mariobros_pasar.mp3'),
-      marioCastleClear: new Audio('/audio/mario-castle-clear.mp3')
+      marioCastleClear: new Audio('/audio/mario-castle-clear.mp3'),
+      gameOver: new Audio('/audio/gameOver.mp3')
     };
 
     // Precarga automática de audios
@@ -287,6 +288,14 @@ class SoundManager {
     this.playAudio('marioCastleClear', 0.95);
     if (navigator.vibrate) {
       navigator.vibrate([70, 50, 100, 50, 150]);
+    }
+  }
+
+  // Sonido de Game Over cuando un jugador provoca perder por cerrar el juego o perder la ronda
+  playGameOver() {
+    this.playAudio('gameOver', 0.95);
+    if (navigator.vibrate) {
+      navigator.vibrate([150, 100, 200, 100, 250]);
     }
   }
 

@@ -931,22 +931,41 @@
   // Final de Ronda / Dominó / Tranca
   socket.on('round_ended', (data) => {
     window.soundManager.stopBgm();
-    if (data.outcome && data.outcome.type === 'tranca') {
-      window.soundManager.playSnareRollReveal();
-    } else {
-      // Cuando un jugador pone la última ficha y gana ("¡Dominó!"): Castle Clear de Super Mario Bros
+    const outcome = data.outcome || {};
+
+    if (outcome.type === 'domino') {
+      // Un jugador puso la última ficha y ganó ("¡Dominó!"): Castle Clear de Super Mario Bros
       window.soundManager.playMarioCastleClear();
+    } else if (outcome.type === 'tranca') {
+      // Cuando un jugador tira una ficha y provoca cerrar el juego (Tranca) y perder: gameOver.mp3
+      window.soundManager.playGameOver();
+    } else {
+      // Otras situaciones (abandono o derrota)
+      if (outcome.winnerSeat !== mySeat) {
+        window.soundManager.playGameOver();
+      } else {
+        window.soundManager.playMarioCastleClear();
+      }
     }
     showRoundOverModal(data);
   });
 
   function showRoundOverModal(data) {
-    const outcome = data.outcome;
+    const outcome = data.outcome || {};
     const title = outcome.type === 'domino' ? '🏆 ¡DOMINÓ!' : '🔒 ¡JUEGO TRANCADO!';
     document.getElementById('roundOverTitle').textContent = title;
+
+    let trancaSubtext = '<p class="text-xs text-slate-300 mt-1">Gana por tener la menor suma de puntos en mano.</p>';
+    if (outcome.type === 'tranca' && outcome.closedByName) {
+      const closedAndLost = (outcome.closedBySeat !== outcome.winnerSeat);
+      trancaSubtext = closedAndLost
+        ? `<p class="text-xs text-rose-300 font-bold mt-1">💀 <strong>${outcome.closedByName}</strong> tiró la ficha que cerró el juego y le provocó perder (Game Over).</p>`
+        : `<p class="text-xs text-emerald-300 font-bold mt-1">🔒 <strong>${outcome.closedByName}</strong> tiró la ficha que cerró el juego ¡y ganó en el conteo de puntos!</p>`;
+    }
+
     document.getElementById('roundOverWinner').innerHTML = `
-      Ganador de la ronda: <strong class="text-yellow-300">${outcome.winnerName}</strong>
-      ${outcome.type === 'tranca' ? '<p class="text-xs text-slate-300 mt-1">Gana por tener la menor suma de puntos en mano.</p>' : ''}
+      Ganador de la ronda: <strong class="text-yellow-300">${outcome.winnerName || 'Empate'}</strong>
+      ${outcome.type === 'tranca' ? trancaSubtext : ''}
     `;
 
     const summaryList = document.getElementById('roundOverSummary');

@@ -353,6 +353,10 @@ function handlePlayTile(room, player, tileId, side, fallbackLeft, fallbackRight)
   // Quitar la ficha de la mano del jugador
   player.hand.splice(tileIndex, 1);
   room.consecutivePasses = 0;
+  room.lastTilePlayedBy = {
+    seat: player.seat,
+    name: player.name
+  };
 
   io.to(room.id).emit('tile_played', {
     seat: player.seat,
@@ -452,6 +456,8 @@ function handleTranca(room) {
     type: 'tranca',
     winnerSeat: winner ? winner.seat : 0,
     winnerName: winner ? winner.name : 'Jugador',
+    closedBySeat: room.lastTilePlayedBy ? room.lastTilePlayedBy.seat : null,
+    closedByName: room.lastTilePlayedBy ? room.lastTilePlayedBy.name : null,
     handPoints
   });
 }

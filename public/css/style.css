@@ -227,6 +227,53 @@ body {
   justify-content: center;
 }
 
+/* Badge de Balance en Vivo arriba de cada jugador: ganas:$xx / debes:$xx */
+.pod-money-badge {
+  font-size: 0.65rem;
+  font-weight: 900;
+  letter-spacing: 0.3px;
+  padding: 1.5px 7px;
+  border-radius: 9999px;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+  transition: all 0.25s ease;
+  user-select: none;
+  z-index: 25;
+  text-transform: lowercase;
+}
+
+.pod-money-badge.winning {
+  background: linear-gradient(135deg, rgba(6, 78, 59, 0.95), rgba(4, 120, 87, 0.95));
+  color: #34d399;
+  border: 1.5px solid #10b981;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.6);
+}
+
+.pod-money-badge.losing {
+  background: linear-gradient(135deg, rgba(127, 29, 29, 0.95), rgba(185, 28, 28, 0.95));
+  color: #fca5a5;
+  border: 1.5px solid #ef4444;
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.6);
+}
+
+.pod-money-badge.neutral {
+  background: rgba(15, 23, 42, 0.88);
+  color: #cbd5e1;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.beacon-money {
+  font-size: 0.68rem;
+  font-weight: 900;
+  background: rgba(0, 0, 0, 0.45);
+  padding: 1px 5px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  letter-spacing: 0.3px;
+  color: #fef08a;
+}
+
 .player-info-tag {
   margin-top: 3px;
   background: rgba(15, 23, 42, 0.75);

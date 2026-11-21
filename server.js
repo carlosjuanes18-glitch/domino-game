@@ -82,6 +82,7 @@ function createInitialRoom(roomId, hostSocketId) {
     status: 'waiting', // 'waiting', 'playing', 'round_end'
     maxPlayers: 4, // 2, 3 o 4 jugadores elegidos por el anfitrión
     round: 0,
+    gameRate: 5, // Valor de cada partida ganada (pesos)
     penaltyPerPass: 1, // Valor de aportación / penalización por cada paso (monedas/puntos)
     players: [], // { socketId, id, name, avatar, seat, isBot, ready, hand: [], passesTotal: 0, passesRound: 0, wins: 0, losses: 0, hasLeft: false, points: 0 }
     board: [], // Fichas jugadas en la mesa
@@ -102,7 +103,8 @@ function getSafeRoomData(room, requesterSocketId) {
     status: room.status,
     maxPlayers: room.maxPlayers || 4,
     round: room.round,
-    penaltyPerPass: room.penaltyPerPass,
+    gameRate: (typeof room.gameRate === 'number') ? room.gameRate : 5,
+    penaltyPerPass: (typeof room.penaltyPerPass === 'number') ? room.penaltyPerPass : 1,
     board: room.board,
     leftEnd: room.leftEnd,
     rightEnd: room.rightEnd,
@@ -524,8 +526,8 @@ function handleRoundEnd(room, outcome) {
 }
 
 function calculateSessionBalance(room) {
-  const gameRate = 5; // Cada juego vale 5 pesos
-  const penaltyPerPass = room.penaltyPerPass || 1; // Cada pase vale 1 peso
+  const gameRate = (typeof room.gameRate === 'number' && !isNaN(room.gameRate) && room.gameRate >= 0) ? room.gameRate : 5;
+  const penaltyPerPass = (typeof room.penaltyPerPass === 'number' && !isNaN(room.penaltyPerPass) && room.penaltyPerPass >= 0) ? room.penaltyPerPass : 1;
   const players = room.players.map(p => ({
     id: p.id,
     name: p.name,
@@ -549,7 +551,7 @@ function calculateSessionBalance(room) {
   const champion = rankedByWins[0];
   const isDraw = rankedByWins.length > 1 && rankedByWins[0].wins === rankedByWins[1].wins && rankedByWins[0].wins > 0;
 
-  // Diferencias de juegos ganados (cada juego ganado de diferencia vale $5 pesos)
+  // Diferencias de juegos ganados
   const winDifferences = [];
   for (let i = 0; i < rankedByWins.length; i++) {
     for (let j = i + 1; j < rankedByWins.length; j++) {
@@ -565,7 +567,7 @@ function calculateSessionBalance(room) {
         diffWins: diff,
         amount: money,
         summaryText: diff > 0
-          ? `${pA.name} superó a ${pB.name} por ${diff} juego(s) (${pA.wins} vs ${pB.wins}) ➔ $${money} pesos por victorias ($5 c/u)`
+          ? `${pA.name} superó a ${pB.name} por ${diff} juego(s) (${pA.wins} vs ${pB.wins}) ➔ $${money} pesos por victorias ($${gameRate} c/u)`
           : `${pA.name} y ${pB.name} empataron con ${pA.wins} victoria(s) ($0 pesos)`
       });
     }
@@ -660,7 +662,7 @@ function calculateSessionBalance(room) {
       const winPart = (pA.wins - pB.wins) * gameRate;
       const passPart = (pB.passesTotal - pA.passesTotal) * penaltyPerPass;
       primaryPaymentHeadline = `${pB.name} debe pagarle $${totalAmount} pesos a ${pA.name}`;
-      primaryPaymentBreakdown = `Desglose: $${winPart} pesos por ${pA.wins - pB.wins} juego(s) ganados de ventaja ($5 c/u) + $${passPart} pesos por ${pB.passesTotal - pA.passesTotal} pase(s) de diferencia ($1 c/u)`;
+      primaryPaymentBreakdown = `Desglose: $${winPart} pesos por ${pA.wins - pB.wins} juego(s) ganados de ventaja ($${gameRate} c/u) + $${passPart} pesos por ${pB.passesTotal - pA.passesTotal} pase(s) de diferencia ($${penaltyPerPass} c/u)`;
       finalPayments.push({
         payer: pB.name,
         receiver: pA.name,
@@ -676,7 +678,7 @@ function calculateSessionBalance(room) {
       const winPart = (pB.wins - pA.wins) * gameRate;
       const passPart = (pA.passesTotal - pB.passesTotal) * penaltyPerPass;
       primaryPaymentHeadline = `${pA.name} debe pagarle $${totalAmount} pesos a ${pB.name}`;
-      primaryPaymentBreakdown = `Desglose: $${winPart} pesos por ${pB.wins - pA.wins} juego(s) ganados de ventaja ($5 c/u) + $${passPart} pesos por ${pA.passesTotal - pB.passesTotal} pase(s) de diferencia ($1 c/u)`;
+      primaryPaymentBreakdown = `Desglose: $${winPart} pesos por ${pB.wins - pA.wins} juego(s) ganados de ventaja ($${gameRate} c/u) + $${passPart} pesos por ${pA.passesTotal - pB.passesTotal} pase(s) de diferencia ($${penaltyPerPass} c/u)`;
       finalPayments.push({
         payer: pA.name,
         receiver: pB.name,
@@ -779,7 +781,7 @@ function calculateSessionBalance(room) {
 io.on('connection', (socket) => {
   let currentRoomId = null;
 
-  socket.on('join_room', ({ roomId, playerName, avatar, clientId, forceReset, takeSeat }) => {
+  socket.on('join_room', ({ roomId, playerName, avatar, clientId, forceReset, takeSeat, gameRate, penaltyValue }) => {
     const formattedRoomId = (roomId || 'MESA-1').toUpperCase().trim();
     let room = rooms.get(formattedRoomId);
 
@@ -790,6 +792,12 @@ io.on('connection', (socket) => {
     // Reiniciar la sala completamente limpia en sala de espera con 0 fichas
     if (forceReset || !room || liveHumans.length === 0) {
       room = createInitialRoom(formattedRoomId, socket.id);
+      if (gameRate !== undefined && !isNaN(parseInt(gameRate))) {
+        room.gameRate = Math.max(0, parseInt(gameRate));
+      }
+      if (penaltyValue !== undefined && !isNaN(parseInt(penaltyValue))) {
+        room.penaltyPerPass = Math.max(0, parseInt(penaltyValue));
+      }
       rooms.set(formattedRoomId, room);
     }
 
@@ -1130,8 +1138,32 @@ io.on('connection', (socket) => {
     if (!currentRoomId) return;
     const room = rooms.get(currentRoomId);
     if (!room) return;
-    const num = Math.max(0, parseInt(penaltyValue) || 1);
+    const num = Math.max(0, parseInt(penaltyValue) || 0);
     room.penaltyPerPass = num;
+    broadcastRoom(room);
+  });
+
+  // Configurar valor de pago por partida
+  socket.on('set_game_rate', ({ gameRate }) => {
+    if (!currentRoomId) return;
+    const room = rooms.get(currentRoomId);
+    if (!room) return;
+    const num = Math.max(0, parseInt(gameRate) || 0);
+    room.gameRate = num;
+    broadcastRoom(room);
+  });
+
+  // Configurar ambos valores de una vez (Partida y Pases)
+  socket.on('set_bet_settings', ({ gameRate, penaltyValue }) => {
+    if (!currentRoomId) return;
+    const room = rooms.get(currentRoomId);
+    if (!room) return;
+    if (gameRate !== undefined && !isNaN(parseInt(gameRate))) {
+      room.gameRate = Math.max(0, parseInt(gameRate));
+    }
+    if (penaltyValue !== undefined && !isNaN(parseInt(penaltyValue))) {
+      room.penaltyPerPass = Math.max(0, parseInt(penaltyValue));
+    }
     broadcastRoom(room);
   });
 

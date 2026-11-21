@@ -155,6 +155,8 @@
     window.soundManager.init();
     const nameInput = document.getElementById('inputPlayerName').value.trim() || 'Jugador';
     const roomInput = document.getElementById('inputRoomId').value.trim() || 'MESA-1';
+    const gameRateInput = parseInt(document.getElementById('setupGameRateInput')?.value) || 5;
+    const penaltyInput = parseInt(document.getElementById('setupPenaltyInput')?.value) || 1;
 
     // Guardar para que nunca se pierda si minimiza o cambia de app
     sessionStorage.setItem('domino_active_session', JSON.stringify({
@@ -168,7 +170,9 @@
       roomId: roomInput,
       playerName: nameInput,
       avatar: selectedAvatar,
-      clientId: myClientId
+      clientId: myClientId,
+      gameRate: gameRateInput,
+      penaltyValue: penaltyInput
     });
   });
 
@@ -183,6 +187,8 @@
       const cleanRoom = `MESA-${rand}`;
       const inputRoom = document.getElementById('inputRoomId');
       if (inputRoom) inputRoom.value = cleanRoom;
+      const gameRateInput = parseInt(document.getElementById('setupGameRateInput')?.value) || 5;
+      const penaltyInput = parseInt(document.getElementById('setupPenaltyInput')?.value) || 1;
 
       sessionStorage.setItem('domino_active_session', JSON.stringify({
         roomId: cleanRoom,
@@ -196,7 +202,9 @@
         playerName: nameInput,
         avatar: selectedAvatar,
         clientId: myClientId,
-        forceReset: true
+        forceReset: true,
+        gameRate: gameRateInput,
+        penaltyValue: penaltyInput
       });
     });
   }
@@ -266,10 +274,20 @@
     });
   });
 
-  // Configuración de Aportación por Paso
-  document.getElementById('penaltyInput').addEventListener('change', (e) => {
-    socket.emit('set_penalty_value', { penaltyValue: e.target.value });
-  });
+  // Configuración de Pago por Partida y por Pase en Lobby
+  const lobbyGameRateEl = document.getElementById('lobbyGameRateInput');
+  if (lobbyGameRateEl) {
+    lobbyGameRateEl.addEventListener('change', (e) => {
+      socket.emit('set_game_rate', { gameRate: e.target.value });
+    });
+  }
+
+  const penaltyInputEl = document.getElementById('penaltyInput');
+  if (penaltyInputEl) {
+    penaltyInputEl.addEventListener('change', (e) => {
+      socket.emit('set_penalty_value', { penaltyValue: e.target.value });
+    });
+  }
 
   // Actualización Global de la Sala
   socket.on('room_update', (room) => {
@@ -372,6 +390,42 @@
       }
     }
 
+    // Sincronizar ajustes de pago por partida y por pase en el Lobby
+    const lobbyGameRateInput = document.getElementById('lobbyGameRateInput');
+    const penaltyInput = document.getElementById('penaltyInput');
+    const lobbyBetHostBadge = document.getElementById('lobbyBetHostBadge');
+
+    if (lobbyGameRateInput) {
+      if (document.activeElement !== lobbyGameRateInput) {
+        lobbyGameRateInput.value = (typeof room.gameRate === 'number') ? room.gameRate : 5;
+      }
+      lobbyGameRateInput.disabled = !isHost;
+      if (!isHost) {
+        lobbyGameRateInput.classList.add('opacity-70', 'cursor-not-allowed');
+      } else {
+        lobbyGameRateInput.classList.remove('opacity-70', 'cursor-not-allowed');
+      }
+    }
+
+    if (penaltyInput) {
+      if (document.activeElement !== penaltyInput) {
+        penaltyInput.value = (typeof room.penaltyPerPass === 'number') ? room.penaltyPerPass : 1;
+      }
+      penaltyInput.disabled = !isHost;
+      if (!isHost) {
+        penaltyInput.classList.add('opacity-70', 'cursor-not-allowed');
+      } else {
+        penaltyInput.classList.remove('opacity-70', 'cursor-not-allowed');
+      }
+    }
+
+    if (lobbyBetHostBadge) {
+      lobbyBetHostBadge.textContent = isHost ? '👑 Eres el Anfitrión' : 'Definido por el anfitrión';
+      lobbyBetHostBadge.className = isHost
+        ? 'text-[9px] bg-amber-500/20 text-amber-300 font-bold px-1.5 py-0.5 rounded border border-amber-500/40'
+        : 'text-[9px] bg-slate-800 text-slate-400 font-bold px-1.5 py-0.5 rounded border border-slate-700';
+    }
+
     // Botones de cantidad de jugadores activa
     document.querySelectorAll('.player-count-btn').forEach(btn => {
       const cnt = parseInt(btn.getAttribute('data-count'));
@@ -439,6 +493,30 @@
     }
   }
 
+  // Calcular el balance neto en vivo de un jugador:
+  // Diferencia de victorias * gameRate + diferencia de pases * penaltyPerPass
+  function getPlayerLiveNetBalance(player, room) {
+    if (!room || !room.players || room.players.length === 0) return 0;
+    const gameRate = (typeof room.gameRate === 'number') ? room.gameRate : 5;
+    const penaltyPerPass = (typeof room.penaltyPerPass === 'number') ? room.penaltyPerPass : 1;
+    const myWins = player.wins || 0;
+    const myPasses = player.passesTotal || 0;
+
+    let winNet = 0;
+    let passNet = 0;
+
+    room.players.forEach(other => {
+      if (other.seat !== player.seat) {
+        const otherWins = other.wins || 0;
+        const otherPasses = other.passesTotal || 0;
+        winNet += (myWins - otherWins) * gameRate;
+        passNet += (otherPasses - myPasses) * penaltyPerPass;
+      }
+    });
+
+    return winNet + passNet;
+  }
+
   // Actualizar Pods en la Mesa de Dominó adaptados a 2, 3 o 4 jugadores
   function updatePlayerPods(room) {
     const maxP = room.maxPlayers || 4;
@@ -484,6 +562,22 @@
         podEl.classList.remove('active-turn');
       }
 
+      // Badge en vivo en la parte de arriba del jugador (debes:$xx / ganas:$xx)
+      const moneyBadge = podEl.querySelector('.pod-money-badge');
+      if (moneyBadge) {
+        const net = getPlayerLiveNetBalance(player, room);
+        if (net > 0) {
+          moneyBadge.className = 'pod-money-badge winning';
+          moneyBadge.textContent = `ganas:$${net}`;
+        } else if (net < 0) {
+          moneyBadge.className = 'pod-money-badge losing';
+          moneyBadge.textContent = `debes:$${Math.abs(net)}`;
+        } else {
+          moneyBadge.className = 'pod-money-badge neutral';
+          moneyBadge.textContent = `ganas:$0`;
+        }
+      }
+
       const avatarObj = window.AVATARS[player.avatar] || window.AVATARS.male_1;
       const avatarEl = podEl.querySelector('.pod-avatar');
       if (avatarEl) avatarEl.innerHTML = avatarObj.svg;
@@ -496,9 +590,26 @@
 
       const passCounterEl = podEl.querySelector('.pod-pass-count');
       if (passCounterEl) {
-        passCounterEl.innerHTML = `🚫 Pasos: <strong>${player.passesTotal || 0}</strong>`;
+        passCounterEl.innerHTML = `🚫 Pases: <strong>${player.passesTotal || 0}</strong>`;
       }
     });
+
+    // Actualizar indicador en el botón de la barra superior para el propio jugador
+    const myPlayer = room.players.find(p => p.seat === mySeat);
+    const headerLiveBadge = document.getElementById('headerLiveBalanceBadge');
+    if (headerLiveBadge && myPlayer) {
+      const myNet = getPlayerLiveNetBalance(myPlayer, room);
+      if (myNet > 0) {
+        headerLiveBadge.textContent = `ganas:$${myNet}`;
+        headerLiveBadge.className = 'beacon-money !text-emerald-300 !border-emerald-400';
+      } else if (myNet < 0) {
+        headerLiveBadge.textContent = `debes:$${Math.abs(myNet)}`;
+        headerLiveBadge.className = 'beacon-money !text-rose-300 !border-rose-400';
+      } else {
+        headerLiveBadge.textContent = `ganas:$0`;
+        headerLiveBadge.className = 'beacon-money !text-slate-300 !border-slate-500';
+      }
+    }
   }
 
   // Renderizar la Mano del Jugador con Fichas Clásicas Blancas
@@ -935,8 +1046,8 @@
 
   function getClientComputedLiveBalance() {
     if (!currentRoom || !currentRoom.players) return null;
-    const gameRate = 5;
-    const penaltyPerPass = 1;
+    const gameRate = (currentRoom && typeof currentRoom.gameRate === 'number') ? currentRoom.gameRate : 5;
+    const penaltyPerPass = (currentRoom && typeof currentRoom.penaltyPerPass === 'number') ? currentRoom.penaltyPerPass : 1;
     const players = currentRoom.players.map(p => ({
       name: p.name,
       wins: p.wins || 0,
@@ -1081,8 +1192,8 @@
               <th>Jugador</th>
               <th>Juegos</th>
               <th>Pases</th>
-              <th>Juegos ($5)</th>
-              <th>Pases ($1)</th>
+              <th>Juegos ($${gameRate})</th>
+              <th>Pases ($${penaltyPerPass})</th>
               <th>Total Neto</th>
               <th>Estado</th>
             </tr>
@@ -1668,7 +1779,7 @@
               <th>Posición</th>
               <th>Jugador</th>
               <th>Pases Totales</th>
-              <th>Aportación ($1 c/u)</th>
+              <th>Aportación ($${balance.penaltyPerPass || 1} c/u)</th>
             </tr>
           </thead>
           <tbody>
@@ -1714,8 +1825,8 @@
               <th>Jugador</th>
               <th>Juegos</th>
               <th>Pases</th>
-              <th>Por Juegos ($5 c/u)</th>
-              <th>Por Pases ($1 c/u)</th>
+              <th>Por Juegos ($${balance.gameRate || 5} c/u)</th>
+              <th>Por Pases ($${balance.penaltyPerPass || 1} c/u)</th>
               <th>Total Neto ($)</th>
               <th>Estado</th>
             </tr>

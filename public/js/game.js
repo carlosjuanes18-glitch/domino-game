@@ -636,18 +636,29 @@
       }
 
       // Badge en vivo en la parte de arriba del jugador (debes:$xx / ganas:$xx)
+      // REGLA ESTRICTA: Únicamente debe salirle al jugador lo que debe o lo que gana en su propia pantalla.
+      // NO debe salir la información de lo que debe o gana el otro jugador.
       const moneyBadge = podEl.querySelector('.pod-money-badge');
       if (moneyBadge) {
-        const net = getPlayerLiveNetBalance(player, room);
-        if (net > 0) {
-          moneyBadge.className = 'pod-money-badge winning';
-          moneyBadge.textContent = `ganas:$${net}`;
-        } else if (net < 0) {
-          moneyBadge.className = 'pod-money-badge losing';
-          moneyBadge.textContent = `debes:$${Math.abs(net)}`;
+        if (player.seat === mySeat) {
+          // ÚNICAMENTE mostrar para el propio jugador en su pod
+          moneyBadge.classList.remove('hidden');
+          moneyBadge.style.display = 'inline-flex';
+          const net = getPlayerLiveNetBalance(player, room);
+          if (net > 0) {
+            moneyBadge.className = 'pod-money-badge winning';
+            moneyBadge.textContent = `ganas:$${net}`;
+          } else if (net < 0) {
+            moneyBadge.className = 'pod-money-badge losing';
+            moneyBadge.textContent = `debes:$${Math.abs(net)}`;
+          } else {
+            moneyBadge.className = 'pod-money-badge neutral';
+            moneyBadge.textContent = `ganas:$0`;
+          }
         } else {
-          moneyBadge.className = 'pod-money-badge neutral';
-          moneyBadge.textContent = `ganas:$0`;
+          // Ocultar completamente para que no salga la información de lo que debe o gana el otro jugador
+          moneyBadge.classList.add('hidden');
+          moneyBadge.style.display = 'none';
         }
       }
 

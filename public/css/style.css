@@ -243,6 +243,10 @@ body {
   text-transform: lowercase;
 }
 
+.pod-money-badge.hidden {
+  display: none !important;
+}
+
 .pod-money-badge.winning {
   background: linear-gradient(135deg, rgba(6, 78, 59, 0.95), rgba(4, 120, 87, 0.95));
   color: #34d399;

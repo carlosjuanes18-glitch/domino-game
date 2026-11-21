@@ -1326,17 +1326,53 @@ body {
   }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 768px) {
+  .game-header {
+    height: 48px;
+    padding: 4px 6px;
+  }
+
+  .brand-badge {
+    display: none !important;
+  }
+
+  .header-actions {
+    width: 100%;
+    justify-content: space-between;
+    gap: 3px;
+    flex-wrap: nowrap;
+  }
+
+  .icon-btn {
+    width: 32px;
+    height: 32px;
+    font-size: 0.95rem;
+    flex-shrink: 0;
+    border-radius: 8px;
+  }
+
+  #btnSyncRoomHeader {
+    padding: 2px 5px !important;
+    font-size: 8.5px !important;
+    flex-shrink: 0;
+  }
+
+  .live-beacon-btn {
+    padding: 3px 6px;
+    height: 32px;
+    border-radius: 8px;
+    flex-shrink: 0;
+    gap: 4px;
+    font-size: 0.68rem;
+  }
+
   .live-beacon-btn .beacon-label {
     display: none;
   }
 
-  .live-beacon-btn {
-    padding: 6px;
-    width: 32px;
-    height: 32px;
-    justify-content: center;
-    border-radius: 50%;
+  .live-beacon-btn .beacon-money {
+    font-size: 0.62rem;
+    padding: 1px 3px;
   }
 }
 

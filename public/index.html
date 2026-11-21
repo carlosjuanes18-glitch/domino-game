@@ -11,7 +11,7 @@
   <!-- Socket.io -->
   <script src="/socket.io/socket.io.js"></script>
   <!-- Estilos personalizados -->
-  <link rel="stylesheet" href="/css/style.css?v=12.0">
+  <link rel="stylesheet" href="/css/style.css?v=13.0">
 </head>
 
 <body>
@@ -19,15 +19,14 @@
   <div class="app-viewport">
     <!-- Encabezado de la Mesa -->
     <header class="game-header">
-      <div class="brand-badge">
-        <span class="text-xl">🀫</span>
+      <!-- Oculto en celulares para que quepan holgadamente todos los botones de la derecha (bocina de sonido, marcador, etc.) -->
+      <div class="brand-badge hidden md:flex">
         <div>
-          <div class="leading-tight">DOMINÓ <span id="headerPlayerMode">4P</span></div>
-          <div class="text-[8px] font-semibold text-emerald-300 uppercase tracking-wider">Bloqueo (Sin Pozo)</div>
-          <div class="text-[6.5px] text-emerald-400/70 font-bold uppercase tracking-wider">Por Von Carloo MC • Veracruz
-          </div>
+          <div class="leading-tight text-xs font-black text-amber-300">DOMINÓ</div>
+          <div class="text-[6.5px] text-emerald-400/70 font-bold uppercase tracking-wider">Por Von Carloo MC • Veracruz</div>
         </div>
       </div>
+      <span id="headerPlayerMode" class="hidden"></span>
 
       <div class="header-actions">
         <!-- Indicador de Sala y Ronda (Tocar para sincronizar/destrabar) -->
@@ -845,10 +844,10 @@
   </div>
 
   <!-- Scripts -->
-  <script src="/js/avatars.js?v=12.0"></script>
-  <script src="/js/audio.js?v=12.0"></script>
-  <script src="/js/domino-renderer.js?v=12.0"></script>
-  <script src="/js/game.js?v=12.0"></script>
+  <script src="/js/avatars.js?v=13.0"></script>
+  <script src="/js/audio.js?v=13.0"></script>
+  <script src="/js/domino-renderer.js?v=13.0"></script>
+  <script src="/js/game.js?v=13.0"></script>
 </body>
 
 </html>

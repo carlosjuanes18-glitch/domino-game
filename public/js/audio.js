@@ -24,7 +24,7 @@ class SoundManager {
       champions: new Audio('/audio/queen-champions.mp3'),
       timeBomb: new Audio('/audio/bomba-tiempo.mp3'),
       psychosis: new Audio('/audio/psicosis.mp3'),
-      marioPass: new Audio('/audio/mariobros_pasar.mp3'),
+      marioPass: new Audio('/audio/mario-pipe-pass.mp3'),
       marioCastleClear: new Audio('/audio/mario-castle-clear.mp3'),
       gameOver: new Audio('/audio/gameOver.mp3')
     };
@@ -267,12 +267,12 @@ class SoundManager {
     }
   }
 
-  // Sonido de "Paso" con audio de Mario Bros (mariobros_pasar.mp3)
+  // Sonido de "Paso" con audio Pipe Travel / Power Down (mario-pipe-pass.mp3)
   playPassKnock() {
     this.playMarioPass();
   }
 
-  // Sonido de pasar turno de Mario Bros (mariobros_pasar.mp3)
+  // Sonido de pasar turno de Mario Bros Pipe Travel (mario-pipe-pass.mp3)
   playMarioPass() {
     if (this.muted) return;
     this.init();

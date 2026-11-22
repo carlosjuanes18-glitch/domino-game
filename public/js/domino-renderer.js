@@ -77,13 +77,13 @@ class DominoRenderer {
   computeSnakeLayout(board, containerEl) {
     if (!board || board.length === 0) return { placed: [], totalW: 0, totalH: 0 };
     const U = this.U || 30; // 30px por mitad de ficha (60x30px horizontal, 30x60px vertical)
-    const pad = 16;
+    const pad = 24;
 
-    // Detectar ancho útil para definir fichas por fila (4 en celular, 5 o 6 en pantallas anchas)
+    // Detectar ancho útil para definir fichas por fila (3 en celular para garantizar márgenes holgados, 5 en PC)
     const containerW = containerEl && containerEl.clientWidth > 0
       ? containerEl.clientWidth
       : (typeof window !== 'undefined' ? window.innerWidth : 400);
-    const maxPerRow = containerW >= 640 ? 6 : 4;
+    const maxPerRow = containerW >= 600 ? 5 : 3;
 
     if (board.length === 1) {
       const t = board[0];
@@ -122,10 +122,10 @@ class DominoRenderer {
       const isTail = (i === board.length - 1);
       const isDouble = (t.left === t.right) || t.isDouble;
 
-      // Condición de giro en S:
-      // Cuando la fila actual tiene suficientes fichas horizontales, y ni esta ficha ni la anterior son dobles,
-      // y no es la última ficha de la mesa, doblamos 90° hacia abajo con una ficha vertical compacta.
-      const shouldTurn = (tilesInRow >= maxPerRow) && (!isDouble) && (!prevWasDouble) && (!isTail);
+      // Giro de 90° hacia abajo cuando la fila alcanza maxPerRow:
+      // Se gira congruentemente hacia abajo con una ficha vertical compacta (sea normal o doble)
+      // para que la cadena nunca se salga por los bordes laterales y ambos extremos queden siempre 100% visibles.
+      const shouldTurn = (tilesInRow >= maxPerRow);
 
       if (shouldTurn) {
         if (dir === 'RIGHT') {
@@ -149,7 +149,6 @@ class DominoRenderer {
           curY = y + U;
           dir = 'LEFT';
           tilesInRow = 0;
-          prevWasDouble = false;
         } else {
           // dir === 'LEFT': conector baja verticalmente desde la mitad izquierda de la ficha previa
           const x = curX;
@@ -171,7 +170,6 @@ class DominoRenderer {
           curY = y + U;
           dir = 'RIGHT';
           tilesInRow = 0;
-          prevWasDouble = false;
         }
       } else {
         tilesInRow++;
@@ -194,7 +192,6 @@ class DominoRenderer {
               dir: 'RIGHT'
             });
             curX += U;
-            prevWasDouble = true;
           } else {
             // Ficha horizontal normal hacia la derecha
             const x = curX;
@@ -213,7 +210,6 @@ class DominoRenderer {
               dir: 'RIGHT'
             });
             curX += 2 * U;
-            prevWasDouble = false;
           }
         } else {
           // dir === 'LEFT'
@@ -235,7 +231,6 @@ class DominoRenderer {
               dir: 'LEFT'
             });
             curX -= U;
-            prevWasDouble = true;
           } else {
             // Ficha horizontal normal hacia la izquierda
             const x = curX - 2 * U;
@@ -254,7 +249,6 @@ class DominoRenderer {
               dir: 'LEFT'
             });
             curX -= 2 * U;
-            prevWasDouble = false;
           }
         }
       }
@@ -285,7 +279,7 @@ class DominoRenderer {
 
     canvas.style.transform = 'none';
 
-    const pad = 16;
+    const pad = 28;
     const containerW = containerEl.clientWidth - pad;
     const containerH = containerEl.clientHeight - pad;
     const canvasW = canvas.offsetWidth;

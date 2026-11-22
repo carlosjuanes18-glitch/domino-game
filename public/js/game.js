@@ -939,7 +939,13 @@
 
   // Notificaciones de jugadas recibidas
   socket.on('tile_played', (data) => {
-    window.soundManager.playTileClick();
+    if (data.isBombEnds) {
+      // Puntas iguales: ¡Activar efecto de bomba con sonido característico y animación!
+      window.soundManager.playTimeBomb();
+      triggerBombScreenEffect(data.seat, data.bombNumber);
+    } else {
+      window.soundManager.playTileClick();
+    }
   });
 
   socket.on('player_passed', (data) => {
@@ -1434,7 +1440,7 @@
       window.soundManager.playScream();
     } else if (data.emoji === '😡' || data.emoji === '🤬') {
       window.soundManager.playAngry();
-    } else if (data.text && data.text.includes('volar la papada')) {
+    } else if (data.emoji === '💣' || (data.text && (data.text.includes('volar la papada') || data.text.includes('BOMBA')))) {
       window.soundManager.playTimeBomb();
     } else if (data.emoji === '🤯' || (data.text && data.text.includes('volaste la papada'))) {
       window.soundManager.playFailureTrumpet();
@@ -1505,7 +1511,7 @@
       let thematicIcons = ['💬', '🗣️', '💭'];
       if (content.includes('Psicópata')) {
         thematicIcons = ['DOMINO_PSYCHO', '🔪', '🩸', 'DOMINO_PSYCHO', '🔪', '🩸', 'DOMINO_PSYCHO', '🔪', '🩸', 'DOMINO_PSYCHO', '🔪', 'DOMINO_PSYCHO'];
-      } else if (content.includes('volar la papada')) {
+      } else if (content.includes('volar la papada') || content.includes('BOMBA') || content.includes('PUNTAS') || content.includes('💣')) {
         thematicIcons = ['💣', '💥', '🔥', '💣', '💥', '🔥', '💣', '💥', '🔥', '💣', '💥', '🔥'];
       } else if (content.includes('volaste la papada')) {
         thematicIcons = ['🤯', '💥', '😵', '🤕', '🤯', '💥', '😵', '🤕', '🤯', '💥', '😵', '🤕'];
@@ -1527,6 +1533,26 @@
         if (badge.parentNode) badge.parentNode.removeChild(badge);
       }, 4200);
     }
+  }
+
+  // Activa la animación en pantalla y bomba cuando los extremos quedan con números iguales
+  function triggerBombScreenEffect(seat, bombNumber) {
+    const label = (bombNumber !== null && bombNumber !== undefined)
+      ? `💣 ¡BOMBA! PUNTAS A ${bombNumber} 💣`
+      : '💣 ¡BOMBA! PUNTAS IGUALES 💣';
+    triggerFloatingReaction(seat, label);
+
+    const burst = document.createElement('div');
+    burst.className = 'bomb-central-burst';
+    burst.innerHTML = `
+      <div class="bomb-icon">💣</div>
+      <div class="bomb-badge">¡BOMBA! ${bombNumber !== null && bombNumber !== undefined ? `Puntas a ${bombNumber}` : 'Puntas Iguales'}</div>
+    `;
+    document.body.appendChild(burst);
+
+    setTimeout(() => {
+      if (burst.parentNode) burst.parentNode.removeChild(burst);
+    }, 3200);
   }
 
   function createSlowScreenEmoji(emoji, index, total) {

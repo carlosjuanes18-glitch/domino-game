@@ -360,13 +360,19 @@ function handlePlayTile(room, player, tileId, side, fallbackLeft, fallbackRight)
     name: player.name
   };
 
+  // Detectar si los extremos quedan con números iguales (Bomba de puntas iguales)
+  // Requiere que haya al menos 2 fichas en el tablero y que el jugador no haya ganado la partida
+  const isBombEnds = (player.hand.length > 0 && room.board.length >= 2 && room.leftEnd !== null && room.rightEnd !== null && room.leftEnd === room.rightEnd);
+
   io.to(room.id).emit('tile_played', {
     seat: player.seat,
     playerName: player.name,
     tile: placedTile,
     remainingTiles: player.hand.length,
     leftEnd: room.leftEnd,
-    rightEnd: room.rightEnd
+    rightEnd: room.rightEnd,
+    isBombEnds: isBombEnds,
+    bombNumber: isBombEnds ? room.leftEnd : null
   });
 
   // Verificar si el jugador hizo ¡DOMINÓ!

@@ -918,6 +918,79 @@ body {
   white-space: nowrap;
 }
 
+/* Efecto de Explosión de Bomba cuando los extremos quedan con números iguales */
+.bomb-central-burst {
+  position: fixed;
+  top: 42%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.2);
+  z-index: 9999999;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  animation: bombBurstPop 3.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.bomb-central-burst .bomb-icon {
+  font-size: 6rem;
+  filter: drop-shadow(0 0 30px rgba(239, 68, 68, 0.95)) drop-shadow(0 0 55px rgba(245, 158, 11, 0.9));
+  animation: bombWiggle 0.35s infinite alternate ease-in-out;
+}
+
+.bomb-central-burst .bomb-badge {
+  margin-top: -12px;
+  background: linear-gradient(135deg, #ef4444, #991b1b);
+  color: #fff;
+  font-weight: 900;
+  font-size: 1.15rem;
+  padding: 6px 20px;
+  border-radius: 9999px;
+  border: 2px solid #fef08a;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.9), 0 0 15px rgba(239, 68, 68, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
+
+@keyframes bombBurstPop {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.2);
+  }
+
+  12% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.25);
+  }
+
+  22% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  78% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.05);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -65%) scale(0.5);
+  }
+}
+
+@keyframes bombWiggle {
+  0% {
+    transform: rotate(-9deg) scale(1);
+  }
+
+  100% {
+    transform: rotate(9deg) scale(1.12);
+  }
+}
+
 @keyframes floatPhraseCenter {
   0% {
     opacity: 0;

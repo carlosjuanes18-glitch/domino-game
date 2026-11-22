@@ -68,426 +68,199 @@ class DominoRenderer {
     `;
   }
 
-  // Algoritmo de Acomodo Real de Dominó idéntico a las mesas tradicionales:
-  // - La ficha inicial (doble o ficha de apertura) se sitúa en el centro de la mesa.
-  // - La rama derecha avanza hacia la derecha y se dobla hacia abajo.
-  // - La rama izquierda avanza hacia la izquierda y se dobla hacia arriba.
-  // - Los dobles se colocan cruzados (perpendiculares a la línea de avance).
-  // - Cada ficha conecta cara con cara con su número idéntico (ej: 6 con 6, 3 con 3).
-  // - Cero colisiones ni encimamientos entre filas.
-  computeSnakeLayout(board) {
+  // Algoritmo de Acomodo Serpentino Compacto en S (Zigzag Horizontal):
+  // - Organiza las fichas en filas horizontales paralelas aprovechando todo el ancho.
+  // - Dobles colocados transversalmente (verticales) cruzando la fila horizontal.
+  // - Conector de esquina de 1 ficha vertical hacia abajo al llegar al límite de la fila.
+  // - Serpentina fluida (Fila 1: Derecha -> Conector 90° Abajo -> Fila 2: Izquierda -> Conector 90° Abajo -> Fila 3: Derecha...).
+  // - Ahorro máximo de espacio vertical y horizontal para que todo el juego quepa nítido y visible.
+  computeSnakeLayout(board, containerEl) {
     if (!board || board.length === 0) return { placed: [], totalW: 0, totalH: 0 };
-    const U = this.U; // 30 px por mitad de ficha
+    const U = this.U || 30; // 30px por mitad de ficha (60x30px horizontal, 30x60px vertical)
+    const pad = 16;
 
-    const rootIndex = board.findIndex(t => t.side === 'root') !== -1 
-      ? board.findIndex(t => t.side === 'root') 
-      : 0;
+    // Detectar ancho útil para definir fichas por fila (4 en celular, 5 o 6 en pantallas anchas)
+    const containerW = containerEl && containerEl.clientWidth > 0
+      ? containerEl.clientWidth
+      : (typeof window !== 'undefined' ? window.innerWidth : 400);
+    const maxPerRow = containerW >= 640 ? 6 : 4;
 
-    const rootTile = board[rootIndex];
-    const leftBranch = board.slice(0, rootIndex).reverse();
-    const rightBranch = board.slice(rootIndex + 1);
+    if (board.length === 1) {
+      const t = board[0];
+      const isD = (t.left === t.right) || t.isDouble;
+      const w = isD ? U : 2 * U;
+      const h = isD ? 2 * U : U;
+      return {
+        placed: [{
+          index: 0,
+          tile: t,
+          isVertical: isD,
+          reverseHalves: false,
+          x: pad,
+          y: pad,
+          w: w,
+          h: h,
+          isHead: true,
+          isTail: true,
+          dir: 'RIGHT'
+        }],
+        totalW: w + pad * 2,
+        totalH: h + pad * 2
+      };
+    }
 
     const placed = [];
-
-    // 1. Ficha Central / Inicial (Root)
-    let leftAttachX = 0, leftAttachY = 0;
-    let rightAttachX = 0, rightAttachY = 0;
-
-    if (rootTile.isDouble) {
-      // Doble colocado transversalmente (vertical en el centro)
-      placed.push({
-        index: rootIndex,
-        tile: rootTile,
-        isVertical: true,
-        reverseHalves: false,
-        x: 0, y: 0,
-        w: U, h: 2 * U,
-        isHead: rootIndex === 0 && leftBranch.length === 0,
-        isTail: rootIndex === board.length - 1 && rightBranch.length === 0,
-        dir: 'CENTER'
-      });
-      leftAttachX = 0; leftAttachY = U / 2;
-      rightAttachX = U; rightAttachY = U / 2;
-    } else {
-      // Ficha horizontal normal en el centro
-      placed.push({
-        index: rootIndex,
-        tile: rootTile,
-        isVertical: false,
-        reverseHalves: false,
-        x: 0, y: 0,
-        w: 2 * U, h: U,
-        isHead: rootIndex === 0 && leftBranch.length === 0,
-        isTail: rootIndex === board.length - 1 && rightBranch.length === 0,
-        dir: 'CENTER'
-      });
-      leftAttachX = 0; leftAttachY = 0;
-      rightAttachX = 2 * U; rightAttachY = 0;
-    }
-
-    // 2. Rama DERECHA (avanza hacia la derecha, luego dobla 90° HACIA ARRIBA, luego izquierda)
-    let curX = rightAttachX;
-    let curY = rightAttachY;
     let dir = 'RIGHT';
-    let tilesInRun = 0;
-    const maxHorizontal = 2; // Máximo 2 fichas horizontales en móvil antes de doblar en ángulo recto
-    let prevWasDouble = rootTile.isDouble;
+    let tilesInRow = 0;
+    let curX = 0;
+    let curY = 0;
+    let prevWasDouble = false;
 
-    for (let i = 0; i < rightBranch.length; i++) {
-      const t = rightBranch[i];
-      const isLast = (i === rightBranch.length - 1);
-      tilesInRun++;
+    for (let i = 0; i < board.length; i++) {
+      const t = board[i];
+      const isHead = (i === 0);
+      const isTail = (i === board.length - 1);
+      const isDouble = (t.left === t.right) || t.isDouble;
 
-      if (dir === 'RIGHT') {
-        if (tilesInRun > maxHorizontal && !t.isDouble) {
-          // Doblar 90° HACIA ARRIBA: ficha vertical sobre la mitad derecha de la anterior
+      // Condición de giro en S:
+      // Cuando la fila actual tiene suficientes fichas horizontales, y ni esta ficha ni la anterior son dobles,
+      // y no es la última ficha de la mesa, doblamos 90° hacia abajo con una ficha vertical compacta.
+      const shouldTurn = (tilesInRow >= maxPerRow) && (!isDouble) && (!prevWasDouble) && (!isTail);
+
+      if (shouldTurn) {
+        if (dir === 'RIGHT') {
+          // El conector baja verticalmente desde la mitad derecha de la ficha previa
           const x = curX - U;
-          const y = prevWasDouble ? (curY - U / 2 - 2 * U) : (curY - 2 * U);
-          placed.push({
-            index: rootIndex + 1 + i,
-            tile: t,
-            isVertical: true,
-            reverseHalves: true, // val1 (top) = t.right, val2 (bottom) = t.left
-            x, y,
-            w: U, h: 2 * U,
-            isHead: false,
-            isTail: isLast,
-            dir: 'UP'
-          });
-          curX = x;
-          curY = y;
-          dir = 'UP';
-          tilesInRun = 0;
-          prevWasDouble = false;
-        } else if (t.isDouble) {
-          // Doble vertical perpendicular al camino horizontal
-          const x = curX;
-          const y = curY - U / 2;
-          placed.push({
-            index: rootIndex + 1 + i,
-            tile: t,
-            isVertical: true,
-            reverseHalves: false,
-            x, y,
-            w: U, h: 2 * U,
-            isHead: false,
-            isTail: isLast,
-            dir: 'RIGHT'
-          });
-          curX = x + U;
-          prevWasDouble = true;
-        } else {
-          // Horizontal normal hacia la derecha
-          const x = curX;
-          const y = curY;
-          placed.push({
-            index: rootIndex + 1 + i,
-            tile: t,
-            isVertical: false,
-            reverseHalves: false,
-            x, y,
-            w: 2 * U, h: U,
-            isHead: false,
-            isTail: isLast,
-            dir: 'RIGHT'
-          });
-          curX = x + 2 * U;
-          prevWasDouble = false;
-        }
-      } else if (dir === 'UP') {
-        if (tilesInRun > 2 && !t.isDouble) {
-          // Doblar 90° hacia la IZQUIERDA
-          const x = curX - 2 * U;
-          const y = curY;
-          placed.push({
-            index: rootIndex + 1 + i,
-            tile: t,
-            isVertical: false,
-            reverseHalves: true,
-            x, y,
-            w: 2 * U, h: U,
-            isHead: false,
-            isTail: isLast,
-            dir: 'LEFT'
-          });
-          curX = x;
-          dir = 'LEFT';
-          tilesInRun = 0;
-          prevWasDouble = false;
-        } else if (t.isDouble) {
-          // Doble horizontal perpendicular al camino vertical
-          const x = curX - U / 2;
-          const y = curY - U;
-          placed.push({
-            index: rootIndex + 1 + i,
-            tile: t,
-            isVertical: false,
-            reverseHalves: false,
-            x, y,
-            w: 2 * U, h: U,
-            isHead: false,
-            isTail: isLast,
-            dir: 'UP'
-          });
-          curY = y;
-          prevWasDouble = true;
-        } else {
-          // Ficha vertical continuando hacia arriba
-          const x = curX;
-          const y = curY - 2 * U;
-          placed.push({
-            index: rootIndex + 1 + i,
-            tile: t,
-            isVertical: true,
-            reverseHalves: true,
-            x, y,
-            w: U, h: 2 * U,
-            isHead: false,
-            isTail: isLast,
-            dir: 'UP'
-          });
-          curY = y;
-          prevWasDouble = false;
-        }
-      } else if (dir === 'LEFT') {
-        if (tilesInRun > 2 && !t.isDouble) {
-          // Doblar 90° hacia ARRIBA
-          const x = curX;
-          const y = curY - 2 * U;
-          placed.push({
-            index: rootIndex + 1 + i,
-            tile: t,
-            isVertical: true,
-            reverseHalves: true,
-            x, y,
-            w: U, h: 2 * U,
-            isHead: false,
-            isTail: isLast,
-            dir: 'UP'
-          });
-          curY = y;
-          dir = 'UP';
-          tilesInRun = 0;
-          prevWasDouble = false;
-        } else if (t.isDouble) {
-          const x = curX - U;
-          const y = curY - U / 2;
-          placed.push({
-            index: rootIndex + 1 + i,
-            tile: t,
-            isVertical: true,
-            reverseHalves: false,
-            x, y,
-            w: U, h: 2 * U,
-            isHead: false,
-            isTail: isLast,
-            dir: 'LEFT'
-          });
-          curX = x;
-          prevWasDouble = true;
-        } else {
-          const x = curX - 2 * U;
-          const y = curY;
-          placed.push({
-            index: rootIndex + 1 + i,
-            tile: t,
-            isVertical: false,
-            reverseHalves: true,
-            x, y,
-            w: 2 * U, h: U,
-            isHead: false,
-            isTail: isLast,
-            dir: 'LEFT'
-          });
-          curX = x;
-          prevWasDouble = false;
-        }
-      }
-    }
-
-    // 3. Rama IZQUIERDA (avanza hacia la izquierda, luego dobla 90° HACIA ABAJO, luego derecha)
-    curX = leftAttachX;
-    curY = leftAttachY;
-    dir = 'LEFT';
-    tilesInRun = 0;
-    prevWasDouble = rootTile.isDouble;
-
-    for (let i = 0; i < leftBranch.length; i++) {
-      const t = leftBranch[i];
-      const origIndex = rootIndex - 1 - i;
-      const isLast = (i === leftBranch.length - 1);
-      tilesInRun++;
-
-      if (dir === 'LEFT') {
-        if (tilesInRun > maxHorizontal && !t.isDouble) {
-          // Doblar 90° HACIA ABAJO: ficha vertical bajo la mitad izquierda de la anterior
-          const x = curX;
           const y = curY + U;
           placed.push({
-            index: origIndex,
-            tile: t,
-            isVertical: true,
-            reverseHalves: true, // val1 (top) = t.right (conecta al previo), val2 (bottom) = t.left (nuevo extremo)
-            x, y,
-            w: U, h: 2 * U,
-            isHead: isLast,
-            isTail: false,
-            dir: 'DOWN'
-          });
-          curX = x;
-          curY = y + 2 * U;
-          dir = 'DOWN';
-          tilesInRun = 0;
-          prevWasDouble = false;
-        } else if (t.isDouble) {
-          const x = curX - U;
-          const y = curY - U / 2;
-          placed.push({
-            index: origIndex,
+            index: i,
             tile: t,
             isVertical: true,
             reverseHalves: false,
-            x, y,
-            w: U, h: 2 * U,
-            isHead: isLast,
-            isTail: false,
-            dir: 'LEFT'
-          });
-          curX = x;
-          prevWasDouble = true;
-        } else {
-          // Horizontal hacia la izquierda: t.left a la izq, t.right a la der
-          const x = curX - 2 * U;
-          const y = curY;
-          placed.push({
-            index: origIndex,
-            tile: t,
-            isVertical: false,
-            reverseHalves: false,
-            x, y,
-            w: 2 * U, h: U,
-            isHead: isLast,
-            isTail: false,
-            dir: 'LEFT'
-          });
-          curX = x;
-          prevWasDouble = false;
-        }
-      } else if (dir === 'DOWN') {
-        if (tilesInRun > 2 && !t.isDouble) {
-          // Doblar 90° hacia la DERECHA
-          const x = curX + U;
-          const y = curY - U;
-          placed.push({
-            index: origIndex,
-            tile: t,
-            isVertical: false,
-            reverseHalves: true,
-            x, y,
-            w: 2 * U, h: U,
-            isHead: isLast,
-            isTail: false,
-            dir: 'RIGHT'
-          });
-          curX = x + 2 * U;
-          curY = y;
-          dir = 'RIGHT';
-          tilesInRun = 0;
-          prevWasDouble = false;
-        } else if (t.isDouble) {
-          // Doble horizontal perpendicular al camino vertical
-          const x = curX - U / 2;
-          const y = curY;
-          placed.push({
-            index: origIndex,
-            tile: t,
-            isVertical: false,
-            reverseHalves: false,
-            x, y,
-            w: 2 * U, h: U,
-            isHead: isLast,
-            isTail: false,
+            x: x,
+            y: y,
+            w: U,
+            h: 2 * U,
+            isHead: isHead,
+            isTail: isTail,
             dir: 'DOWN'
           });
+          curX = x;
           curY = y + U;
-          prevWasDouble = true;
-        } else {
-          // Ficha vertical continuando hacia abajo
-          const x = curX;
-          const y = curY;
-          placed.push({
-            index: origIndex,
-            tile: t,
-            isVertical: true,
-            reverseHalves: true, // val1 (top) = t.right (conecta al previo), val2 (bottom) = t.left (nuevo extremo)
-            x, y,
-            w: U, h: 2 * U,
-            isHead: isLast,
-            isTail: false,
-            dir: 'DOWN'
-          });
-          curY = y + 2 * U;
+          dir = 'LEFT';
+          tilesInRow = 0;
           prevWasDouble = false;
-        }
-      } else if (dir === 'RIGHT') {
-        if (tilesInRun > 2 && !t.isDouble) {
-          // Doblar 90° hacia ABAJO
-          const x = curX - U;
+        } else {
+          // dir === 'LEFT': conector baja verticalmente desde la mitad izquierda de la ficha previa
+          const x = curX;
           const y = curY + U;
           placed.push({
-            index: origIndex,
-            tile: t,
-            isVertical: true,
-            reverseHalves: true,
-            x, y,
-            w: U, h: 2 * U,
-            isHead: isLast,
-            isTail: false,
-            dir: 'DOWN'
-          });
-          curX = x;
-          curY = y + 2 * U;
-          dir = 'DOWN';
-          tilesInRun = 0;
-          prevWasDouble = false;
-        } else if (t.isDouble) {
-          const x = curX;
-          const y = curY - U / 2;
-          placed.push({
-            index: origIndex,
+            index: i,
             tile: t,
             isVertical: true,
             reverseHalves: false,
-            x, y,
-            w: U, h: 2 * U,
-            isHead: isLast,
-            isTail: false,
-            dir: 'RIGHT'
+            x: x,
+            y: y,
+            w: U,
+            h: 2 * U,
+            isHead: isHead,
+            isTail: isTail,
+            dir: 'DOWN'
           });
           curX = x + U;
-          prevWasDouble = true;
-        } else {
-          const x = curX;
-          const y = curY;
-          placed.push({
-            index: origIndex,
-            tile: t,
-            isVertical: false,
-            reverseHalves: true,
-            x, y,
-            w: 2 * U, h: U,
-            isHead: isLast,
-            isTail: false,
-            dir: 'RIGHT'
-          });
-          curX = x + 2 * U;
+          curY = y + U;
+          dir = 'RIGHT';
+          tilesInRow = 0;
           prevWasDouble = false;
+        }
+      } else {
+        tilesInRow++;
+        if (dir === 'RIGHT') {
+          if (isDouble) {
+            // Doble colocado transversal (vertical) centrado en la fila horizontal
+            const x = curX;
+            const y = curY - U / 2;
+            placed.push({
+              index: i,
+              tile: t,
+              isVertical: true,
+              reverseHalves: false,
+              x: x,
+              y: y,
+              w: U,
+              h: 2 * U,
+              isHead: isHead,
+              isTail: isTail,
+              dir: 'RIGHT'
+            });
+            curX += U;
+            prevWasDouble = true;
+          } else {
+            // Ficha horizontal normal hacia la derecha
+            const x = curX;
+            const y = curY;
+            placed.push({
+              index: i,
+              tile: t,
+              isVertical: false,
+              reverseHalves: false,
+              x: x,
+              y: y,
+              w: 2 * U,
+              h: U,
+              isHead: isHead,
+              isTail: isTail,
+              dir: 'RIGHT'
+            });
+            curX += 2 * U;
+            prevWasDouble = false;
+          }
+        } else {
+          // dir === 'LEFT'
+          if (isDouble) {
+            // Doble transversal (vertical) centrado en la fila horizontal
+            const x = curX - U;
+            const y = curY - U / 2;
+            placed.push({
+              index: i,
+              tile: t,
+              isVertical: true,
+              reverseHalves: false,
+              x: x,
+              y: y,
+              w: U,
+              h: 2 * U,
+              isHead: isHead,
+              isTail: isTail,
+              dir: 'LEFT'
+            });
+            curX -= U;
+            prevWasDouble = true;
+          } else {
+            // Ficha horizontal normal hacia la izquierda
+            const x = curX - 2 * U;
+            const y = curY;
+            placed.push({
+              index: i,
+              tile: t,
+              isVertical: false,
+              reverseHalves: true, // val1 (izquierda) = t.right, val2 (derecha) = t.left para coincidencia cara a cara
+              x: x,
+              y: y,
+              w: 2 * U,
+              h: U,
+              isHead: isHead,
+              isTail: isTail,
+              dir: 'LEFT'
+            });
+            curX -= 2 * U;
+            prevWasDouble = false;
+          }
         }
       }
     }
 
-    // Margen de seguridad para que ningún chip o sombra quede fuera del borde
-    const pad = 16;
+    // Normalizar coordenadas dentro del canvas con márgenes de seguridad
     const minX = Math.min(...placed.map(p => p.x));
     const maxX = Math.max(...placed.map(p => p.x + p.w));
     const minY = Math.min(...placed.map(p => p.y));
@@ -545,7 +318,7 @@ class DominoRenderer {
       return;
     }
 
-    const { placed, totalW, totalH } = this.computeSnakeLayout(boardTiles);
+    const { placed, totalW, totalH } = this.computeSnakeLayout(boardTiles, containerEl);
 
     let tilesHtml = '';
 

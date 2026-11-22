@@ -725,9 +725,11 @@
         if (room.leftEnd === null || room.rightEnd === null) {
           isPlayable = true; // Primer tiro
         } else {
+          const l = Number(room.leftEnd);
+          const r = Number(room.rightEnd);
           isPlayable = (
-            tile.left === room.leftEnd || tile.right === room.leftEnd ||
-            tile.left === room.rightEnd || tile.right === room.rightEnd
+            Number(tile.left) === l || Number(tile.right) === l ||
+            Number(tile.left) === r || Number(tile.right) === r
           );
         }
       }
@@ -903,19 +905,36 @@
       showToast('⏳ Espera tu turno para jugar o pasar.');
       return;
     }
-    const myPlayer = currentRoom.players ? currentRoom.players.find(p => p.seat === mySeat) : null;
-    const hand = (myPlayer && myPlayer.hand) ? myPlayer.hand : [];
-    const canPlay = hand.some(t =>
-      currentRoom.leftEnd === null ||
-      t.left === currentRoom.leftEnd || t.right === currentRoom.leftEnd ||
-      t.left === currentRoom.rightEnd || t.right === currentRoom.rightEnd
-    );
+    const hand = (myHand && myHand.length > 0) ? myHand : ((currentRoom.players && currentRoom.players.find(p => p.seat === mySeat))?.hand || []);
+    const leftEnd = (currentRoom.leftEnd !== undefined && currentRoom.leftEnd !== null) ? Number(currentRoom.leftEnd) : null;
+    const rightEnd = (currentRoom.rightEnd !== undefined && currentRoom.rightEnd !== null) ? Number(currentRoom.rightEnd) : null;
+
+    let canPlay = false;
+    if (leftEnd === null || rightEnd === null) {
+      canPlay = hand.length > 0;
+    } else {
+      canPlay = hand.some(t =>
+        Number(t.left) === leftEnd || Number(t.right) === leftEnd ||
+        Number(t.left) === rightEnd || Number(t.right) === rightEnd
+      );
+    }
+
     if (canPlay) {
       showToast('⚠️ Tienes fichas disponibles para jugar. En dominó no se puede pasar si tienes jugada.');
       return;
     }
-    window.soundManager.playMarioPass();
-    socket.emit('pass_turn');
+
+    // Feedback inmediato y bloqueo temporal para prevenir spam/desincronización
+    passBtn.setAttribute('disabled', 'true');
+    passBtn.classList.remove('must-pass');
+    passBtn.innerHTML = '⏳ Pasando turno...';
+
+    // El sonido Mario Pipe Pass sonará de forma confirmada cuando el servidor emita 'player_passed'
+    socket.emit('pass_turn', {
+      roomId: currentRoom.id,
+      seat: mySeat,
+      clientId: myClientId
+    });
   });
 
   // Notificaciones de jugadas recibidas
@@ -1643,6 +1662,10 @@
   // Errores de jugada o turno (Notificación flotante no intrusiva que nunca saca de la partida)
   socket.on('error_message', (msg) => {
     showToast(`⚠️ ${msg}`);
+    if (currentRoom) {
+      updateUI(currentRoom);
+      socket.emit('request_room_refresh');
+    }
   });
 
   // ==========================================

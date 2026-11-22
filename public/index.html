@@ -11,7 +11,7 @@
   <!-- Socket.io -->
   <script src="/socket.io/socket.io.js"></script>
   <!-- Estilos personalizados -->
-  <link rel="stylesheet" href="/css/style.css?v=18.0">
+  <link rel="stylesheet" href="/css/style.css?v=19.0">
 </head>
 
 <body>
@@ -333,18 +333,18 @@
   <!-- MODAL 2: SALA DE ESPERA (LOBBY) -->
   <!-- ============================================== -->
   <div id="lobbyModal" class="modal-backdrop hidden">
-    <div class="modal-card">
-      <div class="modal-header">
+    <div class="modal-card !max-w-md !p-2.5 sm:!p-3.5">
+      <div class="modal-header !mb-1.5">
         <div class="modal-title">
           <span>⏳</span> Sala de Espera
         </div>
         <div
-          class="text-xs bg-emerald-950 text-emerald-300 font-extrabold px-2.5 py-1 rounded-full border border-emerald-500/40">
+          class="text-xs bg-emerald-950 text-emerald-300 font-extrabold px-2.5 py-0.5 rounded-full border border-emerald-500/40">
           <span id="lobbyCount">1/4</span>
         </div>
       </div>
 
-      <div class="bg-slate-900/80 border border-slate-700/60 rounded-xl p-2 mb-2 flex items-center justify-between">
+      <div class="bg-slate-900/80 border border-slate-700/60 rounded-xl p-1.5 mb-1.5 flex items-center justify-between">
         <div>
           <div class="text-[9.5px] text-slate-400 uppercase font-bold">Código de Sala</div>
           <div id="lobbyRoomCode" class="text-sm sm:text-base font-black text-amber-300 font-mono tracking-wider">MESA-1
@@ -356,8 +356,8 @@
       </div>
 
       <!-- Selector de Jugadores (Configurado por el Anfitrión) -->
-      <div class="bg-slate-900/90 border border-emerald-500/40 rounded-xl p-2 mb-2">
-        <div class="flex items-center justify-between mb-1.5">
+      <div class="bg-slate-900/90 border border-emerald-500/40 rounded-xl p-1.5 mb-1.5">
+        <div class="flex items-center justify-between mb-1">
           <label class="text-[11px] font-bold text-emerald-300 flex items-center gap-1">
             👥 Jugadores en la partida:
           </label>
@@ -367,13 +367,13 @@
           </span>
         </div>
         <div id="playerCountButtons" class="grid grid-cols-3 gap-1.5">
-          <button type="button" class="player-count-btn secondary-btn !py-1.5 !text-xs font-bold" data-count="2">
+          <button type="button" class="player-count-btn secondary-btn !py-1 !text-xs font-bold" data-count="2">
             2 Jugadores
           </button>
-          <button type="button" class="player-count-btn secondary-btn !py-1.5 !text-xs font-bold" data-count="3">
+          <button type="button" class="player-count-btn secondary-btn !py-1 !text-xs font-bold" data-count="3">
             3 Jugadores
           </button>
-          <button type="button" class="player-count-btn secondary-btn !py-1.5 !text-xs font-bold active" data-count="4">
+          <button type="button" class="player-count-btn secondary-btn !py-1 !text-xs font-bold active" data-count="4">
             4 Jugadores
           </button>
         </div>
@@ -392,14 +392,14 @@
       </div>
 
       <!-- Grid de los 4 Asientos -->
-      <div id="lobbySeats" class="lobby-seats-grid">
+      <div id="lobbySeats" class="lobby-seats-grid !mb-1.5">
         <!-- Renderizado dinámico -->
       </div>
 
       <!-- Ajustes de Cuánto se Juega (Partida y Pases - Configurado por el Anfitrión) -->
       <div id="lobbyBetSettingsCard"
-        class="bg-gradient-to-r from-emerald-950/80 via-slate-900 to-amber-950/60 border border-emerald-500/40 rounded-xl p-2 mb-2 shadow">
-        <div class="flex items-center justify-between mb-1.5">
+        class="bg-gradient-to-r from-emerald-950/80 via-slate-900 to-amber-950/60 border border-emerald-500/40 rounded-xl p-1.5 mb-1.5 shadow">
+        <div class="flex items-center justify-between mb-1">
           <label class="text-[10.5px] font-black text-amber-300 flex items-center gap-1 uppercase tracking-wide">
             💵 ¿De cuánto se va a jugar?
           </label>
@@ -439,15 +439,15 @@
             </div>
           </div>
         </div>
-        <div id="lobbyBetNotice" class="text-[9px] text-slate-400 mt-1.5 text-center font-medium"></div>
+        <div id="lobbyBetNotice" class="text-[9px] text-slate-400 mt-1 text-center font-medium"></div>
       </div>
 
       <!-- Botones de Acción del Lobby (EL BOTÓN COMENZAR ARRIBA PARA QUE NUNCA SE OCULTE) -->
-      <div class="flex flex-col gap-1.5 mt-1">
-        <button id="btnStartGame" class="primary-btn !py-2.5 text-sm sm:text-base font-black shadow-lg" disabled>
+      <div class="flex flex-col gap-1.5 mt-0.5">
+        <button id="btnStartGame" class="primary-btn !py-2 text-sm sm:text-base font-black shadow-lg" disabled>
           <span>🚀 ¡Comenzar Partida (4/4)!</span>
         </button>
-        <button id="btnAddBot" class="secondary-btn !py-2 text-xs font-bold">
+        <button id="btnAddBot" class="secondary-btn !py-1.5 text-xs font-bold">
           <span>🤖 Añadir Bot Inteligente (Completar asiento)</span>
         </button>
         <button id="btnResetLobby" type="button"
@@ -849,10 +849,10 @@
   </div>
 
   <!-- Scripts -->
-  <script src="/js/avatars.js?v=18.0"></script>
-  <script src="/js/audio.js?v=18.0"></script>
-  <script src="/js/domino-renderer.js?v=18.0"></script>
-  <script src="/js/game.js?v=18.0"></script>
+  <script src="/js/avatars.js?v=19.0"></script>
+  <script src="/js/audio.js?v=19.0"></script>
+  <script src="/js/domino-renderer.js?v=19.0"></script>
+  <script src="/js/game.js?v=19.0"></script>
 </body>
 
 </html>

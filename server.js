@@ -210,9 +210,11 @@ function startRound(room) {
 
 function getPlayableTiles(hand, leftEnd, rightEnd) {
   if (leftEnd === null || rightEnd === null) return [...hand]; // Primera jugada
-  return hand.filter(t =>
-    t.left === leftEnd || t.right === leftEnd ||
-    t.left === rightEnd || t.right === rightEnd
+  const lEnd = Number(leftEnd);
+  const rEnd = Number(rightEnd);
+  return (hand || []).filter(t =>
+    Number(t.left) === lEnd || Number(t.right) === lEnd ||
+    Number(t.left) === rEnd || Number(t.right) === rEnd
   );
 }
 
@@ -397,16 +399,14 @@ function advanceTurnToNextActive(room) {
     return;
   }
 
-  const maxP = room.maxPlayers || 4;
-  let nextSeat = room.currentTurnSeat;
-  for (let i = 0; i < 4; i++) {
-    nextSeat = (nextSeat + 1) % maxP;
-    const p = room.players.find(pl => pl.seat === nextSeat && !pl.hasLeft);
-    if (p) {
-      room.currentTurnSeat = nextSeat;
-      break;
-    }
-  }
+  // Ordenar por número de asiento y avanzar cíclicamente al siguiente jugador activo
+  const sorted = [...activePlayers].sort((a, b) => a.seat - b.seat);
+  const currentIdx = sorted.findIndex(p => p.seat === room.currentTurnSeat);
+  const nextPlayer = (currentIdx !== -1)
+    ? sorted[(currentIdx + 1) % sorted.length]
+    : sorted[0];
+
+  room.currentTurnSeat = nextPlayer.seat;
 
   broadcastRoom(room);
   checkBotTurn(room);
@@ -1137,20 +1137,53 @@ io.on('connection', (socket) => {
   });
 
   // Pasar turno
-  socket.on('pass_turn', () => {
-    if (!currentRoomId) return;
-    const room = rooms.get(currentRoomId);
-    if (!room || room.status !== 'playing') return;
+  socket.on('pass_turn', (data) => {
+    let rId = (data && data.roomId) ? String(data.roomId).toUpperCase().trim() : currentRoomId;
+    let room = rId ? rooms.get(rId) : null;
+    if (!room) {
+      for (const r of rooms.values()) {
+        if (r.players && r.players.some(p => p.socketId === socket.id || (data && data.clientId && p.clientId === data.clientId))) {
+          room = r;
+          rId = r.id;
+          break;
+        }
+      }
+    }
+    if (!room || room.status !== 'playing') {
+      if (room) socket.emit('room_update', getSafeRoomData(room, socket.id));
+      return;
+    }
+    currentRoomId = room.id;
+    socket.join(room.id);
 
-    const player = room.players.find(p => p.socketId === socket.id);
-    if (!player || player.seat !== room.currentTurnSeat) {
-      socket.emit('error_message', 'No es tu turno.');
+    let player = room.players.find(p => p.socketId === socket.id);
+    if (!player && data && data.clientId) {
+      player = room.players.find(p => p.clientId === data.clientId);
+    }
+    if (!player && data && data.seat !== undefined) {
+      player = room.players.find(p => p.seat === Number(data.seat));
+    }
+
+    if (!player) {
+      socket.emit('error_message', 'No se encontró tu jugador en la mesa.');
+      socket.emit('room_update', getSafeRoomData(room, socket.id));
+      return;
+    }
+
+    if (player.socketId !== socket.id) {
+      player.socketId = socket.id;
+    }
+
+    if (player.seat !== room.currentTurnSeat) {
+      socket.emit('error_message', `No es tu turno. Le toca tirar al Asiento ${room.currentTurnSeat + 1}.`);
+      socket.emit('room_update', getSafeRoomData(room, socket.id));
       return;
     }
 
     const playable = getPlayableTiles(player.hand, room.leftEnd, room.rightEnd);
     if (playable.length > 0) {
       socket.emit('error_message', 'Tienes fichas disponibles para jugar. En dominó no se puede pasar si tienes jugada.');
+      socket.emit('room_update', getSafeRoomData(room, socket.id));
       return;
     }
 

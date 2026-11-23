@@ -1893,3 +1893,95 @@ body {
     box-shadow: 0 0 10px rgba(57, 255, 20, 0.35), inset 0 0 8px rgba(0, 255, 204, 0.2);
   }
 }
+
+/* ========================================= */
+/* ESTILOS DE AMIGOS, INVITACIONES Y RECONEXIÓN */
+/* ========================================= */
+
+.friends-tab-btn.active {
+  background: rgba(6, 78, 59, 0.9) !important;
+  color: #6ee7b7 !important;
+  border-color: rgba(16, 185, 129, 0.6) !important;
+}
+
+.reconnect-banner {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(220, 38, 38, 0.95);
+  color: #ffffff;
+  border: 1.5px solid #fca5a5;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.8);
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 4px 14px;
+  border-radius: 9999px;
+  z-index: 999999;
+  white-space: nowrap;
+  animation: pulseNotice 1.5s infinite alternate;
+}
+
+.partner-disconnect-banner {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(217, 119, 6, 0.95);
+  color: #ffffff;
+  border: 1.5px solid #fde047;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.8);
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 4px 14px;
+  border-radius: 9999px;
+  z-index: 999999;
+  white-space: nowrap;
+}
+
+@keyframes pulseNotice {
+  0% {
+    transform: translateX(-50%) scale(0.98);
+  }
+
+  100% {
+    transform: translateX(-50%) scale(1.02);
+  }
+}
+
+.friend-card {
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(51, 65, 85, 0.8);
+  border-radius: 12px;
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: all 0.2s ease;
+}
+
+.friend-card:hover {
+  border-color: rgba(16, 185, 129, 0.5);
+  background: rgba(15, 23, 42, 0.98);
+}
+
+.friend-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  display: inline-block;
+}
+
+.friend-status-dot.online {
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+}
+
+.friend-status-dot.offline {
+  background: #64748b;
+}
+
+.friend-status-dot.playing {
+  background: #f59e0b;
+  box-shadow: 0 0 8px #f59e0b;
+}

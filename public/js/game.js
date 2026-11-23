@@ -7,6 +7,19 @@
     localStorage.setItem('domino_client_id', myClientId);
   }
 
+  // Identidad persistente del jugador para Amigos, Invitaciones y Sesión
+  let myPlayerId = localStorage.getItem('domino_player_id');
+  if (!myPlayerId) {
+    myPlayerId = 'p_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 9);
+    localStorage.setItem('domino_player_id', myPlayerId);
+  }
+
+  let myPlayerToken = localStorage.getItem('domino_player_token');
+  if (!myPlayerToken) {
+    myPlayerToken = 'tok_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    localStorage.setItem('domino_player_token', myPlayerToken);
+  }
+
   const socket = io({
     reconnection: true,
     reconnectionAttempts: Infinity,
@@ -28,27 +41,47 @@
     if (!socket.connected) {
       socket.connect();
     }
+    const pName = document.getElementById('inputPlayerName')?.value?.trim() || localStorage.getItem('domino_player_name') || 'Jugador';
+    const pAvatar = (typeof selectedAvatar !== 'undefined' && selectedAvatar) ? selectedAvatar : (localStorage.getItem('domino_selected_avatar') || 'male_1');
+
+    socket.emit('auth_profile', {
+      playerId: myPlayerId,
+      playerToken: myPlayerToken,
+      playerName: pName,
+      avatar: pAvatar
+    });
+
     const saved = sessionStorage.getItem('domino_active_session');
     if (saved) {
       try {
         const data = JSON.parse(saved);
-        socket.emit('join_room', { ...data, clientId: myClientId });
+        socket.emit('join_room', {
+          ...data,
+          clientId: myClientId,
+          playerId: myPlayerId,
+          playerToken: myPlayerToken
+        });
       } catch (e) { }
     }
     socket.emit('request_room_refresh');
   }
 
   socket.on('connect', () => {
+    const banner = document.getElementById('reconnectBanner');
+    if (banner) banner.classList.add('hidden');
     syncSessionWithServer();
   });
 
   socket.on('reconnect', () => {
+    const banner = document.getElementById('reconnectBanner');
+    if (banner) banner.classList.add('hidden');
     syncSessionWithServer();
     showToast('✅ Conexión recuperada con éxito.');
   });
 
   socket.on('disconnect', () => {
-    showToast('⚠️ Conexión móvil inestable. Reconectando...');
+    const banner = document.getElementById('reconnectBanner');
+    if (banner) banner.classList.remove('hidden');
   });
 
   // Cuando el celular se desbloquea, se enciende la pantalla o se vuelve a la pestaña
@@ -144,6 +177,8 @@
           playerName: nameInput,
           avatar: selectedAvatar,
           clientId: myClientId,
+          playerId: myPlayerId,
+          playerToken: myPlayerToken,
           forceReset: true
         });
       }
@@ -158,12 +193,17 @@
     const gameRateInput = parseInt(document.getElementById('setupGameRateInput')?.value) || 5;
     const penaltyInput = parseInt(document.getElementById('setupPenaltyInput')?.value) || 1;
 
+    localStorage.setItem('domino_player_name', nameInput);
+    localStorage.setItem('domino_selected_avatar', selectedAvatar);
+
     // Guardar para que nunca se pierda si minimiza o cambia de app
     sessionStorage.setItem('domino_active_session', JSON.stringify({
       roomId: roomInput,
       playerName: nameInput,
       avatar: selectedAvatar,
-      clientId: myClientId
+      clientId: myClientId,
+      playerId: myPlayerId,
+      playerToken: myPlayerToken
     }));
 
     socket.emit('join_room', {
@@ -171,6 +211,8 @@
       playerName: nameInput,
       avatar: selectedAvatar,
       clientId: myClientId,
+      playerId: myPlayerId,
+      playerToken: myPlayerToken,
       gameRate: gameRateInput,
       penaltyValue: penaltyInput
     });
@@ -190,11 +232,16 @@
       const gameRateInput = parseInt(document.getElementById('setupGameRateInput')?.value) || 5;
       const penaltyInput = parseInt(document.getElementById('setupPenaltyInput')?.value) || 1;
 
+      localStorage.setItem('domino_player_name', nameInput);
+      localStorage.setItem('domino_selected_avatar', selectedAvatar);
+
       sessionStorage.setItem('domino_active_session', JSON.stringify({
         roomId: cleanRoom,
         playerName: nameInput,
         avatar: selectedAvatar,
-        clientId: myClientId
+        clientId: myClientId,
+        playerId: myPlayerId,
+        playerToken: myPlayerToken
       }));
 
       socket.emit('join_room', {
@@ -202,6 +249,8 @@
         playerName: nameInput,
         avatar: selectedAvatar,
         clientId: myClientId,
+        playerId: myPlayerId,
+        playerToken: myPlayerToken,
         forceReset: true,
         gameRate: gameRateInput,
         penaltyValue: penaltyInput
@@ -816,6 +865,7 @@
       showToast('⏳ Espera tu turno para tirar ficha.');
       return;
     }
+    const actionId = 'act_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
     window.soundManager.playTileClick();
 
     if (room.leftEnd === null) {
@@ -823,7 +873,10 @@
         tileId: tile.id || `${tile.left}-${tile.right}`,
         side: 'root',
         left: tile.left,
-        right: tile.right
+        right: tile.right,
+        actionId,
+        playerId: myPlayerId,
+        clientId: myClientId
       });
       return;
     }
@@ -842,14 +895,20 @@
         tileId: tile.id || `${tile.left}-${tile.right}`,
         side: 'left',
         left: tile.left,
-        right: tile.right
+        right: tile.right,
+        actionId,
+        playerId: myPlayerId,
+        clientId: myClientId
       });
     } else if (canRight) {
       socket.emit('play_tile', {
         tileId: tile.id || `${tile.left}-${tile.right}`,
         side: 'right',
         left: tile.left,
-        right: tile.right
+        right: tile.right,
+        actionId,
+        playerId: myPlayerId,
+        clientId: myClientId
       });
     }
   }
@@ -864,11 +923,15 @@
   function handleChoicePlay(side) {
     if (!selectedTileForChoice) return;
     const tile = selectedTileForChoice;
+    const actionId = 'act_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
     socket.emit('play_tile', {
       tileId: tile.id || `${tile.left}-${tile.right}`,
       side: side,
       left: tile.left,
-      right: tile.right
+      right: tile.right,
+      actionId,
+      playerId: myPlayerId,
+      clientId: myClientId
     });
     closeEndChoiceModal();
   }
@@ -933,7 +996,8 @@
     socket.emit('pass_turn', {
       roomId: currentRoom.id,
       seat: mySeat,
-      clientId: myClientId
+      clientId: myClientId,
+      playerId: myPlayerId
     });
   });
 
@@ -2395,6 +2459,676 @@
       }
     }
   });
+
+  // ==========================================
+  // SISTEMA DE AMIGOS, INVITACIONES, PUSH Y RECONEXIÓN
+  // ==========================================
+  let myFriends = [];
+  let pendingRequests = [];
+  let pendingInvitations = [];
+  let activePartnerGraceInterval = null;
+  let deferredPrompt = null;
+
+  // Registrar Service Worker para PWA y Web Push
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js').then((reg) => {
+        if ('pushManager' in reg) {
+          reg.pushManager.getSubscription().then((sub) => {
+            const pushStatusText = document.getElementById('pushStatusText');
+            const pushIcon = document.getElementById('pushIcon');
+            if (sub && pushStatusText) {
+              pushStatusText.textContent = 'Avisos de partidas activados';
+              if (pushIcon) pushIcon.textContent = '✅';
+            }
+          });
+        }
+      }).catch(err => {
+        console.warn('Error registrando Service Worker:', err);
+      });
+    });
+  }
+
+  // Capturar evento PWA para instalación en pantalla de inicio
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    const btnInstallPwa = document.getElementById('btnInstallPwa');
+    if (btnInstallPwa) {
+      btnInstallPwa.classList.remove('hidden');
+    }
+  });
+
+  const btnInstallPwa = document.getElementById('btnInstallPwa');
+  if (btnInstallPwa) {
+    btnInstallPwa.addEventListener('click', async () => {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+          showToast('📲 ¡Instalando aplicación de Dominó!');
+        }
+        deferredPrompt = null;
+        btnInstallPwa.classList.add('hidden');
+      }
+    });
+  }
+
+  // Elementos de la interfaz de Amigos
+  const friendsModal = document.getElementById('friendsModal');
+  const btnOpenFriends = document.getElementById('btnOpenFriends');
+  const btnCloseFriends = document.getElementById('btnCloseFriends');
+  const friendsPendingBadge = document.getElementById('friendsPendingBadge');
+  const requestsTabBadge = document.getElementById('requestsTabBadge');
+  const myFriendsCount = document.getElementById('myFriendsCount');
+
+  const tabBtnMyFriends = document.getElementById('tabBtnMyFriends');
+  const tabBtnRequests = document.getElementById('tabBtnRequests');
+  const tabBtnShareLink = document.getElementById('tabBtnShareLink');
+  const tabContentMyFriends = document.getElementById('tabContentMyFriends');
+  const tabContentRequests = document.getElementById('tabContentRequests');
+  const tabContentShareLink = document.getElementById('tabContentShareLink');
+
+  const myFriendsList = document.getElementById('myFriendsList');
+  const emptyFriendsNotice = document.getElementById('emptyFriendsNotice');
+  const incomingRequestsList = document.getElementById('incomingRequestsList');
+  const emptyRequestsNotice = document.getElementById('emptyRequestsNotice');
+
+  const myFriendLinkInput = document.getElementById('myFriendLinkInput');
+  const btnCopyFriendLink = document.getElementById('btnCopyFriendLink');
+  const btnShareFriendWhatsApp = document.getElementById('btnShareFriendWhatsApp');
+  const btnGoToShareFromEmpty = document.getElementById('btnGoToShareFromEmpty');
+  const btnTogglePushNotifications = document.getElementById('btnTogglePushNotifications');
+
+  // Enlace personal de amistad
+  const myFriendLink = `${window.location.origin}/?friend=${myPlayerId}`;
+  if (myFriendLinkInput) {
+    myFriendLinkInput.value = myFriendLink;
+  }
+
+  // Abrir y cerrar Panel de Amigos
+  if (btnOpenFriends) {
+    btnOpenFriends.addEventListener('click', () => {
+      window.soundManager.playTileClick();
+      if (friendsModal) {
+        friendsModal.classList.remove('hidden');
+        friendsModal.style.display = 'flex';
+      }
+      switchFriendsTab('myFriends');
+      syncSessionWithServer();
+    });
+  }
+
+  if (btnCloseFriends) {
+    btnCloseFriends.addEventListener('click', () => {
+      window.soundManager.playTileClick();
+      if (friendsModal) {
+        friendsModal.classList.add('hidden');
+        friendsModal.style.display = 'none';
+      }
+    });
+  }
+
+  if (btnGoToShareFromEmpty) {
+    btnGoToShareFromEmpty.addEventListener('click', () => {
+      switchFriendsTab('shareLink');
+    });
+  }
+
+  function switchFriendsTab(tabName) {
+    if (!tabBtnMyFriends || !tabBtnRequests || !tabBtnShareLink) return;
+    tabBtnMyFriends.classList.remove('active');
+    tabBtnRequests.classList.remove('active');
+    tabBtnShareLink.classList.remove('active');
+
+    tabContentMyFriends?.classList.add('hidden');
+    tabContentRequests?.classList.add('hidden');
+    tabContentShareLink?.classList.add('hidden');
+
+    if (tabName === 'myFriends') {
+      tabBtnMyFriends.classList.add('active');
+      tabContentMyFriends?.classList.remove('hidden');
+    } else if (tabName === 'requests') {
+      tabBtnRequests.classList.add('active');
+      tabContentRequests?.classList.remove('hidden');
+    } else if (tabName === 'shareLink') {
+      tabBtnShareLink.classList.add('active');
+      tabContentShareLink?.classList.remove('hidden');
+    }
+  }
+
+  if (tabBtnMyFriends) tabBtnMyFriends.addEventListener('click', () => switchFriendsTab('myFriends'));
+  if (tabBtnRequests) tabBtnRequests.addEventListener('click', () => switchFriendsTab('requests'));
+  if (tabBtnShareLink) tabBtnShareLink.addEventListener('click', () => switchFriendsTab('shareLink'));
+
+  // Copiar Enlace de Amistad
+  if (btnCopyFriendLink) {
+    btnCopyFriendLink.addEventListener('click', () => {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(myFriendLink).then(() => {
+          showToast('📋 ¡Enlace de amistad copiado!');
+        }).catch(() => {
+          copyFallback(myFriendLink);
+        });
+      } else {
+        copyFallback(myFriendLink);
+      }
+    });
+  }
+
+  function copyFallback(text) {
+    if (myFriendLinkInput) {
+      myFriendLinkInput.select();
+      document.execCommand('copy');
+      showToast('📋 ¡Enlace de amistad copiado!');
+    }
+  }
+
+  // Compartir Enlace por WhatsApp
+  if (btnShareFriendWhatsApp) {
+    btnShareFriendWhatsApp.addEventListener('click', () => {
+      const msg = `¡Hola! Agrégame como amigo en Dominó Clásico para que juguemos juntos cuando quieras:\n${myFriendLink}`;
+      window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
+    });
+  }
+
+  // Activar avisos de partidas (Web Push)
+  if (btnTogglePushNotifications) {
+    btnTogglePushNotifications.addEventListener('click', async () => {
+      window.soundManager.playTileClick();
+      await setupWebPush();
+    });
+  }
+
+  async function setupWebPush() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      alert('Tu navegador no admite Web Push. Puedes agregar el juego como aplicación a tu pantalla de inicio.');
+      return;
+    }
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') {
+        showToast('⚠️ Permiso de notificaciones no concedido.');
+        return;
+      }
+      const reg = await navigator.serviceWorker.ready;
+      const resp = await fetch('/api/vapid-key');
+      const { publicKey } = await resp.json();
+      if (!publicKey) throw new Error('No se pudo obtener la clave VAPID');
+
+      const convertedVapidKey = urlBase64ToUint8Array(publicKey);
+      const subscription = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: convertedVapidKey
+      });
+
+      await fetch('/api/push/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playerId: myPlayerId, subscription })
+      });
+
+      const pushStatusText = document.getElementById('pushStatusText');
+      const pushIcon = document.getElementById('pushIcon');
+      if (pushStatusText) pushStatusText.textContent = 'Avisos de partidas activados';
+      if (pushIcon) pushIcon.textContent = '✅';
+      showToast('🔔 ¡Avisos activados! Te avisaremos cuando te inviten.');
+    } catch (err) {
+      console.error('Error configurando Web Push:', err);
+      showToast('Error activando avisos: ' + (err.message || 'desconocido'));
+    }
+  }
+
+  function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+  }
+
+  // Sincronización recibida de amigos y solicitudes
+  socket.on('sync_friends', (data) => {
+    myFriends = data.friends || [];
+    pendingRequests = data.pendingRequests || [];
+    pendingInvitations = data.pendingInvitations || [];
+
+    renderFriendsList(myFriends);
+    renderRequestsList(pendingRequests);
+    updateFriendsBadges();
+
+    // Si hay invitaciones de partida pendientes
+    if (pendingInvitations.length > 0) {
+      showGameInviteModal(pendingInvitations[0]);
+    }
+  });
+
+  socket.on('friends_updated', () => {
+    syncSessionWithServer();
+  });
+
+  socket.on('friend_request_received', (data) => {
+    showToast(`👥 ¡Nueva solicitud de amistad de ${data.from?.name || 'un jugador'}!`);
+    window.soundManager.playPop();
+    syncSessionWithServer();
+  });
+
+  socket.on('friend_request_result', (result) => {
+    if (result.ok) {
+      if (result.autoAccepted) {
+        showToast('🤝 ¡Ahora son amigos mutuamente!');
+      } else {
+        showToast('📨 Solicitud de amistad enviada.');
+      }
+    } else {
+      showToast('⚠️ ' + (result.error || 'No se pudo enviar la solicitud'));
+    }
+  });
+
+  socket.on('respond_friend_request_result', (result) => {
+    if (result.ok) {
+      if (result.action === 'accepted') {
+        showToast('✅ ¡Solicitud aceptada! Ahora son amigos.');
+      } else {
+        showToast('Solicitud rechazada.');
+      }
+    }
+    syncSessionWithServer();
+  });
+
+  function updateFriendsBadges() {
+    const count = pendingRequests.length;
+    if (friendsPendingBadge) {
+      if (count > 0) {
+        friendsPendingBadge.textContent = count;
+        friendsPendingBadge.classList.remove('hidden');
+      } else {
+        friendsPendingBadge.classList.add('hidden');
+      }
+    }
+    if (requestsTabBadge) {
+      if (count > 0) {
+        requestsTabBadge.textContent = count;
+        requestsTabBadge.classList.remove('hidden');
+      } else {
+        requestsTabBadge.classList.add('hidden');
+      }
+    }
+    if (myFriendsCount) {
+      myFriendsCount.textContent = myFriends.length;
+    }
+  }
+
+  function renderFriendsList(friends) {
+    if (!myFriendsList) return;
+    myFriendsList.innerHTML = '';
+
+    if (!friends || friends.length === 0) {
+      emptyFriendsNotice?.classList.remove('hidden');
+      return;
+    }
+    emptyFriendsNotice?.classList.add('hidden');
+
+    friends.forEach(f => {
+      const card = document.createElement('div');
+      card.className = 'friend-card';
+      const avSvg = window.AVATARS[f.avatar]?.svg || '👤';
+
+      let statusHtml = '<span class="text-[9.5px] text-slate-400 flex items-center gap-1"><span class="friend-status-dot offline"></span> Desconectado</span>';
+      if (f.activeRoomId) {
+        statusHtml = `<span class="text-[9.5px] text-amber-300 font-bold flex items-center gap-1"><span class="friend-status-dot playing"></span> En mesa ${f.activeRoomId}</span>`;
+      } else if (f.isOnline) {
+        statusHtml = '<span class="text-[9.5px] text-emerald-400 font-bold flex items-center gap-1"><span class="friend-status-dot online"></span> En línea</span>';
+      }
+
+      card.innerHTML = `
+        <div class="flex items-center gap-2.5">
+          <div class="w-10 h-10 rounded-full bg-slate-800 border border-emerald-500/40 overflow-hidden flex items-center justify-center">
+            ${avSvg}
+          </div>
+          <div>
+            <div class="text-xs font-black text-white">${f.name}</div>
+            ${statusHtml}
+          </div>
+        </div>
+        <button type="button" class="btn-invite-friend primary-btn !py-1 !px-2.5 !text-[11px] font-bold" data-id="${f.id}" data-name="${f.name}">
+          🎮 Invitar
+        </button>
+      `;
+
+      card.querySelector('.btn-invite-friend').addEventListener('click', (e) => {
+        e.stopPropagation();
+        inviteFriendToPlay(f.id, f.name);
+      });
+
+      card.addEventListener('click', () => {
+        inviteFriendToPlay(f.id, f.name);
+      });
+
+      myFriendsList.appendChild(card);
+    });
+  }
+
+  function renderRequestsList(requests) {
+    if (!incomingRequestsList) return;
+    incomingRequestsList.innerHTML = '';
+
+    if (!requests || requests.length === 0) {
+      emptyRequestsNotice?.classList.remove('hidden');
+      return;
+    }
+    emptyRequestsNotice?.classList.add('hidden');
+
+    requests.forEach(r => {
+      const item = document.createElement('div');
+      item.className = 'bg-slate-900 border border-emerald-500/40 rounded-xl p-2.5 flex items-center justify-between';
+      const avSvg = window.AVATARS[r.fromAvatar]?.svg || '👤';
+
+      item.innerHTML = `
+        <div class="flex items-center gap-2">
+          <div class="w-9 h-9 rounded-full bg-slate-800 border border-amber-400/60 overflow-hidden flex items-center justify-center">
+            ${avSvg}
+          </div>
+          <div>
+            <div class="text-xs font-black text-white">${r.fromName}</div>
+            <div class="text-[9.5px] text-slate-400">Quiere ser tu amigo</div>
+          </div>
+        </div>
+        <div class="flex gap-1.5">
+          <button type="button" class="btn-accept-req primary-btn !py-1 !px-2.5 !text-xs font-bold" data-id="${r.id}">
+            ✅ Aceptar
+          </button>
+          <button type="button" class="btn-reject-req secondary-btn !py-1 !px-2 !text-xs font-bold !text-rose-300" data-id="${r.id}">
+            ❌
+          </button>
+        </div>
+      `;
+
+      item.querySelector('.btn-accept-req').addEventListener('click', () => {
+        socket.emit('respond_friend_request', {
+          requestId: r.id,
+          recipientId: myPlayerId,
+          action: 'accept'
+        });
+      });
+
+      item.querySelector('.btn-reject-req').addEventListener('click', () => {
+        socket.emit('respond_friend_request', {
+          requestId: r.id,
+          recipientId: myPlayerId,
+          action: 'reject'
+        });
+      });
+
+      incomingRequestsList.appendChild(item);
+    });
+  }
+
+  // Invitar a un amigo a jugar
+  function inviteFriendToPlay(friendId, friendName) {
+    let targetRoom = 'MESA-1';
+    if (currentRoom && currentRoom.id) {
+      targetRoom = currentRoom.id;
+    } else {
+      const rand = Math.floor(Math.random() * 90) + 10;
+      targetRoom = `MESA-${rand}`;
+      const inputRoom = document.getElementById('inputRoomId');
+      if (inputRoom) inputRoom.value = targetRoom;
+
+      const nameInput = document.getElementById('inputPlayerName')?.value?.trim() || 'Jugador';
+      socket.emit('join_room', {
+        roomId: targetRoom,
+        playerName: nameInput,
+        avatar: selectedAvatar,
+        clientId: myClientId,
+        playerId: myPlayerId,
+        playerToken: myPlayerToken,
+        forceReset: false
+      });
+    }
+
+    socket.emit('send_game_invite', {
+      fromId: myPlayerId,
+      toId: friendId,
+      roomId: targetRoom
+    });
+
+    showToast(`🚀 Invitando a ${friendName} a la mesa ${targetRoom}...`);
+  }
+
+  socket.on('game_invite_result', (res) => {
+    if (res.ok) {
+      showToast(res.alreadySent ? 'Invitación ya enviada recientemente.' : '🎮 Invitación enviada con éxito.');
+    } else {
+      showToast('⚠️ ' + (res.error || 'No se pudo enviar la invitación'));
+    }
+  });
+
+  socket.on('game_invitation_received', (data) => {
+    showGameInviteModal(data);
+  });
+
+  socket.on('game_invite_response', (data) => {
+    if (data.action === 'accept') {
+      showToast(`🎉 ¡${data.playerName} aceptó tu invitación y se está uniendo!`);
+    } else {
+      showToast(`ℹ️ ${data.playerName} no pudo aceptar en este momento.`);
+    }
+  });
+
+  // Modal de Invitación a Jugar
+  const gameInviteModal = document.getElementById('gameInviteModal');
+  const gameInviteSenderName = document.getElementById('gameInviteSenderName');
+  const gameInviteSenderAvatar = document.getElementById('gameInviteSenderAvatar');
+  const gameInviteSenderTitle = document.getElementById('gameInviteSenderTitle');
+  const gameInviteRoomCode = document.getElementById('gameInviteRoomCode');
+  const btnAcceptGameInvite = document.getElementById('btnAcceptGameInvite');
+  const btnRejectGameInvite = document.getElementById('btnRejectGameInvite');
+  let currentActiveInvite = null;
+
+  function showGameInviteModal(invData) {
+    if (!gameInviteModal) return;
+    currentActiveInvite = invData;
+
+    if (gameInviteSenderName) gameInviteSenderName.textContent = invData.fromName || 'Un amigo';
+    if (gameInviteSenderTitle) gameInviteSenderTitle.textContent = invData.fromName || 'Amigo';
+    if (gameInviteRoomCode) gameInviteRoomCode.textContent = invData.roomId || 'MESA-1';
+
+    if (gameInviteSenderAvatar) {
+      gameInviteSenderAvatar.innerHTML = window.AVATARS[invData.fromAvatar]?.svg || '👤';
+    }
+
+    window.soundManager.playPop();
+    gameInviteModal.classList.remove('hidden');
+    gameInviteModal.style.display = 'flex';
+  }
+
+  if (btnAcceptGameInvite) {
+    btnAcceptGameInvite.addEventListener('click', () => {
+      window.soundManager.playTileClick();
+      if (!currentActiveInvite) return;
+      const targetRoom = currentActiveInvite.roomId;
+      const inviteId = currentActiveInvite.invitation?.id || currentActiveInvite.id;
+
+      socket.emit('respond_game_invite', {
+        inviteId: inviteId,
+        playerId: myPlayerId,
+        action: 'accept'
+      });
+
+      gameInviteModal.classList.add('hidden');
+      gameInviteModal.style.display = 'none';
+
+      const nameInput = document.getElementById('inputPlayerName')?.value?.trim() || 'Jugador';
+      socket.emit('join_room', {
+        roomId: targetRoom,
+        playerName: nameInput,
+        avatar: selectedAvatar,
+        clientId: myClientId,
+        playerId: myPlayerId,
+        playerToken: myPlayerToken,
+        forceReset: false
+      });
+    });
+  }
+
+  if (btnRejectGameInvite) {
+    btnRejectGameInvite.addEventListener('click', () => {
+      window.soundManager.playTileClick();
+      if (currentActiveInvite) {
+        const inviteId = currentActiveInvite.invitation?.id || currentActiveInvite.id;
+        socket.emit('respond_game_invite', {
+          inviteId: inviteId,
+          playerId: myPlayerId,
+          action: 'reject'
+        });
+      }
+      gameInviteModal.classList.add('hidden');
+      gameInviteModal.style.display = 'none';
+    });
+  }
+
+  // Tarjeta de Visitante que abrió enlace de amistad (/?friend=...)
+  const friendInviteCardModal = document.getElementById('friendInviteCardModal');
+  const targetFriendName = document.getElementById('targetFriendName');
+  const targetFriendDisplayName = document.getElementById('targetFriendDisplayName');
+  const targetFriendAvatarWrapper = document.getElementById('targetFriendAvatarWrapper');
+  const inputVisitorName = document.getElementById('inputVisitorName');
+  const btnSendFriendRequestFromCard = document.getElementById('btnSendFriendRequestFromCard');
+  const btnDismissFriendCard = document.getElementById('btnDismissFriendCard');
+
+  const friendParam = urlParams.get('friend');
+  if (friendParam && friendParam !== myPlayerId) {
+    fetch(`/api/user/${friendParam}`).then(r => r.json()).then(targetUser => {
+      if (targetUser && targetUser.id) {
+        if (targetFriendName) targetFriendName.textContent = targetUser.name;
+        if (targetFriendDisplayName) targetFriendDisplayName.textContent = targetUser.name;
+        if (targetFriendAvatarWrapper) {
+          targetFriendAvatarWrapper.innerHTML = window.AVATARS[targetUser.avatar]?.svg || '👤';
+        }
+        if (inputVisitorName) {
+          inputVisitorName.value = localStorage.getItem('domino_player_name') || '';
+        }
+        if (friendInviteCardModal) {
+          friendInviteCardModal.classList.remove('hidden');
+          friendInviteCardModal.style.display = 'flex';
+        }
+      }
+    }).catch(e => console.warn('Error cargando amigo de URL:', e));
+  }
+
+  if (btnSendFriendRequestFromCard) {
+    btnSendFriendRequestFromCard.addEventListener('click', () => {
+      const vName = inputVisitorName?.value?.trim() || 'Jugador';
+      localStorage.setItem('domino_player_name', vName);
+      if (document.getElementById('inputPlayerName')) {
+        document.getElementById('inputPlayerName').value = vName;
+      }
+
+      socket.emit('auth_profile', {
+        playerId: myPlayerId,
+        playerToken: myPlayerToken,
+        playerName: vName,
+        avatar: selectedAvatar
+      });
+
+      socket.emit('send_friend_request', {
+        fromId: myPlayerId,
+        toId: friendParam
+      });
+
+      if (friendInviteCardModal) {
+        friendInviteCardModal.classList.add('hidden');
+        friendInviteCardModal.style.display = 'none';
+      }
+      showToast('🤝 ¡Solicitud de amistad enviada!');
+      history.replaceState(null, '', window.location.pathname);
+    });
+  }
+
+  if (btnDismissFriendCard) {
+    btnDismissFriendCard.addEventListener('click', () => {
+      if (friendInviteCardModal) {
+        friendInviteCardModal.classList.add('hidden');
+        friendInviteCardModal.style.display = 'none';
+      }
+      history.replaceState(null, '', window.location.pathname);
+    });
+  }
+
+  // Manejo de Desconexión de Compañero con Periodo de Gracia
+  const partnerDisconnectBanner = document.getElementById('partnerDisconnectBanner');
+  const partnerGraceTimerText = document.getElementById('partnerGraceTimerText');
+  const graceExpiredModal = document.getElementById('graceExpiredModal');
+  const graceExpiredPlayerName = document.getElementById('graceExpiredPlayerName');
+  const btnLeaveTableAfterGrace = document.getElementById('btnLeaveTableAfterGrace');
+  const btnDismissGraceModal = document.getElementById('btnDismissGraceModal');
+
+  socket.on('player_disconnected', (data) => {
+    if (data.seat !== mySeat && partnerDisconnectBanner) {
+      partnerDisconnectBanner.classList.remove('hidden');
+      let remaining = data.graceSeconds || 60;
+      if (partnerGraceTimerText) partnerGraceTimerText.textContent = remaining;
+
+      if (activePartnerGraceInterval) clearInterval(activePartnerGraceInterval);
+      activePartnerGraceInterval = setInterval(() => {
+        remaining -= 1;
+        if (partnerGraceTimerText) partnerGraceTimerText.textContent = Math.max(0, remaining);
+        if (remaining <= 0) {
+          clearInterval(activePartnerGraceInterval);
+        }
+      }, 1000);
+    }
+  });
+
+  socket.on('player_reconnected', (data) => {
+    if (partnerDisconnectBanner) {
+      partnerDisconnectBanner.classList.add('hidden');
+    }
+    if (activePartnerGraceInterval) {
+      clearInterval(activePartnerGraceInterval);
+      activePartnerGraceInterval = null;
+    }
+    showToast(`🎮 ${data.playerName} se ha reconectado a la mesa.`);
+  });
+
+  socket.on('reconnect_grace_expired', (data) => {
+    if (partnerDisconnectBanner) {
+      partnerDisconnectBanner.classList.add('hidden');
+    }
+    if (activePartnerGraceInterval) {
+      clearInterval(activePartnerGraceInterval);
+      activePartnerGraceInterval = null;
+    }
+    if (graceExpiredPlayerName) graceExpiredPlayerName.textContent = data.playerName || 'Rival';
+    if (graceExpiredModal) {
+      graceExpiredModal.classList.remove('hidden');
+      graceExpiredModal.style.display = 'flex';
+    }
+  });
+
+  if (btnLeaveTableAfterGrace) {
+    btnLeaveTableAfterGrace.addEventListener('click', () => {
+      if (graceExpiredModal) {
+        graceExpiredModal.classList.add('hidden');
+        graceExpiredModal.style.display = 'none';
+      }
+      sessionStorage.removeItem('domino_active_session');
+      window.location.reload();
+    });
+  }
+
+  if (btnDismissGraceModal) {
+    btnDismissGraceModal.addEventListener('click', () => {
+      if (graceExpiredModal) {
+        graceExpiredModal.classList.add('hidden');
+        graceExpiredModal.style.display = 'none';
+      }
+    });
+  }
 
   // Desbloqueo de audio y arranque de música de fondo en la primera interacción
   document.addEventListener('click', () => {

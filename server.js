@@ -2,6 +2,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
+const storage = require('./server-storage');
 
 const app = express();
 const server = http.createServer(app);
@@ -16,12 +17,47 @@ const io = new Server(server, {
 
 const PORT = process.env.PORT || 3000;
 
+app.use(express.json());
+
 // Desactivar caché agresivo en navegadores móviles para garantizar siempre la versión más reciente
 app.use((req, res, next) => {
   res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
   res.set('Pragma', 'no-cache');
   res.set('Expires', '0');
   next();
+});
+
+// REST APIs para Amigos, Invitaciones y Web Push
+app.get('/api/vapid-key', (req, res) => {
+  res.json({ publicKey: storage.vapidKeys.publicKey });
+});
+
+app.post('/api/push/subscribe', (req, res) => {
+  const { playerId, subscription } = req.body;
+  if (!playerId || !subscription) return res.status(400).json({ error: 'Faltan datos' });
+  storage.savePushSubscription(playerId, subscription);
+  res.json({ ok: true });
+});
+
+app.get('/api/user/:playerId', (req, res) => {
+  const user = storage.getUser(req.params.playerId);
+  if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+  res.json({ id: user.id, name: user.name, avatar: user.avatar });
+});
+
+app.get('/api/friends/:playerId', (req, res) => {
+  const friends = storage.getFriendsList(req.params.playerId);
+  res.json({ friends });
+});
+
+app.get('/api/friend-requests/:playerId', (req, res) => {
+  const requests = storage.getPendingRequests(req.params.playerId);
+  res.json({ requests });
+});
+
+app.get('/api/invitations/:playerId', (req, res) => {
+  const invitations = storage.getPendingInvitations(req.params.playerId);
+  res.json({ invitations });
 });
 
 app.use(express.static(path.join(__dirname, 'public'), {
@@ -72,8 +108,41 @@ function shuffle(array) {
   return arr;
 }
 
-// Almacén de salas activas
+// Almacén de salas activas (recuperadas de almacenamiento persistente en disco si se reinicia el servidor)
 const rooms = new Map();
+try {
+  const savedRooms = storage.loadRoomsFromDisk();
+  if (savedRooms && savedRooms.length > 0) {
+    savedRooms.forEach(r => {
+      // Al reiniciar el servidor, marcar que los jugadores humanos reconectarán
+      if (r.players) {
+        r.players.forEach(p => {
+          if (!p.isBot) {
+            p.isDisconnected = true;
+            p.socketId = null;
+          }
+        });
+      }
+      rooms.set(r.id, r);
+    });
+    console.log(`Recuperadas ${rooms.size} salas persistentes de disco.`);
+  }
+} catch (e) {
+  console.error('Error restaurando salas de disco:', e);
+}
+
+// Mapeo de sockets y usuarios para comunicación directa y Web Push
+const userSockets = new Map(); // playerId -> Set(socket.id)
+const socketToPlayerId = new Map(); // socket.id -> playerId
+
+function notifyUser(playerId, event, data) {
+  const sockIds = userSockets.get(playerId);
+  if (sockIds && sockIds.size > 0) {
+    sockIds.forEach(sid => {
+      io.to(sid).emit(event, data);
+    });
+  }
+}
 
 function createInitialRoom(roomId, hostSocketId) {
   return {
@@ -84,7 +153,7 @@ function createInitialRoom(roomId, hostSocketId) {
     round: 0,
     gameRate: 5, // Valor de cada partida ganada (pesos)
     penaltyPerPass: 1, // Valor de aportación / penalización por cada paso (monedas/puntos)
-    players: [], // { socketId, id, name, avatar, seat, isBot, ready, hand: [], passesTotal: 0, passesRound: 0, wins: 0, losses: 0, hasLeft: false, points: 0 }
+    players: [], // { socketId, id, playerId, clientId, name, avatar, seat, isBot, ready, hand: [], passesTotal: 0, passesRound: 0, wins: 0, losses: 0, hasLeft: false, points: 0, isDisconnected: false }
     board: [], // Fichas jugadas en la mesa
     leftEnd: null,
     rightEnd: null,
@@ -92,11 +161,13 @@ function createInitialRoom(roomId, hostSocketId) {
     consecutivePasses: 0,
     starterSeat: 0,
     history: [], // Historial de partidas del cuaderno
-    log: []
+    log: [],
+    lastActionId: null
   };
 }
 
 function getSafeRoomData(room, requesterSocketId) {
+  const disconnectedSeatWaiting = room.players.find(p => p.seat === room.currentTurnSeat && p.isDisconnected)?.seat;
   return {
     id: room.id,
     hostId: room.hostId,
@@ -112,8 +183,10 @@ function getSafeRoomData(room, requesterSocketId) {
     consecutivePasses: room.consecutivePasses,
     history: room.history,
     finalBalance: room.finalBalance || null,
+    disconnectedSeatWaiting: (disconnectedSeatWaiting !== undefined) ? disconnectedSeatWaiting : null,
     players: room.players.map(p => ({
       id: p.id,
+      playerId: p.playerId || p.clientId,
       name: p.name,
       avatar: p.avatar,
       seat: p.seat,
@@ -126,6 +199,8 @@ function getSafeRoomData(room, requesterSocketId) {
       losses: p.losses || 0,
       hasLeft: p.hasLeft || false,
       points: p.points || 0,
+      isDisconnected: p.isDisconnected || false,
+      disconnectedAt: p.disconnectedAt || null,
       // Solo enviamos la mano si es el jugador solicitante
       hand: (p.socketId === requesterSocketId) ? p.hand : undefined
     }))
@@ -258,7 +333,10 @@ function checkBotTurn(room) {
   }, delay);
 }
 
-function handlePlayTile(room, player, tileId, side, fallbackLeft, fallbackRight) {
+function handlePlayTile(room, player, tileId, side, fallbackLeft, fallbackRight, actionId) {
+  if (actionId && room.lastActionId === actionId) {
+    return true;
+  }
   let tileIndex = player.hand.findIndex(t => t.id === tileId);
   if (tileIndex === -1 && tileId) {
     const parts = String(tileId).split('-');
@@ -408,6 +486,7 @@ function handlePlayTile(room, player, tileId, side, fallbackLeft, fallbackRight)
     return true;
   }
 
+  storage.saveRoomsToDisk(rooms);
   // Siguiente turno rotativo entre jugadores activos
   advanceTurnToNextActive(room);
   return true;
@@ -816,16 +895,141 @@ function calculateSessionBalance(room) {
 io.on('connection', (socket) => {
   let currentRoomId = null;
 
-  socket.on('join_room', ({ roomId, playerName, avatar, clientId, forceReset, takeSeat, gameRate, penaltyValue }) => {
+  // Autenticación de perfil y sincronización de identidad persistente
+  socket.on('auth_profile', ({ playerId, playerToken, playerName, avatar }) => {
+    if (!playerId) return;
+    const user = storage.upsertUser(playerId, playerToken, playerName, avatar);
+
+    if (!userSockets.has(playerId)) userSockets.set(playerId, new Set());
+    userSockets.get(playerId).add(socket.id);
+    socketToPlayerId.set(socket.id, playerId);
+
+    const friends = storage.getFriendsList(playerId).map(f => {
+      const isOnline = userSockets.has(f.id) && userSockets.get(f.id).size > 0;
+      let activeRoomId = null;
+      rooms.forEach(r => {
+        if (r.players && r.players.some(p => (p.playerId === f.id || p.clientId === f.id) && !p.hasLeft)) {
+          activeRoomId = r.id;
+        }
+      });
+      return {
+        ...f,
+        isOnline,
+        activeRoomId
+      };
+    });
+
+    const pendingRequests = storage.getPendingRequests(playerId);
+    const pendingInvitations = storage.getPendingInvitations(playerId);
+
+    socket.emit('sync_friends', {
+      user: { id: user.id, name: user.name, avatar: user.avatar },
+      friends,
+      pendingRequests,
+      pendingInvitations
+    });
+  });
+
+  // Enviar solicitud de amistad
+  socket.on('send_friend_request', ({ fromId, toId }) => {
+    const result = storage.sendFriendRequest(fromId, toId);
+    socket.emit('friend_request_result', result);
+
+    if (result.ok) {
+      if (result.autoAccepted) {
+        notifyUser(fromId, 'friends_updated');
+        notifyUser(toId, 'friends_updated');
+      } else {
+        notifyUser(toId, 'friend_request_received', {
+          request: result.request,
+          from: storage.getUser(fromId)
+        });
+      }
+    }
+  });
+
+  // Responder a solicitud de amistad (aceptar / rechazar)
+  socket.on('respond_friend_request', ({ requestId, recipientId, action }) => {
+    const result = storage.respondFriendRequest(requestId, recipientId, action);
+    socket.emit('respond_friend_request_result', result);
+
+    if (result.ok) {
+      notifyUser(result.senderId, 'friends_updated');
+      notifyUser(result.recipientId, 'friends_updated');
+    }
+  });
+
+  // Invitar a un amigo a jugar
+  socket.on('send_game_invite', async ({ fromId, toId, roomId }) => {
+    const sender = storage.getUser(fromId);
+    if (!sender) return socket.emit('game_invite_result', { ok: false, error: 'Usuario remitente no encontrado' });
+
+    let targetRoomId = (roomId || 'MESA-1').toUpperCase().trim();
+    let room = rooms.get(targetRoomId);
+    if (!room) {
+      room = createInitialRoom(targetRoomId, socket.id);
+      rooms.set(targetRoomId, room);
+      storage.saveRoomsToDisk(rooms);
+    }
+
+    const result = storage.createGameInvitation(fromId, toId, targetRoomId);
+    socket.emit('game_invite_result', result);
+
+    if (result.ok) {
+      const invData = {
+        invitation: result.invitation,
+        fromName: sender.name,
+        fromAvatar: sender.avatar,
+        roomId: targetRoomId
+      };
+
+      const targetSockets = userSockets.get(toId);
+      if (targetSockets && targetSockets.size > 0) {
+        targetSockets.forEach(sockId => {
+          io.to(sockId).emit('game_invitation_received', invData);
+        });
+      }
+
+      // Enviar Web Push si la pestaña está cerrada
+      storage.sendPushNotification(toId, {
+        title: '🀫 ¡Invitación a jugar Dominó!',
+        body: `${sender.name} te ha invitado a jugar en la mesa ${targetRoomId}`,
+        data: {
+          url: `/?room=${targetRoomId}&invite=${result.invitation.id}`,
+          roomId: targetRoomId,
+          inviteId: result.invitation.id
+        }
+      });
+    }
+  });
+
+  // Responder a invitación de partida
+  socket.on('respond_game_invite', ({ inviteId, playerId, action }) => {
+    const result = storage.respondInvitation(inviteId, playerId, action);
+    socket.emit('respond_game_invite_result', result);
+
+    if (result.ok && result.fromId) {
+      notifyUser(result.fromId, 'game_invite_response', {
+        inviteId,
+        playerId,
+        playerName: storage.getUser(playerId)?.name || 'Tu amigo',
+        action
+      });
+    }
+  });
+
+  socket.on('join_room', ({ roomId, playerName, avatar, clientId, playerId, playerToken, forceReset, takeSeat, gameRate, penaltyValue }) => {
     const formattedRoomId = (roomId || 'MESA-1').toUpperCase().trim();
     let room = rooms.get(formattedRoomId);
 
-    // Identificar humanos vivos actualmente conectados por WebSocket
-    const liveHumans = room ? room.players.filter(p => !p.isBot && p.socketId && io.sockets.sockets.has(p.socketId)) : [];
+    const cleanName = (playerName || 'Jugador').trim();
+    const effectiveClientId = clientId || socket.id;
+    const effectivePlayerId = playerId || effectiveClientId;
 
-    // Si el usuario forzó el reinicio de la sala, o la sala no existe, o no tiene humanos vivos conectados:
-    // Reiniciar la sala completamente limpia en sala de espera con 0 fichas
-    if (forceReset || !room || liveHumans.length === 0) {
+    storage.upsertUser(effectivePlayerId, playerToken, cleanName, avatar);
+
+    // Si el usuario forzó el reinicio de la sala o la sala no existe
+    if (forceReset || !room) {
       room = createInitialRoom(formattedRoomId, socket.id);
       if (gameRate !== undefined && !isNaN(parseInt(gameRate))) {
         room.gameRate = Math.max(0, parseInt(gameRate));
@@ -841,19 +1045,9 @@ io.on('connection', (socket) => {
       room.cleanupTimer = null;
     }
 
-    const cleanName = (playerName || 'Jugador').trim();
-    const effectiveClientId = clientId || socket.id;
-
-    // En sala de espera, purgar jugadores desconectados que ya no tengan socket activo
-    if (room.status === 'waiting') {
-      room.players = room.players.filter(p => p.socketId === socket.id || (p.socketId && io.sockets.sockets.has(p.socketId)));
-      if (room.players.length === 0 || !room.players.some(p => p.socketId === room.hostId && io.sockets.sockets.has(p.socketId))) {
-        room.hostId = socket.id;
-      }
-    }
-
-    // 1. Verificar si hay un jugador con el mismo clientId, socketId o el mismo nombre (Reconexión legítima)
+    // 1. Verificar si hay un jugador existente con este playerId, clientId, socketId o nombre (Reconexión legítima)
     let matchPlayer = room.players.find(p =>
+      (p.playerId && p.playerId === effectivePlayerId) ||
       (p.clientId && p.clientId === effectiveClientId) ||
       p.socketId === socket.id ||
       p.name.toLowerCase() === cleanName.toLowerCase() ||
@@ -867,16 +1061,30 @@ io.on('connection', (socket) => {
         if (oldSock) oldSock.disconnect(true);
       }
       matchPlayer.socketId = socket.id;
+      matchPlayer.playerId = effectivePlayerId;
       matchPlayer.clientId = effectiveClientId;
       matchPlayer.name = cleanName;
       matchPlayer.avatar = avatar || matchPlayer.avatar;
       matchPlayer.isBot = false;
       matchPlayer.isDisconnected = false;
+      matchPlayer.disconnectedAt = null;
       matchPlayer.lastSeen = Date.now();
+
+      if (matchPlayer.graceTimer) {
+        clearTimeout(matchPlayer.graceTimer);
+        matchPlayer.graceTimer = null;
+      }
+
       // Si era el anfitrión o el anfitrión no está vivo, este jugador es el anfitrión
       if (room.hostId === matchPlayer.socketId || !room.players.some(p => p.socketId === room.hostId && io.sockets.sockets.has(p.socketId))) {
         room.hostId = socket.id;
       }
+
+      // Avisar a la sala que el jugador se reconectó
+      io.to(room.id).emit('player_reconnected', {
+        seat: matchPlayer.seat,
+        playerName: matchPlayer.name
+      });
     } else {
       if (room.status === 'waiting') {
         // En SALA DE ESPERA:
@@ -884,14 +1092,16 @@ io.on('connection', (socket) => {
         const botSeat = room.players.find(p => p.isBot);
         if (botSeat) {
           botSeat.socketId = socket.id;
+          botSeat.playerId = effectivePlayerId;
           botSeat.clientId = effectiveClientId;
           botSeat.name = cleanName;
           botSeat.avatar = avatar || 'male_1';
           botSeat.isBot = false;
           botSeat.isDisconnected = false;
+          botSeat.disconnectedAt = null;
           botSeat.lastSeen = Date.now();
-        } else if (room.players.length < 4) {
-          // Si hay espacio (hasta 4 jugadores), añadir al jugador
+        } else if (room.players.length < (room.maxPlayers || 4)) {
+          // Si hay espacio, añadir al jugador
           const takenSeats = room.players.map(p => p.seat);
           let freeSeat = 0;
           for (let s = 0; s < 4; s++) {
@@ -902,6 +1112,7 @@ io.on('connection', (socket) => {
           }
           const newPlayer = {
             socketId: socket.id,
+            playerId: effectivePlayerId,
             clientId: effectiveClientId,
             id: socket.id,
             name: cleanName,
@@ -914,47 +1125,21 @@ io.on('connection', (socket) => {
             passesRound: 0,
             wins: 0,
             points: 0,
+            isDisconnected: false,
+            disconnectedAt: null,
             lastSeen: Date.now()
           };
           room.players.push(newPlayer);
-          if (room.players.length > (room.maxPlayers || 2)) {
-            room.maxPlayers = room.players.length;
-          }
         } else {
-          // Literalmente hay 4 humanos en sala de espera
-          socket.emit('room_full_options', { roomId: formattedRoomId, maxPlayers: 4 });
+          // La sala de espera está llena
+          socket.emit('error_message', `La sala ${formattedRoomId} ya está llena (${room.players.length}/${room.maxPlayers || 4}).`);
           return;
         }
       } else {
         // En PARTIDA ACTIVA ('playing'):
-        // Si el jugador es nuevo y NO pidió expresamente unirse a la partida en curso
+        // Si no es un jugador que estaba en la partida, rechazar
         if (!takeSeat) {
-          const hasReplaceable = room.players.some(p => p.isBot || !io.sockets.sockets.has(p.socketId));
-          socket.emit('room_in_progress', {
-            roomId: formattedRoomId,
-            round: room.round,
-            liveHumansCount: liveHumans.length,
-            canTakeSeat: hasReplaceable,
-            suggestedRoom: `MESA-${Math.floor(Math.random() * 90) + 10}`
-          });
-          return;
-        }
-
-        // Si pidió tomar asiento en la partida en curso:
-        const replaceableSeat = room.players.find(p => p.isBot || !io.sockets.sockets.has(p.socketId));
-        if (replaceableSeat) {
-          replaceableSeat.socketId = socket.id;
-          replaceableSeat.clientId = effectiveClientId;
-          replaceableSeat.name = cleanName;
-          replaceableSeat.avatar = avatar || 'male_1';
-          replaceableSeat.isBot = false;
-          replaceableSeat.isDisconnected = false;
-          replaceableSeat.lastSeen = Date.now();
-          if (!room.players.some(p => p.socketId === room.hostId && !p.isBot)) {
-            room.hostId = socket.id;
-          }
-        } else {
-          socket.emit('room_full_options', { roomId: formattedRoomId, maxPlayers: room.maxPlayers || 2 });
+          socket.emit('error_message', `La partida en la mesa ${formattedRoomId} ya está en curso con otros jugadores.`);
           return;
         }
       }
@@ -1148,20 +1333,51 @@ io.on('connection', (socket) => {
   });
 
   // Jugar ficha
-  socket.on('play_tile', ({ tileId, side, left, right }) => {
-    if (!currentRoomId) return;
-    const room = rooms.get(currentRoomId);
+  socket.on('play_tile', ({ tileId, side, left, right, actionId, clientId, playerId }) => {
+    let rId = currentRoomId;
+    let room = rId ? rooms.get(rId) : null;
+    if (!room) {
+      for (const r of rooms.values()) {
+        if (r.players && r.players.some(p => p.socketId === socket.id || (playerId && p.playerId === playerId) || (clientId && p.clientId === clientId))) {
+          room = r;
+          rId = r.id;
+          break;
+        }
+      }
+    }
     if (!room || room.status !== 'playing') return;
 
-    const player = room.players.find(p => p.socketId === socket.id);
-    if (!player || player.seat !== room.currentTurnSeat) {
+    let player = room.players.find(p => p.socketId === socket.id || (playerId && p.playerId === playerId) || (clientId && p.clientId === clientId));
+    if (!player) return;
+    if (player.socketId !== socket.id) player.socketId = socket.id;
+
+    // Idempotencia: si la jugada ya fue colocada y registrada (por corte de red en el envío)
+    if (actionId && room.lastActionId === actionId) {
+      broadcastRoom(room);
+      return;
+    }
+
+    if (player.seat !== room.currentTurnSeat) {
+      const onBoard = room.board.some(t => t.id === tileId || `${t.left}-${t.right}` === tileId);
+      if (onBoard) {
+        broadcastRoom(room);
+        return;
+      }
       socket.emit('error_message', 'No es tu turno.');
       return;
     }
 
-    const success = handlePlayTile(room, player, tileId, side, left, right);
+    const success = handlePlayTile(room, player, tileId, side, left, right, actionId);
     if (!success) {
+      const isAlreadyOnBoard = room.board.some(t => t.id === tileId || `${t.left}-${t.right}` === tileId);
+      if (isAlreadyOnBoard) {
+        broadcastRoom(room);
+        return;
+      }
       socket.emit('error_message', 'Jugada no válida para ese extremo.');
+    } else {
+      room.lastActionId = actionId;
+      storage.saveRoomsToDisk(rooms);
     }
   });
 
@@ -1449,42 +1665,60 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
+    const pId = socketToPlayerId.get(socket.id);
+    if (pId && userSockets.has(pId)) {
+      userSockets.get(pId).delete(socket.id);
+      if (userSockets.get(pId).size === 0) userSockets.delete(pId);
+    }
+    socketToPlayerId.delete(socket.id);
+
     if (!currentRoomId) return;
     const room = rooms.get(currentRoomId);
     if (!room) return;
 
     const player = room.players.find(p => p.socketId === socket.id);
-    if (player) {
-      player.isDisconnected = true;
-      player.disconnectedAt = Date.now();
-    }
+    if (!player) return;
+
+    player.isDisconnected = true;
+    player.disconnectedAt = Date.now();
+    player.socketId = null;
 
     if (room.status === 'waiting') {
-      // En la sala de espera, NO expulsar de inmediato al jugador ni borrar la sala.
-      // Se da tiempo de espera ilimitado/prolongado (hasta 30 minutos) para que puedan invitar amigos por WhatsApp
-      if (!room.cleanupTimer) {
-        room.cleanupTimer = setTimeout(() => {
-          const hasActiveHuman = room.players.some(p => !p.isBot && !p.isDisconnected);
-          if (!hasActiveHuman) {
-            rooms.delete(currentRoomId);
-          }
-        }, 30 * 60 * 1000); // 30 minutos de espera
-      }
+      // En sala de espera: conservar asiento
       broadcastRoom(room);
-    } else {
-      if (player) {
-        player.isBot = true;
-        player.name = `${player.name} (Auto)`;
+      storage.saveRoomsToDisk(rooms);
+    } else if (room.status === 'playing') {
+      // En partida en curso:
+      // Mantener visible y funcional el tablero del jugador que sigue conectado.
+      // Muéstrale «Tu compañero se está reconectando».
+      // Si es su turno, permite que juegue normalmente.
+      // Cuando el turno llegue al jugador desconectado, espera durante el periodo de gracia y conserva su asiento.
+      // Evita saltar turnos o jugar en nombre del jugador desconectado.
+      const graceSeconds = 60;
+      const isHisTurn = (room.currentTurnSeat === player.seat);
 
-        const hasHuman = room.players.some(p => !p.isBot);
-        if (!hasHuman) {
-          rooms.delete(currentRoomId);
-          return;
+      io.to(room.id).emit('player_disconnected', {
+        seat: player.seat,
+        playerName: player.name,
+        graceSeconds: graceSeconds,
+        isHisTurn: isHisTurn
+      });
+
+      broadcastRoom(room);
+      storage.saveRoomsToDisk(rooms);
+
+      if (player.graceTimer) clearTimeout(player.graceTimer);
+      player.graceTimer = setTimeout(() => {
+        player.graceTimer = null;
+        if (player.isDisconnected) {
+          // El tiempo de espera se agotó sin reconexión
+          io.to(room.id).emit('reconnect_grace_expired', {
+            seat: player.seat,
+            playerName: player.name
+          });
+          storage.saveRoomsToDisk(rooms);
         }
-
-        broadcastRoom(room);
-        checkBotTurn(room);
-      }
+      }, graceSeconds * 1000);
     }
   });
 });

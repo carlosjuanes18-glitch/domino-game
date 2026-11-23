@@ -123,9 +123,9 @@ class DominoRenderer {
       const isDouble = (t.left === t.right) || t.isDouble;
 
       // Giro de 90° hacia abajo cuando la fila alcanza maxPerRow:
-      // Se gira congruentemente hacia abajo con una ficha vertical compacta (sea normal o doble)
-      // para que la cadena nunca se salga por los bordes laterales y ambos extremos queden siempre 100% visibles.
-      const shouldTurn = (tilesInRow >= maxPerRow);
+      // Se gira congruentemente hacia abajo con una ficha normal compacta (evitando dobles en la esquina
+      // para que nunca colisionen y respetando el boceto con las mulas cruzadas en el centro).
+      const shouldTurn = (tilesInRow >= maxPerRow) && !isDouble && !prevWasDouble;
 
       if (shouldTurn) {
         if (dir === 'RIGHT') {
@@ -149,6 +149,7 @@ class DominoRenderer {
           curY = y + U;
           dir = 'LEFT';
           tilesInRow = 0;
+          prevWasDouble = false;
         } else {
           // dir === 'LEFT': conector baja verticalmente desde la mitad izquierda de la ficha previa
           const x = curX;
@@ -170,6 +171,7 @@ class DominoRenderer {
           curY = y + U;
           dir = 'RIGHT';
           tilesInRow = 0;
+          prevWasDouble = false;
         }
       } else {
         tilesInRow++;
@@ -192,6 +194,7 @@ class DominoRenderer {
               dir: 'RIGHT'
             });
             curX += U;
+            prevWasDouble = true;
           } else {
             // Ficha horizontal normal hacia la derecha
             const x = curX;
@@ -210,6 +213,7 @@ class DominoRenderer {
               dir: 'RIGHT'
             });
             curX += 2 * U;
+            prevWasDouble = false;
           }
         } else {
           // dir === 'LEFT'
@@ -231,6 +235,7 @@ class DominoRenderer {
               dir: 'LEFT'
             });
             curX -= U;
+            prevWasDouble = true;
           } else {
             // Ficha horizontal normal hacia la izquierda
             const x = curX - 2 * U;
@@ -249,6 +254,7 @@ class DominoRenderer {
               dir: 'LEFT'
             });
             curX -= 2 * U;
+            prevWasDouble = false;
           }
         }
       }

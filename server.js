@@ -949,13 +949,17 @@ io.on('connection', (socket) => {
   });
 
   // Responder a solicitud de amistad (aceptar / rechazar)
-  socket.on('respond_friend_request', ({ requestId, recipientId, action }) => {
-    const result = storage.respondFriendRequest(requestId, recipientId, action);
+  socket.on('respond_friend_request', ({ requestId, recipientId, playerId, action }) => {
+    const effectiveRecipient = recipientId || playerId;
+    const result = storage.respondFriendRequest(requestId, effectiveRecipient, action);
     socket.emit('respond_friend_request_result', result);
 
     if (result.ok) {
       notifyUser(result.senderId, 'friends_updated');
       notifyUser(result.recipientId, 'friends_updated');
+      if (action === 'accept') {
+        notifyUser(result.senderId, 'friend_request_accepted', result);
+      }
     }
   });
 

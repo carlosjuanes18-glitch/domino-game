@@ -939,7 +939,14 @@
 
   // Notificaciones de jugadas recibidas
   socket.on('tile_played', (data) => {
-    if (data.isBombEnds) {
+    if (data.forcedPass) {
+      // ¡Al poner la ficha hizo pasar al siguiente jugador! Sonido Super Mario Bros PowerUp
+      window.soundManager.playMarioPowerUp();
+      triggerForcedPassScreenEffect(data.seat, data.playerName, data.forcedPlayerName, data.forcedPlayerSeat);
+      if (data.isBombEnds) {
+        triggerBombScreenEffect(data.seat, data.bombNumber);
+      }
+    } else if (data.isBombEnds) {
       // Puntas iguales: ¡Activar efecto de bomba con sonido característico y animación!
       window.soundManager.playTimeBomb();
       triggerBombScreenEffect(data.seat, data.bombNumber);
@@ -1513,6 +1520,8 @@
         thematicIcons = ['DOMINO_PSYCHO', '🔪', '🩸', 'DOMINO_PSYCHO', '🔪', '🩸', 'DOMINO_PSYCHO', '🔪', '🩸', 'DOMINO_PSYCHO', '🔪', 'DOMINO_PSYCHO'];
       } else if (content.includes('volar la papada') || content.includes('BOMBA') || content.includes('PUNTAS') || content.includes('💣')) {
         thematicIcons = ['💣', '💥', '🔥', '💣', '💥', '🔥', '💣', '💥', '🔥', '💣', '💥', '🔥'];
+      } else if (content.includes('PASAR A') || content.includes('🍄') || content.includes('PowerUp')) {
+        thematicIcons = ['🍄', '⭐', '✨', '🍄', '⭐', '✨', '🍄', '⭐', '✨', '🍄', '⭐', '✨'];
       } else if (content.includes('volaste la papada')) {
         thematicIcons = ['🤯', '💥', '😵', '🤕', '🤯', '💥', '😵', '🤕', '🤯', '💥', '😵', '🤕'];
       } else if (content.includes('Dominó')) {
@@ -1533,6 +1542,32 @@
         if (badge.parentNode) badge.parentNode.removeChild(badge);
       }, 4200);
     }
+  }
+
+  // Activa la animación en pantalla cuando una ficha colocada hace pasar al siguiente jugador
+  function triggerForcedPassScreenEffect(seat, playerName, forcedPlayerName, forcedPlayerSeat) {
+    const targetName = forcedPlayerName || 'Rival';
+    const label = `🍄 ¡HIZO PASAR A ${targetName.toUpperCase()}! 🍄`;
+    triggerFloatingReaction(seat, label);
+
+    // Globito en el jugador obligado a pasar
+    if (forcedPlayerSeat !== null && forcedPlayerSeat !== undefined) {
+      setTimeout(() => {
+        triggerFloatingReaction(forcedPlayerSeat, '🚫 ¡NO LLEVO!');
+      }, 700);
+    }
+
+    const burst = document.createElement('div');
+    burst.className = 'powerup-central-burst';
+    burst.innerHTML = `
+      <div class="powerup-icon">🍄</div>
+      <div class="powerup-badge">¡HIZO PASAR A ${targetName}!</div>
+    `;
+    document.body.appendChild(burst);
+
+    setTimeout(() => {
+      if (burst.parentNode) burst.parentNode.removeChild(burst);
+    }, 3200);
   }
 
   // Activa la animación en pantalla y bomba cuando los extremos quedan con números iguales

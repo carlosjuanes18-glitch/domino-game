@@ -360,6 +360,26 @@ function handlePlayTile(room, player, tileId, side, fallbackLeft, fallbackRight)
     name: player.name
   };
 
+  // Determinar quién será el siguiente jugador activo
+  const activePlayers = room.players.filter(p => !p.hasLeft);
+  const sorted = [...activePlayers].sort((a, b) => a.seat - b.seat);
+  const currentIdx = sorted.findIndex(p => p.seat === player.seat);
+  const nextPlayer = (currentIdx !== -1)
+    ? sorted[(currentIdx + 1) % sorted.length]
+    : sorted[0];
+
+  // Verificar si la jugada deja al siguiente jugador sin fichas para tirar (lo hace pasar)
+  const nextCanPlay = nextPlayer && nextPlayer.hand && nextPlayer.hand.some(t =>
+    t.left === room.leftEnd || t.right === room.leftEnd ||
+    t.left === room.rightEnd || t.right === room.rightEnd
+  );
+  const forcedNextPlayerToPass = (
+    player.hand.length > 0 &&
+    nextPlayer &&
+    nextPlayer.seat !== player.seat &&
+    !nextCanPlay
+  );
+
   // Detectar si los extremos quedan con números iguales (Bomba de puntas iguales)
   // Requiere que haya al menos 2 fichas en el tablero y que el jugador no haya ganado la partida
   const isBombEnds = (player.hand.length > 0 && room.board.length >= 2 && room.leftEnd !== null && room.rightEnd !== null && room.leftEnd === room.rightEnd);
@@ -372,7 +392,10 @@ function handlePlayTile(room, player, tileId, side, fallbackLeft, fallbackRight)
     leftEnd: room.leftEnd,
     rightEnd: room.rightEnd,
     isBombEnds: isBombEnds,
-    bombNumber: isBombEnds ? room.leftEnd : null
+    bombNumber: isBombEnds ? room.leftEnd : null,
+    forcedPass: forcedNextPlayerToPass,
+    forcedPlayerName: forcedNextPlayerToPass ? nextPlayer.name : null,
+    forcedPlayerSeat: forcedNextPlayerToPass ? nextPlayer.seat : null
   });
 
   // Verificar si el jugador hizo ¡DOMINÓ!

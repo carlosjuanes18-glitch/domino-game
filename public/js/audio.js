@@ -26,6 +26,7 @@ class SoundManager {
       psychosis: new Audio('/audio/psicosis.mp3'),
       marioPass: new Audio('/audio/mario-pipe-pass.mp3'),
       marioCastleClear: new Audio('/audio/mario-castle-clear.mp3'),
+      marioPowerUp: new Audio('/audio/mario-powerup.mp3'),
       gameOver: new Audio('/audio/gameOver.mp3')
     };
 
@@ -208,6 +209,11 @@ class SoundManager {
   // Efecto de sonido Bomba de Tiempo (para el emoji de bomba clásica 💣)
   playTimeBomb() {
     this.playAudio('timeBomb', 0.95);
+  }
+
+  // Sonido Super Mario Bros PowerUp (cuando una ficha colocada hace pasar al siguiente jugador)
+  playMarioPowerUp() {
+    this.playAudio('marioPowerUp', 0.95);
   }
 
   // Tema de Psicosis (para el emoji de Dominó Psicópata con cuchillo)

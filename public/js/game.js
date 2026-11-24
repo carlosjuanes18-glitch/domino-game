@@ -2710,6 +2710,15 @@
     syncSessionWithServer();
   });
 
+  socket.on('remove_friend_result', (result) => {
+    if (result && result.ok) {
+      showToast('🗑️ Amigo eliminado correctamente.');
+      syncSessionWithServer();
+    } else {
+      showToast('⚠️ No se pudo eliminar: ' + (result?.error || 'Error'));
+    }
+  });
+
   socket.on('friend_request_received', (data) => {
     showToast(`👥 ¡Nueva solicitud de amistad de ${data.from?.name || 'un jugador'}!`);
     window.soundManager.playPop();
@@ -2794,14 +2803,30 @@
             ${statusHtml}
           </div>
         </div>
-        <button type="button" class="btn-invite-friend primary-btn !py-1 !px-2.5 !text-[11px] font-bold" data-id="${f.id}" data-name="${f.name}">
-          🎮 Invitar
-        </button>
+        <div class="flex items-center gap-1.5">
+          <button type="button" class="btn-invite-friend primary-btn !py-1 !px-2.5 !text-[11px] font-bold" data-id="${f.id}" data-name="${f.name}">
+            🎮 Invitar
+          </button>
+          <button type="button" class="btn-remove-friend !py-1 !px-2 bg-rose-950/80 hover:bg-rose-800 border border-rose-500/50 text-rose-200 hover:text-white rounded-lg text-[10.5px] font-bold transition-all active:scale-95 flex items-center gap-1 shadow-sm" title="Eliminar amigo" data-id="${f.id}" data-name="${f.name}">
+            🗑️ Eliminar
+          </button>
+        </div>
       `;
 
       card.querySelector('.btn-invite-friend').addEventListener('click', (e) => {
         e.stopPropagation();
         inviteFriendToPlay(f.id, f.name);
+      });
+
+      card.querySelector('.btn-remove-friend').addEventListener('click', (e) => {
+        e.stopPropagation();
+        const conf = confirm(`¿Estás seguro que deseas eliminar de amigos a ${f.name}?`);
+        if (conf) {
+          socket.emit('remove_friend', {
+            playerId: myPlayerId,
+            friendId: f.id
+          });
+        }
       });
 
       card.addEventListener('click', () => {

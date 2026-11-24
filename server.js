@@ -50,6 +50,16 @@ app.get('/api/friends/:playerId', (req, res) => {
   res.json({ friends });
 });
 
+app.post('/api/friends/remove', (req, res) => {
+  const { playerId, friendId } = req.body || {};
+  const result = storage.removeFriend(playerId, friendId);
+  if (result.ok) {
+    notifyUser(playerId, 'friends_updated');
+    notifyUser(friendId, 'friends_updated');
+  }
+  res.json(result);
+});
+
 app.get('/api/friend-requests/:playerId', (req, res) => {
   const requests = storage.getPendingRequests(req.params.playerId);
   res.json({ requests });
@@ -960,6 +970,18 @@ io.on('connection', (socket) => {
       if (action === 'accept') {
         notifyUser(result.senderId, 'friend_request_accepted', result);
       }
+    }
+  });
+
+  // Eliminar amigo mutuamente para ambos jugadores
+  socket.on('remove_friend', ({ playerId, friendId }) => {
+    if (!playerId || !friendId) return;
+    const result = storage.removeFriend(playerId, friendId);
+    socket.emit('remove_friend_result', result);
+
+    if (result.ok) {
+      notifyUser(playerId, 'friends_updated');
+      notifyUser(friendId, 'friends_updated');
     }
   });
 

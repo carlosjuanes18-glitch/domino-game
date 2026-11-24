@@ -141,6 +141,19 @@ function getFriendsList(playerId) {
   return result;
 }
 
+function removeFriend(idA, idB) {
+  if (!idA || !idB) return { ok: false, error: 'Identificadores inválidos' };
+  const initialLen = db.friends.length;
+  db.friends = db.friends.filter(f =>
+    !((f.user1 === idA && f.user2 === idB) || (f.user1 === idB && f.user2 === idA))
+  );
+  if (db.friends.length < initialLen) {
+    saveDatabase();
+    return { ok: true, removed: true, idA, idB };
+  }
+  return { ok: false, error: 'No se encontró la amistad' };
+}
+
 function sendFriendRequest(fromId, toId) {
   if (!fromId || !toId || fromId === toId) {
     return { ok: false, error: 'No puedes enviarte solicitud a ti mismo' };
@@ -395,6 +408,7 @@ module.exports = {
   getUser,
   areFriends,
   getFriendsList,
+  removeFriend,
   sendFriendRequest,
   getPendingRequests,
   respondFriendRequest,

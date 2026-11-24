@@ -4,11 +4,20 @@ class SoundManager {
     this.ctx = null;
     this.muted = false;
 
-    // Música de Fondo Durante Partida: Super Mario Bros (NES) Underground Theme
-    this.bgm = new Audio('/audio/mario-underground.mp3');
-    this.bgm.loop = true;
-    this.bgm.volume = 0.35; // Nivel de fondo agradable para no tapar efectos
-    this.bgm.preload = 'auto';
+    // Música de Fondo Durante Partida: Super Mario Bros Overworld (inicial) y Underground (a 3 fichas)
+    this.bgmOverworld = new Audio('/audio/mario-overworld.mp3');
+    this.bgmOverworld.loop = true;
+    this.bgmOverworld.volume = 0.35;
+    this.bgmOverworld.preload = 'auto';
+
+    this.bgmUnderground = new Audio('/audio/mario-underground.mp3');
+    this.bgmUnderground.loop = true;
+    this.bgmUnderground.volume = 0.35;
+    this.bgmUnderground.preload = 'auto';
+
+    this.currentBgmTrack = 'overworld';
+    this.bgm = this.bgmOverworld;
+    this.hasSwitchedToUnderground = false;
     this.bgmDesired = false;
     this.bgmInterrupted = false;
     this.bgmInterruptionTimeout = null;
@@ -51,7 +60,8 @@ class SoundManager {
   toggleMute() {
     this.muted = !this.muted;
     if (this.muted) {
-      try { this.bgm.pause(); } catch (e) { }
+      try { this.bgmOverworld.pause(); } catch (e) { }
+      try { this.bgmUnderground.pause(); } catch (e) { }
       Object.values(this.audioFiles).forEach(s => {
         try { s.pause(); } catch (e) { }
       });
@@ -100,7 +110,28 @@ class SoundManager {
     }
   }
 
-  // Iniciar / Continuar la música de fondo de Mario Underground durante la partida
+  // Cambiar entre canción Overworld (inicial) y Underground (a 3 fichas)
+  setBgmTrack(track) {
+    if (this.currentBgmTrack === track) return;
+    const wasPlaying = !this.bgm.paused && this.bgmDesired;
+    try {
+      this.bgm.pause();
+      this.bgm.currentTime = 0;
+    } catch (e) { }
+
+    this.currentBgmTrack = track;
+    this.bgm = (track === 'underground') ? this.bgmUnderground : this.bgmOverworld;
+
+    if (wasPlaying && !this.muted && !this.bgmInterrupted) {
+      this.init();
+      try {
+        const p = this.bgm.play();
+        if (p !== undefined) p.catch(() => { });
+      } catch (e) { }
+    }
+  }
+
+  // Iniciar / Continuar la música de fondo durante la partida
   startBgm() {
     this.bgmDesired = true;
     if (this.muted) return;
@@ -125,9 +156,14 @@ class SoundManager {
       this.bgmInterruptionTimeout = null;
     }
     try {
-      this.bgm.pause();
+      this.bgmOverworld.pause();
+      this.bgmUnderground.pause();
       if (reset) {
-        this.bgm.currentTime = 0;
+        this.bgmOverworld.currentTime = 0;
+        this.bgmUnderground.currentTime = 0;
+        this.currentBgmTrack = 'overworld';
+        this.bgm = this.bgmOverworld;
+        this.hasSwitchedToUnderground = false;
       }
     } catch (e) { }
   }

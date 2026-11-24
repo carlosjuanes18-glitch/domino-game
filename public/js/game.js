@@ -397,11 +397,23 @@
     // Actualizar Cuaderno de Puntuaciones
     updateScoreboardUI(room);
 
-    // Música de Fondo Durante la Partida (Super Mario Bros Underground)
+    // Música de Fondo: Mario Overworld al inicio, y cambia a Underground cuando todos tengan 3 fichas
     if (room.status === 'playing') {
+      const activePlayers = room.players ? room.players.filter(p => !p.hasLeft) : [];
+      const allHaveThreeOrLess = activePlayers.length >= 2 && activePlayers.every(p => p.tileCount <= 3);
+      if (allHaveThreeOrLess) {
+        window.soundManager.hasSwitchedToUnderground = true;
+      }
+
+      if (window.soundManager.hasSwitchedToUnderground) {
+        window.soundManager.setBgmTrack('underground');
+      } else {
+        window.soundManager.setBgmTrack('overworld');
+      }
       window.soundManager.startBgm();
     } else {
-      window.soundManager.stopBgm();
+      window.soundManager.hasSwitchedToUnderground = false;
+      window.soundManager.stopBgm(true);
     }
 
     // Indicador de Turno
@@ -1026,7 +1038,7 @@
 
   // Final de Ronda / Dominó / Tranca
   socket.on('round_ended', (data) => {
-    window.soundManager.stopBgm();
+    window.soundManager.stopBgm(true);
     const outcome = data.outcome || {};
 
     if (outcome.type === 'domino') {

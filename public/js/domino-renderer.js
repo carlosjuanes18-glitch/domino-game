@@ -124,8 +124,8 @@ class DominoRenderer {
       const isDouble = (t.left === t.right) || t.isDouble;
       const curY = rowIndex * rowStep;
 
-      // Se gira congruentemente 90° hacia abajo cuando la fila alcanza maxPerRow y esta ficha no es doble
-      const shouldTurn = (tilesInRow >= maxPerRow) && !isDouble;
+      // Se gira congruentemente 90° hacia abajo cuando la fila alcanza maxPerRow y esta ficha no es doble (o máximo maxPerRow+1)
+      const shouldTurn = (tilesInRow >= maxPerRow && !isDouble) || (tilesInRow > maxPerRow);
 
       if (shouldTurn) {
         const nextRowIndex = rowIndex + 1;

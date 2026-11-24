@@ -1045,8 +1045,21 @@
       // Un jugador puso la última ficha y ganó ("¡Dominó!"): Castle Clear de Super Mario Bros
       window.soundManager.playMarioCastleClear();
     } else if (outcome.type === 'tranca') {
-      // Cuando un jugador tira una ficha y provoca cerrar el juego (Tranca) y perder: gameOver.mp3
-      window.soundManager.playGameOver();
+      // Tranca (juego cerrado): comprobar si quien cerró ganó o perdió por puntos
+      const closedAndWon = (outcome.closedBySeat !== null && outcome.closedBySeat !== undefined && outcome.closedBySeat === outcome.winnerSeat);
+      const closedAndLost = (outcome.closedBySeat !== null && outcome.closedBySeat !== undefined && outcome.closedBySeat !== outcome.winnerSeat);
+
+      if (closedAndWon) {
+        // Al cerrar y ganar por puntos: You Win Perfect + emojis de dinero y carita de triunfo
+        window.soundManager.playYouWin();
+        triggerTrancaWinMoneyAnimation(outcome.winnerSeat, outcome.winnerName);
+      } else if (closedAndLost) {
+        // Al cerrar y perder por puntos: Failure trumpet + emojis de cara tonta/triste perdedora
+        window.soundManager.playFailureTrumpet();
+        triggerTrancaLoserClownAnimation(outcome.closedBySeat, outcome.closedByName);
+      } else {
+        window.soundManager.playGameOver();
+      }
     } else {
       // Otras situaciones (abandono o derrota)
       if (outcome.winnerSeat !== mySeat) {
@@ -1664,6 +1677,66 @@
     setTimeout(() => {
       if (burst.parentNode) burst.parentNode.removeChild(burst);
     }, 3200);
+  }
+
+  // Animación cuando alguien tira y gana por puntos al cerrarse el juego (Tranca ganada con dinero y triunfo)
+  function triggerTrancaWinMoneyAnimation(winnerSeat, winnerName) {
+    const targetName = winnerName || 'Ganador';
+    triggerFloatingReaction(winnerSeat, '🤑 ¡GANÓ POR PUNTOS! 💰');
+
+    const burst = document.createElement('div');
+    burst.className = 'powerup-central-burst';
+    burst.style.borderColor = 'rgba(234, 179, 8, 0.85)';
+    burst.style.background = 'radial-gradient(circle, rgba(234, 179, 8, 0.35) 0%, rgba(2, 44, 34, 0.95) 75%)';
+    burst.innerHTML = `
+      <div class="powerup-icon">🤑</div>
+      <div class="powerup-badge" style="background: linear-gradient(135deg, #eab308, #ca8a04); color: #0f172a; font-weight: 900;">
+        💰 ¡${targetName.toUpperCase()} GANÓ POR PUNTOS EN LA TRANCA! 😎
+      </div>
+    `;
+    document.body.appendChild(burst);
+
+    setTimeout(() => {
+      if (burst.parentNode) burst.parentNode.removeChild(burst);
+    }, 3600);
+
+    // Lluvia de emojis de dinero y triunfo cruzando lentamente la pantalla
+    const moneyEmojis = ['💸', '💰', '💵', '🤑', '💎', '😎', '🏆', '🤑', '💸', '💰'];
+    moneyEmojis.forEach((emoji, idx) => {
+      setTimeout(() => {
+        createSlowScreenEmoji(emoji, idx, moneyEmojis.length);
+      }, idx * 260);
+    });
+  }
+
+  // Animación cuando alguien tira y su jugada cierra el juego pero le hace perder (Tranca perdida con trompeta y cara triste)
+  function triggerTrancaLoserClownAnimation(loserSeat, loserName) {
+    const targetName = loserName || 'Jugador';
+    triggerFloatingReaction(loserSeat, '🤡 ¡CERRÓ Y PERDIÓ! 😭');
+
+    const burst = document.createElement('div');
+    burst.className = 'bomb-central-burst';
+    burst.style.borderColor = 'rgba(239, 68, 68, 0.85)';
+    burst.style.background = 'radial-gradient(circle, rgba(239, 68, 68, 0.35) 0%, rgba(30, 10, 10, 0.95) 75%)';
+    burst.innerHTML = `
+      <div class="bomb-icon">🤡</div>
+      <div class="bomb-badge" style="background: linear-gradient(135deg, #ef4444, #dc2626); color: #ffffff; font-weight: 900;">
+        😭 ¡${targetName.toUpperCase()} CERRÓ EL JUEGO Y PERDIÓ! 🥴
+      </div>
+    `;
+    document.body.appendChild(burst);
+
+    setTimeout(() => {
+      if (burst.parentNode) burst.parentNode.removeChild(burst);
+    }, 3600);
+
+    // Emojis de cara tonta y triste perdedora cruzando lentamente la pantalla
+    const loserEmojis = ['🤡', '🥴', '🥺', '😭', '🤦‍♂️', '🤡', '🥴', '🥺', '😭', '🤡'];
+    loserEmojis.forEach((emoji, idx) => {
+      setTimeout(() => {
+        createSlowScreenEmoji(emoji, idx, loserEmojis.length);
+      }, idx * 260);
+    });
   }
 
   function createSlowScreenEmoji(emoji, index, total) {

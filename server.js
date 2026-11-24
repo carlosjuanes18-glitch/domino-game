@@ -72,7 +72,12 @@ app.get('/api/invitations/:playerId', (req, res) => {
 
 app.use(express.static(path.join(__dirname, 'public'), {
   etag: false,
-  maxAge: 0
+  maxAge: 0,
+  setHeaders: (res, filePath) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+  }
 }));
 
 // Funciones para obtener fecha y hora en la zona horaria local de México (Veracruz / CDMX)

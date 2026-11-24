@@ -36,7 +36,8 @@ class SoundManager {
       marioPass: new Audio('/audio/mario-pipe-pass.mp3'),
       marioCastleClear: new Audio('/audio/mario-castle-clear.mp3'),
       marioPowerUp: new Audio('/audio/mario-powerup.mp3'),
-      gameOver: new Audio('/audio/gameOver.mp3')
+      gameOver: new Audio('/audio/gameOver.mp3'),
+      youWin: new Audio('/audio/you-win-perfect.mp3')
     };
 
     // Precarga automática de audios
@@ -219,9 +220,14 @@ class SoundManager {
     this.playAudio('no', 0.85);
   }
 
-  // Trompeta de derrota
+  // Trompeta de derrota (cuando un jugador cierra el juego y pierde por puntos)
   playFailureTrumpet() {
-    this.playAudio('failureTrumpet', 0.85);
+    this.playAudio('failureTrumpet', 0.95);
+  }
+
+  // Sonido You Win Perfect (cuando un jugador tira una ficha y gana por puntos al cerrarse el juego)
+  playYouWin() {
+    this.playAudio('youWin', 0.95);
   }
 
   // Canción de Queen - We Are The Champions para la pantalla de Balance Final

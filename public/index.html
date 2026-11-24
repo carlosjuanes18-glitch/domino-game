@@ -18,7 +18,7 @@
   <!-- Socket.io -->
   <script src="/socket.io/socket.io.js"></script>
   <!-- Estilos personalizados -->
-  <link rel="stylesheet" href="/css/style.css?v=24.0">
+  <link rel="stylesheet" href="/css/style.css?v=25.0">
 </head>
 
 <body>
@@ -95,7 +95,8 @@
 
       <!-- Banner de Desconexión de Compañero con Cuenta Regresiva de Gracia -->
       <div id="partnerDisconnectBanner" class="partner-disconnect-banner hidden">
-        <span>⏳</span> Tu compañero se está reconectando... Esperando turno (<span id="partnerGraceTimerText">60</span>s)
+        <span>⏳</span> Tu compañero se está reconectando... Esperando turno (<span
+          id="partnerGraceTimerText">60</span>s)
       </div>
 
       <!-- Botón flotante para alternar pantalla completa / vista normal en todo momento -->
@@ -263,13 +264,15 @@
       </div>
 
       <!-- Botón «Amigos» en la pantalla inicial con contador pequeño de solicitudes pendientes -->
-      <button id="btnOpenFriends" type="button" class="friends-trigger-btn flex items-center justify-between w-full px-3 py-2 mb-2.5 bg-gradient-to-r from-emerald-950 via-slate-900 to-teal-950 hover:border-emerald-400 border border-emerald-500/50 rounded-xl text-white font-bold text-xs shadow-md transition-all active:scale-98">
+      <button id="btnOpenFriends" type="button"
+        class="friends-trigger-btn flex items-center justify-between w-full px-3 py-2 mb-2.5 bg-gradient-to-r from-emerald-950 via-slate-900 to-teal-950 hover:border-emerald-400 border border-emerald-500/50 rounded-xl text-white font-bold text-xs shadow-md transition-all active:scale-98">
         <div class="flex items-center gap-2">
           <span class="text-base">👥</span>
           <span class="text-emerald-300 font-extrabold text-xs">Amigos y Solicitudes</span>
         </div>
         <div class="flex items-center gap-1.5">
-          <span id="friendsPendingBadge" class="bg-rose-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full shadow-sm animate-pulse hidden">0</span>
+          <span id="friendsPendingBadge"
+            class="bg-rose-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full shadow-sm animate-pulse hidden">0</span>
           <span class="text-xs text-slate-400">➔</span>
         </div>
       </button>
@@ -890,15 +893,20 @@
       </div>
 
       <!-- Pestañas de Navegación -->
-      <div class="grid grid-cols-3 gap-1 my-2 bg-slate-900/90 p-1 rounded-xl border border-slate-700/60 text-xs font-bold">
-        <button id="tabBtnMyFriends" type="button" class="friends-tab-btn active py-1.5 px-1 rounded-lg text-emerald-300 bg-emerald-950/80 border border-emerald-500/40 text-center">
+      <div
+        class="grid grid-cols-3 gap-1 my-2 bg-slate-900/90 p-1 rounded-xl border border-slate-700/60 text-xs font-bold">
+        <button id="tabBtnMyFriends" type="button"
+          class="friends-tab-btn active py-1.5 px-1 rounded-lg text-emerald-300 bg-emerald-950/80 border border-emerald-500/40 text-center">
           Mis amigos (<span id="myFriendsCount">0</span>)
         </button>
-        <button id="tabBtnRequests" type="button" class="friends-tab-btn py-1.5 px-1 rounded-lg text-slate-400 hover:text-white text-center relative">
+        <button id="tabBtnRequests" type="button"
+          class="friends-tab-btn py-1.5 px-1 rounded-lg text-slate-400 hover:text-white text-center relative">
           Solicitudes
-          <span id="requestsTabBadge" class="bg-rose-500 text-white text-[9px] font-black px-1.5 py-0.2 rounded-full hidden">0</span>
+          <span id="requestsTabBadge"
+            class="bg-rose-500 text-white text-[9px] font-black px-1.5 py-0.2 rounded-full hidden">0</span>
         </button>
-        <button id="tabBtnShareLink" type="button" class="friends-tab-btn py-1.5 px-1 rounded-lg text-slate-400 hover:text-white text-center">
+        <button id="tabBtnShareLink" type="button"
+          class="friends-tab-btn py-1.5 px-1 rounded-lg text-slate-400 hover:text-white text-center">
           Compartir
         </button>
       </div>
@@ -911,7 +919,8 @@
         <div id="emptyFriendsNotice" class="text-center py-6 text-slate-400 text-xs hidden">
           <div class="text-2xl mb-1">🀫</div>
           Aún no tienes amigos agregados.<br>
-          <button id="btnGoToShareFromEmpty" type="button" class="text-emerald-400 font-bold underline mt-1.5">¡Comparte tu enlace de amistad!</button>
+          <button id="btnGoToShareFromEmpty" type="button" class="text-emerald-400 font-bold underline mt-1.5">¡Comparte
+            tu enlace de amistad!</button>
         </div>
       </div>
 
@@ -934,15 +943,18 @@
             <span>🔗</span> Tu enlace personal de amistad
           </div>
           <div class="text-[10px] text-slate-300 mb-2 leading-tight">
-            Cada jugador puede compartir su enlace una vez, incluso sin mesa abierta. Quien lo abra verá tu apodo y avatar y podrá pulsar <strong>«Enviar solicitud»</strong> para que queden conectados.
+            Cada jugador puede compartir su enlace una vez, incluso sin mesa abierta. Quien lo abra verá tu apodo y
+            avatar y podrá pulsar <strong>«Enviar solicitud»</strong> para que queden conectados.
           </div>
           <div class="flex items-center gap-1.5 mb-2">
-            <input id="myFriendLinkInput" type="text" readonly class="flex-1 bg-slate-950 border border-emerald-500/50 rounded-lg px-2 py-1 text-[11px] text-emerald-300 font-mono select-all focus:outline-none" />
+            <input id="myFriendLinkInput" type="text" readonly
+              class="flex-1 bg-slate-950 border border-emerald-500/50 rounded-lg px-2 py-1 text-[11px] text-emerald-300 font-mono select-all focus:outline-none" />
             <button id="btnCopyFriendLink" type="button" class="secondary-btn !py-1 !px-2.5 text-xs font-bold">
               📋 Copiar
             </button>
           </div>
-          <button id="btnShareFriendWhatsApp" type="button" class="primary-btn w-full !py-2 text-xs font-bold flex items-center justify-center gap-1.5 bg-emerald-700 hover:bg-emerald-600">
+          <button id="btnShareFriendWhatsApp" type="button"
+            class="primary-btn w-full !py-2 text-xs font-bold flex items-center justify-center gap-1.5 bg-emerald-700 hover:bg-emerald-600">
             <span>📲 Compartir por WhatsApp</span>
           </button>
         </div>
@@ -950,11 +962,13 @@
 
       <!-- Footer del Panel: Notificaciones Web Push e Instalación PWA -->
       <div class="pt-2 mt-2 border-t border-slate-800 flex flex-col gap-1.5 text-xs">
-        <button id="btnTogglePushNotifications" type="button" class="secondary-btn w-full !py-1.5 !text-[11px] font-bold flex items-center justify-center gap-1.5">
+        <button id="btnTogglePushNotifications" type="button"
+          class="secondary-btn w-full !py-1.5 !text-[11px] font-bold flex items-center justify-center gap-1.5">
           <span id="pushIcon">🔔</span>
           <span id="pushStatusText">Activar avisos de partidas</span>
         </button>
-        <button id="btnInstallPwa" type="button" class="secondary-btn w-full !py-1.5 !text-[11px] font-bold flex items-center justify-center gap-1.5 !text-amber-300 !border-amber-500/40 hidden">
+        <button id="btnInstallPwa" type="button"
+          class="secondary-btn w-full !py-1.5 !text-[11px] font-bold flex items-center justify-center gap-1.5 !text-amber-300 !border-amber-500/40 hidden">
           <span>📲 Instalar juego en pantalla de inicio</span>
         </button>
       </div>
@@ -969,12 +983,15 @@
       <div class="text-3xl mb-1">🤝</div>
       <div class="text-base font-black text-amber-300 mb-0.5">¡Enlace de Amistad de Dominó!</div>
       <div class="text-xs text-slate-300 mb-3 leading-tight">
-        <span id="targetFriendName" class="font-extrabold text-emerald-300">Un amigo</span> te ha compartido su enlace para que jueguen juntos.
+        <span id="targetFriendName" class="font-extrabold text-emerald-300">Un amigo</span> te ha compartido su enlace
+        para que jueguen juntos.
       </div>
 
       <!-- Avatar del amigo que compartió -->
-      <div class="flex items-center justify-center gap-3 bg-slate-900/90 border border-emerald-500/40 rounded-xl p-2.5 mb-3">
-        <div id="targetFriendAvatarWrapper" class="w-12 h-12 rounded-full overflow-hidden border-2 border-amber-400 bg-slate-800 flex items-center justify-center">
+      <div
+        class="flex items-center justify-center gap-3 bg-slate-900/90 border border-emerald-500/40 rounded-xl p-2.5 mb-3">
+        <div id="targetFriendAvatarWrapper"
+          class="w-12 h-12 rounded-full overflow-hidden border-2 border-amber-400 bg-slate-800 flex items-center justify-center">
           <!-- Avatar del amigo -->
         </div>
         <div class="text-left">
@@ -986,11 +1003,13 @@
       <!-- Nombre del visitante si no lo tiene configurado -->
       <div id="visitorProfilePrompt" class="mb-3 text-left">
         <label class="text-[10.5px] font-bold text-slate-300 block mb-0.5">Tu Nombre o Apodo:</label>
-        <input id="inputVisitorName" type="text" maxlength="15" placeholder="Escribe tu nombre..." class="w-full bg-slate-950 border border-emerald-500/50 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-400 mb-1.5" />
+        <input id="inputVisitorName" type="text" maxlength="15" placeholder="Escribe tu nombre..."
+          class="w-full bg-slate-950 border border-emerald-500/50 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-400 mb-1.5" />
       </div>
 
       <div class="flex flex-col gap-2">
-        <button id="btnSendFriendRequestFromCard" type="button" class="primary-btn !py-2.5 text-xs font-black flex items-center justify-center gap-2">
+        <button id="btnSendFriendRequestFromCard" type="button"
+          class="primary-btn !py-2.5 text-xs font-black flex items-center justify-center gap-2">
           <span>🤝 Enviar Solicitud de Amistad</span>
         </button>
         <button id="btnDismissFriendCard" type="button" class="secondary-btn !py-1.5 text-xs font-bold">
@@ -1008,12 +1027,14 @@
       <div class="text-3xl mb-1">🎮</div>
       <div class="text-base font-black text-amber-300 mb-0.5">¡Invitación a Jugar!</div>
       <div class="text-xs text-slate-300 mb-3 leading-tight">
-        <span id="gameInviteSenderName" class="font-extrabold text-emerald-300">Tu amigo</span> te invita a una partida de Dominó.
+        <span id="gameInviteSenderName" class="font-extrabold text-emerald-300">Tu amigo</span> te invita a una partida
+        de Dominó.
       </div>
 
       <div class="bg-slate-900/90 border border-emerald-500/40 rounded-xl p-2.5 mb-3 flex items-center justify-between">
         <div class="flex items-center gap-2 text-left">
-          <div id="gameInviteSenderAvatar" class="w-10 h-10 rounded-full border border-amber-400 overflow-hidden bg-slate-800"></div>
+          <div id="gameInviteSenderAvatar"
+            class="w-10 h-10 rounded-full border border-amber-400 overflow-hidden bg-slate-800"></div>
           <div>
             <div id="gameInviteSenderTitle" class="text-xs font-extrabold text-white">Amigo</div>
             <div class="text-[9.5px] text-slate-400">Modalidad Bloqueo</div>
@@ -1029,7 +1050,8 @@
         <button id="btnAcceptGameInvite" type="button" class="primary-btn !py-2 text-xs font-black">
           🚀 Aceptar
         </button>
-        <button id="btnRejectGameInvite" type="button" class="secondary-btn !py-2 text-xs font-bold !text-rose-300 !border-rose-500/40">
+        <button id="btnRejectGameInvite" type="button"
+          class="secondary-btn !py-2 text-xs font-bold !text-rose-300 !border-rose-500/40">
           ❌ Rechazar
         </button>
       </div>
@@ -1044,7 +1066,8 @@
       <div class="text-3xl mb-1">⏳</div>
       <div class="text-base font-black text-amber-300 mb-1">Tiempo de Espera Agotado</div>
       <div class="text-xs text-slate-300 mb-3 leading-normal">
-        Tu compañero <strong id="graceExpiredPlayerName" class="text-emerald-300">Rival</strong> no logró reconectarse en el periodo de gracia establecido (60 segundos).
+        Tu compañero <strong id="graceExpiredPlayerName" class="text-emerald-300">Rival</strong> no logró reconectarse
+        en el periodo de gracia establecido (60 segundos).
       </div>
       <div class="flex flex-col gap-2">
         <button id="btnLeaveTableAfterGrace" type="button" class="primary-btn !py-2 text-xs font-bold">
@@ -1058,10 +1081,10 @@
   </div>
 
   <!-- Scripts -->
-  <script src="/js/avatars.js?v=24.0"></script>
-  <script src="/js/audio.js?v=24.0"></script>
-  <script src="/js/domino-renderer.js?v=24.0"></script>
-  <script src="/js/game.js?v=24.0"></script>
+  <script src="/js/avatars.js?v=25.0"></script>
+  <script src="/js/audio.js?v=25.0"></script>
+  <script src="/js/domino-renderer.js?v=25.0"></script>
+  <script src="/js/game.js?v=25.0"></script>
 </body>
 
 </html>

@@ -78,6 +78,7 @@ class DominoRenderer {
     if (!board || board.length === 0) return { placed: [], totalW: 0, totalH: 0 };
     const U = this.U || 30; // 30px por mitad de ficha (60x30px horizontal, 30x60px vertical)
     const pad = 24;
+    const rowStep = 75; // 2.5 * U = 75px entre líneas base de filas (garantiza separación entre dobles)
 
     // Detectar ancho útil para definir fichas por fila (3 en celular para garantizar márgenes holgados, 5 en PC)
     const containerW = containerEl && containerEl.clientWidth > 0
@@ -113,7 +114,7 @@ class DominoRenderer {
     let dir = 'RIGHT';
     let tilesInRow = 0;
     let curX = 0;
-    let curY = 0;
+    let rowIndex = 0;
     let prevWasDouble = false;
 
     for (let i = 0; i < board.length; i++) {
@@ -121,17 +122,28 @@ class DominoRenderer {
       const isHead = (i === 0);
       const isTail = (i === board.length - 1);
       const isDouble = (t.left === t.right) || t.isDouble;
+      const curY = rowIndex * rowStep;
 
-      // Giro de 90° hacia abajo cuando la fila alcanza maxPerRow:
-      // Se gira congruentemente hacia abajo con una ficha normal compacta (evitando dobles en la esquina
-      // para que nunca colisionen y respetando el boceto con las mulas cruzadas en el centro).
-      const shouldTurn = (tilesInRow >= maxPerRow) && !isDouble && !prevWasDouble;
+      // Se gira congruentemente 90° hacia abajo cuando la fila alcanza maxPerRow y esta ficha no es doble
+      const shouldTurn = (tilesInRow >= maxPerRow) && !isDouble;
 
       if (shouldTurn) {
+        const nextRowIndex = rowIndex + 1;
+        const nextY = nextRowIndex * rowStep;
+
         if (dir === 'RIGHT') {
-          // El conector baja verticalmente desde la mitad derecha de la ficha previa
-          const x = curX - U;
-          const y = curY + U;
+          let x, y, h;
+          if (prevWasDouble) {
+            // El previo fue un doble en vertical. El conector se ubica a su derecha
+            x = curX;
+            y = curY;
+            h = nextY - y + U;
+          } else {
+            // El previo fue horizontal. El conector baja desde su mitad derecha
+            x = curX - U;
+            y = curY + U;
+            h = nextY - y + U;
+          }
           placed.push({
             index: i,
             tile: t,
@@ -140,20 +152,27 @@ class DominoRenderer {
             x: x,
             y: y,
             w: U,
-            h: 2 * U,
+            h: h,
             isHead: isHead,
             isTail: isTail,
             dir: 'DOWN'
           });
           curX = x;
-          curY = y + U;
           dir = 'LEFT';
-          tilesInRow = 0;
-          prevWasDouble = false;
         } else {
-          // dir === 'LEFT': conector baja verticalmente desde la mitad izquierda de la ficha previa
-          const x = curX;
-          const y = curY + U;
+          // dir === 'LEFT'
+          let x, y, h;
+          if (prevWasDouble) {
+            // El previo fue un doble en vertical. Conector se ubica a su izquierda
+            x = curX - U;
+            y = curY;
+            h = nextY - y + U;
+          } else {
+            // El previo fue horizontal. Conector baja desde su mitad izquierda
+            x = curX;
+            y = curY + U;
+            h = nextY - y + U;
+          }
           placed.push({
             index: i,
             tile: t,
@@ -162,31 +181,30 @@ class DominoRenderer {
             x: x,
             y: y,
             w: U,
-            h: 2 * U,
+            h: h,
             isHead: isHead,
             isTail: isTail,
             dir: 'DOWN'
           });
           curX = x + U;
-          curY = y + U;
           dir = 'RIGHT';
-          tilesInRow = 0;
-          prevWasDouble = false;
         }
+        rowIndex = nextRowIndex;
+        tilesInRow = 0;
+        prevWasDouble = false;
       } else {
         tilesInRow++;
+        const y = curY;
         if (dir === 'RIGHT') {
           if (isDouble) {
-            // Doble colocado transversal (vertical) centrado en la fila horizontal
-            const x = curX;
-            const y = curY - U / 2;
+            // Doble transversal (vertical) centrado en la fila horizontal
             placed.push({
               index: i,
               tile: t,
               isVertical: true,
               reverseHalves: false,
-              x: x,
-              y: y,
+              x: curX,
+              y: y - U / 2,
               w: U,
               h: 2 * U,
               isHead: isHead,
@@ -197,14 +215,12 @@ class DominoRenderer {
             prevWasDouble = true;
           } else {
             // Ficha horizontal normal hacia la derecha
-            const x = curX;
-            const y = curY;
             placed.push({
               index: i,
               tile: t,
               isVertical: false,
               reverseHalves: false,
-              x: x,
+              x: curX,
               y: y,
               w: 2 * U,
               h: U,
@@ -219,15 +235,13 @@ class DominoRenderer {
           // dir === 'LEFT'
           if (isDouble) {
             // Doble transversal (vertical) centrado en la fila horizontal
-            const x = curX - U;
-            const y = curY - U / 2;
             placed.push({
               index: i,
               tile: t,
               isVertical: true,
               reverseHalves: false,
-              x: x,
-              y: y,
+              x: curX - U,
+              y: y - U / 2,
               w: U,
               h: 2 * U,
               isHead: isHead,
@@ -238,14 +252,12 @@ class DominoRenderer {
             prevWasDouble = true;
           } else {
             // Ficha horizontal normal hacia la izquierda
-            const x = curX - 2 * U;
-            const y = curY;
             placed.push({
               index: i,
               tile: t,
               isVertical: false,
               reverseHalves: true, // val1 (izquierda) = t.right, val2 (derecha) = t.left para coincidencia cara a cara
-              x: x,
+              x: curX - 2 * U,
               y: y,
               w: 2 * U,
               h: U,
@@ -336,23 +348,13 @@ class DominoRenderer {
         id: `board-${index}-${tile.id}`
       });
 
-      // Indicadores en los extremos de la cadena
+      // Indicadores en los extremos de la cadena (siempre 100% visibles y despegados de los números)
       let chipMarkup = '';
       if (isHead) {
-        if (item.dir === 'UP') {
-          chipMarkup = `<span class="end-chip chip-top">◀ ${leftEnd}</span>`;
-        } else if (item.dir === 'DOWN') {
-          chipMarkup = `<span class="end-chip chip-bottom">◀ ${leftEnd}</span>`;
-        } else if (item.dir === 'RIGHT') {
-          chipMarkup = `<span class="end-chip chip-right">◀ ${leftEnd}</span>`;
-        } else {
-          chipMarkup = `<span class="end-chip chip-left">◀ ${leftEnd}</span>`;
-        }
+        chipMarkup = `<span class="end-chip chip-left">◀ ${leftEnd}</span>`;
       }
       if (isTail) {
-        if (item.dir === 'UP') {
-          chipMarkup += `<span class="end-chip chip-top">${rightEnd} ▶</span>`;
-        } else if (item.dir === 'DOWN') {
+        if (item.dir === 'DOWN') {
           chipMarkup += `<span class="end-chip chip-bottom">${rightEnd} ▶</span>`;
         } else if (item.dir === 'LEFT') {
           chipMarkup += `<span class="end-chip chip-left">${rightEnd} ▶</span>`;

@@ -123,25 +123,234 @@
   const rightEndVal = document.getElementById('rightEndVal');
   const headerPlayerMode = document.getElementById('headerPlayerMode');
 
-  // Inicializar Selector de Avatares en la pantalla de bienvenida
-  function initAvatarSelector() {
-    const avatarGrid = document.getElementById('avatarGrid');
-    if (!avatarGrid) return;
-    avatarGrid.innerHTML = '';
-
+  // Helper para poblar rejilla de avatares reutilizable
+  function populateAvatarGrid(containerEl, currentSelectedId, onSelectCallback) {
+    if (!containerEl || !window.AVATARS) return;
+    containerEl.innerHTML = '';
     Object.values(window.AVATARS).forEach(avatar => {
       const item = document.createElement('div');
-      item.className = `avatar-option ${avatar.id === selectedAvatar ? 'selected' : ''}`;
+      item.className = `avatar-option ${avatar.id === currentSelectedId ? 'selected' : ''}`;
       item.innerHTML = avatar.svg;
       item.title = avatar.name;
       item.addEventListener('click', () => {
-        document.querySelectorAll('.avatar-option').forEach(el => el.classList.remove('selected'));
+        containerEl.querySelectorAll('.avatar-option').forEach(el => el.classList.remove('selected'));
         item.classList.add('selected');
-        selectedAvatar = avatar.id;
         window.soundManager.playTileClick();
+        if (onSelectCallback) onSelectCallback(avatar.id);
       });
-      avatarGrid.appendChild(item);
+      containerEl.appendChild(item);
     });
+  }
+
+  // Actualizar la tarjeta de perfil en la pantalla inicial y los datos locales
+  function updateProfileCardUI() {
+    const savedName = localStorage.getItem('domino_player_name') || 'Jugador';
+    const savedAvatar = localStorage.getItem('domino_selected_avatar') || selectedAvatar || 'male_1';
+    selectedAvatar = savedAvatar;
+
+    const setupAvatar = document.getElementById('setupProfileAvatar');
+    const setupName = document.getElementById('setupProfileName');
+    const inputPlayerName = document.getElementById('inputPlayerName');
+
+    if (setupAvatar && window.AVATARS[savedAvatar]) {
+      setupAvatar.innerHTML = window.AVATARS[savedAvatar].svg;
+    }
+    if (setupName) {
+      setupName.textContent = savedName;
+    }
+    if (inputPlayerName) {
+      inputPlayerName.value = savedName;
+    }
+  }
+
+  // Modal de Registro Inicial (Obligatorio la primera vez que se abre el juego)
+  function checkFirstTimeRegistration() {
+    const savedName = localStorage.getItem('domino_player_name');
+    const isRegistered = localStorage.getItem('domino_registered') === 'true' && savedName;
+    const regModal = document.getElementById('firstTimeRegisterModal');
+
+    if (!isRegistered) {
+      if (regModal) {
+        regModal.classList.remove('hidden');
+        regModal.style.display = 'flex';
+      }
+
+      const regInput = document.getElementById('regNickInput');
+      const regPreviewName = document.getElementById('regNickPreview');
+      const regPreviewAvatar = document.getElementById('regAvatarPreview');
+      const regGrid = document.getElementById('regAvatarGrid');
+      const regErr = document.getElementById('regNickError');
+
+      let tempRegAvatar = selectedAvatar || 'male_1';
+      if (regPreviewAvatar && window.AVATARS[tempRegAvatar]) {
+        regPreviewAvatar.innerHTML = window.AVATARS[tempRegAvatar].svg;
+      }
+      if (regPreviewName) {
+        regPreviewName.textContent = 'Jugador';
+      }
+
+      populateAvatarGrid(regGrid, tempRegAvatar, (newId) => {
+        tempRegAvatar = newId;
+        selectedAvatar = newId;
+        if (regPreviewAvatar && window.AVATARS[newId]) {
+          regPreviewAvatar.innerHTML = window.AVATARS[newId].svg;
+        }
+      });
+
+      if (regInput) {
+        regInput.value = '';
+        setTimeout(() => regInput.focus(), 200);
+        regInput.oninput = () => {
+          const val = regInput.value.trim();
+          if (regPreviewName) regPreviewName.textContent = val || 'Jugador';
+          if (regErr && val.length >= 2) regErr.classList.add('hidden');
+        };
+      }
+
+      const btnConfirm = document.getElementById('btnConfirmRegister');
+      if (btnConfirm) {
+        btnConfirm.onclick = () => {
+          const val = regInput ? regInput.value.trim() : '';
+          const err = document.getElementById('regNickError');
+          if (!val || val.length < 2) {
+            if (err) err.classList.remove('hidden');
+            if (regInput) regInput.focus();
+            return;
+          }
+          if (err) err.classList.add('hidden');
+          window.soundManager.init();
+          window.soundManager.playTileClick();
+
+          localStorage.setItem('domino_player_name', val);
+          localStorage.setItem('domino_selected_avatar', tempRegAvatar);
+          localStorage.setItem('domino_registered', 'true');
+          selectedAvatar = tempRegAvatar;
+
+          const pNameInput = document.getElementById('inputPlayerName');
+          if (pNameInput) pNameInput.value = val;
+
+          regModal.classList.add('hidden');
+          regModal.style.display = 'none';
+
+          updateProfileCardUI();
+          syncSessionWithServer();
+          showToast(`🎉 ¡Bienvenido, ${val}! Tu perfil ha quedado registrado permanentemente.`);
+        };
+      }
+    } else {
+      selectedAvatar = localStorage.getItem('domino_selected_avatar') || 'male_1';
+      const pNameInput = document.getElementById('inputPlayerName');
+      if (pNameInput) pNameInput.value = savedName;
+      updateProfileCardUI();
+    }
+  }
+
+  // Modal para Cambiar Nick y Avatar Posteriormente
+  function openEditProfileModal() {
+    const editModal = document.getElementById('editProfileModal');
+    if (!editModal) return;
+
+    window.soundManager.playTileClick();
+    editModal.classList.remove('hidden');
+    editModal.style.display = 'flex';
+
+    const currentName = localStorage.getItem('domino_player_name') || 'Jugador';
+    let tempEditAvatar = localStorage.getItem('domino_selected_avatar') || selectedAvatar || 'male_1';
+
+    const editInput = document.getElementById('editNickInput');
+    const editPreviewName = document.getElementById('editNickPreview');
+    const editPreviewAvatar = document.getElementById('editAvatarPreview');
+    const editGrid = document.getElementById('editAvatarGrid');
+    const editErr = document.getElementById('editNickError');
+
+    if (editErr) editErr.classList.add('hidden');
+    if (editInput) {
+      editInput.value = currentName;
+      setTimeout(() => editInput.focus(), 150);
+      editInput.oninput = () => {
+        const val = editInput.value.trim();
+        if (editPreviewName) editPreviewName.textContent = val || 'Jugador';
+        if (editErr && val.length >= 2) editErr.classList.add('hidden');
+      };
+    }
+    if (editPreviewName) editPreviewName.textContent = currentName;
+    if (editPreviewAvatar && window.AVATARS[tempEditAvatar]) {
+      editPreviewAvatar.innerHTML = window.AVATARS[tempEditAvatar].svg;
+    }
+
+    populateAvatarGrid(editGrid, tempEditAvatar, (newId) => {
+      tempEditAvatar = newId;
+      if (editPreviewAvatar && window.AVATARS[newId]) {
+        editPreviewAvatar.innerHTML = window.AVATARS[newId].svg;
+      }
+    });
+
+    const btnSave = document.getElementById('btnSaveEditProfile');
+    if (btnSave) {
+      btnSave.onclick = () => {
+        const newName = editInput ? editInput.value.trim() : '';
+        if (!newName || newName.length < 2) {
+          if (editErr) editErr.classList.remove('hidden');
+          if (editInput) editInput.focus();
+          return;
+        }
+        if (editErr) editErr.classList.add('hidden');
+        window.soundManager.playTileClick();
+
+        localStorage.setItem('domino_player_name', newName);
+        localStorage.setItem('domino_selected_avatar', tempEditAvatar);
+        localStorage.setItem('domino_registered', 'true');
+        selectedAvatar = tempEditAvatar;
+
+        updateProfileCardUI();
+
+        // Actualizar sesión activa en sessionStorage si existe
+        const saved = sessionStorage.getItem('domino_active_session');
+        if (saved) {
+          try {
+            const data = JSON.parse(saved);
+            data.playerName = newName;
+            data.avatar = selectedAvatar;
+            sessionStorage.setItem('domino_active_session', JSON.stringify(data));
+          } catch (e) {}
+        }
+
+        // Notificar en tiempo real al servidor
+        socket.emit('update_profile', {
+          playerId: myPlayerId,
+          playerName: newName,
+          avatar: selectedAvatar
+        });
+        socket.emit('auth_profile', {
+          playerId: myPlayerId,
+          playerToken: myPlayerToken,
+          playerName: newName,
+          avatar: selectedAvatar
+        });
+
+        editModal.classList.add('hidden');
+        editModal.style.display = 'none';
+
+        showToast(`✅ Perfil actualizado: ${newName}`);
+      };
+    }
+
+    const btnCancel = document.getElementById('btnCancelEditProfile');
+    if (btnCancel) {
+      btnCancel.onclick = () => {
+        window.soundManager.playTileClick();
+        editModal.classList.add('hidden');
+        editModal.style.display = 'none';
+      };
+    }
+    const btnCloseX = document.getElementById('btnCloseEditProfileX');
+    if (btnCloseX) {
+      btnCloseX.onclick = () => {
+        window.soundManager.playTileClick();
+        editModal.classList.add('hidden');
+        editModal.style.display = 'none';
+      };
+    }
   }
 
   // Comprobar parámetros URL para unirse directo (?room=XXXX)
@@ -152,7 +361,17 @@
     if (inputRoom) inputRoom.value = roomParam.toUpperCase();
   }
 
-  initAvatarSelector();
+  // Inicializar verificación de registro y tarjeta de perfil
+  checkFirstTimeRegistration();
+
+  const btnOpenEditProfile = document.getElementById('btnOpenEditProfile');
+  if (btnOpenEditProfile) {
+    btnOpenEditProfile.addEventListener('click', openEditProfileModal);
+  }
+  const btnEditProfileFromLobby = document.getElementById('btnEditProfileFromLobby');
+  if (btnEditProfileFromLobby) {
+    btnEditProfileFromLobby.addEventListener('click', openEditProfileModal);
+  }
 
   // Botón Generar Otra Sala Aleatoria
   const btnRandomRoom = document.getElementById('btnRandomRoom');

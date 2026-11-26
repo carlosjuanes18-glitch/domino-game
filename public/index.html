@@ -18,7 +18,7 @@
   <!-- Socket.io -->
   <script src="/socket.io/socket.io.js"></script>
   <!-- Estilos personalizados -->
-  <link rel="stylesheet" href="/css/style.css?v=28.0">
+  <link rel="stylesheet" href="/css/style.css?v=29.0">
 </head>
 
 <body>
@@ -277,16 +277,30 @@
         </div>
       </button>
 
-      <!-- Nombre del Jugador -->
-      <label class="text-[11px] font-bold text-slate-300 mb-0.5 block">Tu Nombre o Apodo:</label>
-      <input id="inputPlayerName" type="text" maxlength="15" placeholder="Ej: Roberto, Carmen, Alex..."
-        class="w-full bg-slate-900 border border-emerald-500/40 rounded-xl px-3 py-1.5 text-sm text-white focus:outline-none focus:border-emerald-400 mb-2" />
-
-      <!-- Selección de Avatar Personalizable -->
-      <label class="text-[11px] font-bold text-slate-300 block mb-1">Elige tu Avatar (Masculinos y Femeninos):</label>
-      <div id="avatarGrid" class="avatar-grid mb-2">
-        <!-- Poblado por JS -->
+      <!-- Perfil Permanente Activo -->
+      <div id="setupProfileCard" class="bg-gradient-to-r from-emerald-950 via-slate-900 to-teal-950 border border-emerald-500/50 rounded-2xl p-2.5 mb-2.5 shadow-md flex items-center justify-between">
+        <div class="flex items-center gap-2.5 overflow-hidden">
+          <div id="setupProfileAvatar" class="w-12 h-12 rounded-full border-2 border-amber-400 p-0.5 bg-slate-900 shadow flex-shrink-0 flex items-center justify-center">
+            <!-- Avatar SVG -->
+          </div>
+          <div class="overflow-hidden">
+            <div class="text-[9.5px] uppercase font-black text-emerald-400 flex items-center gap-1">
+              <span>👤</span> Tu Nick Permanente
+            </div>
+            <div id="setupProfileName" class="text-base font-black text-white tracking-wide truncate">
+              Jugador
+            </div>
+          </div>
+        </div>
+        <button id="btnOpenEditProfile" type="button"
+          class="secondary-btn !py-1.5 !px-2.5 text-xs font-bold !bg-slate-800/90 hover:!bg-emerald-900/60 !border-emerald-500/40 text-emerald-300 flex items-center gap-1 flex-shrink-0">
+          <span>✏️</span> Cambiar
+        </button>
       </div>
+
+      <!-- Inputs de compatibilidad interna -->
+      <input id="inputPlayerName" type="hidden" value="Jugador" />
+      <div id="avatarGrid" style="display:none;"></div>
 
       <!-- Código de Sala -->
       <label class="text-[11px] font-bold text-slate-300 mb-0.5 block">Código de Sala:</label>
@@ -419,8 +433,12 @@
         </div>
       </div>
 
-      <div class="text-[10.5px] text-slate-300 font-bold mb-0.5">
-        Jugadores en la mesa (se requieren <span id="lobbyNeededPlayers">4</span> para iniciar):
+      <div class="flex items-center justify-between text-[10.5px] text-slate-300 font-bold mb-1">
+        <span>Jugadores en la mesa (<span id="lobbyNeededPlayers">4</span> para iniciar):</span>
+        <button id="btnEditProfileFromLobby" type="button"
+          class="text-[10px] text-emerald-400 hover:text-emerald-300 bg-emerald-950/60 border border-emerald-500/40 px-2 py-0.5 rounded-full font-bold flex items-center gap-1 transition-all">
+          <span>✏️</span> Cambiar Mi Nick
+        </button>
       </div>
 
       <!-- Grid de los 4 Asientos -->
@@ -1080,11 +1098,108 @@
     </div>
   </div>
 
+  <!-- ============================================== -->
+  <!-- MODAL 11: REGISTRO DE JUGADOR (PRIMERA VEZ) -->
+  <!-- ============================================== -->
+  <div id="firstTimeRegisterModal" class="modal-backdrop hidden" style="z-index: 100000;">
+    <div class="modal-card !max-w-md border-2 border-emerald-500/70 shadow-2xl">
+      <div class="modal-header">
+        <div class="modal-title">
+          <span>🀫</span> Registro de Jugador
+        </div>
+        <span class="text-xs bg-emerald-900/80 text-emerald-300 font-bold px-2 py-0.5 rounded border border-emerald-500/40">¡Bienvenido!</span>
+      </div>
+
+      <p class="text-xs text-slate-300 mb-3 leading-tight">
+        Para comenzar a jugar, ingresa tu <strong>Apodo o Nick</strong> y elige tu <strong>Avatar</strong>. Quedarán guardados permanentemente en tu dispositivo y podrás cambiarlos cuando gustes.
+      </p>
+
+      <!-- Previsualización en Vivo de Identidad -->
+      <div class="bg-gradient-to-r from-emerald-950 via-slate-900 to-teal-950 border border-emerald-500/50 rounded-2xl p-3 mb-3 flex items-center gap-3 shadow-inner">
+        <div id="regAvatarPreview" class="w-14 h-14 rounded-full border-2 border-amber-400 p-0.5 bg-slate-900 shadow-md flex-shrink-0 flex items-center justify-center">
+          <!-- SVG dinámico -->
+        </div>
+        <div class="overflow-hidden">
+          <div class="text-[9.5px] uppercase font-black text-amber-400 tracking-wider">Tu Identidad en Dominó</div>
+          <div id="regNickPreview" class="text-base font-black text-white truncate">Jugador</div>
+          <div class="text-[9.5px] text-emerald-400/80">Guardado permanente</div>
+        </div>
+      </div>
+
+      <!-- Input de Nickname -->
+      <label class="text-xs font-bold text-slate-200 mb-1 block">Tu Nombre o Apodo:</label>
+      <input id="regNickInput" type="text" maxlength="15" placeholder="Escribe tu apodo aquí (ej. Carlos, Roberto, Alex)..."
+        class="w-full bg-slate-900 border-2 border-emerald-500/50 rounded-xl px-3 py-2 text-sm font-bold text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400 mb-1" />
+      <div id="regNickError" class="text-[10.5px] text-rose-400 font-bold mb-2 hidden">⚠️ Escribe un apodo válido (mínimo 2 caracteres).</div>
+
+      <!-- Selector de Avatar -->
+      <label class="text-xs font-bold text-slate-200 block mb-1">Elige tu Avatar (Masculinos y Femeninos):</label>
+      <div id="regAvatarGrid" class="avatar-grid mb-3">
+        <!-- Generado por JS -->
+      </div>
+
+      <button id="btnConfirmRegister" type="button" class="primary-btn !py-3 text-sm font-black w-full flex items-center justify-center gap-2 shadow-lg">
+        <span>💾 Guardar Perfil y Comenzar</span> ➔
+      </button>
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- MODAL 12: EDITAR PERFIL (CAMBIAR NICK Y AVATAR) -->
+  <!-- ============================================== -->
+  <div id="editProfileModal" class="modal-backdrop hidden" style="z-index: 100000;">
+    <div class="modal-card !max-w-md border-2 border-emerald-500/70 shadow-2xl">
+      <div class="modal-header">
+        <div class="modal-title">
+          <span>✏️</span> Editar Mi Perfil
+        </div>
+        <button id="btnCloseEditProfileX" type="button" class="text-slate-400 hover:text-white text-lg font-bold px-2 py-0.5">✕</button>
+      </div>
+
+      <p class="text-xs text-slate-300 mb-3 leading-tight">
+        Modifica tu apodo o cambia de avatar. Tus amigos y oponentes lo verán actualizado de inmediato.
+      </p>
+
+      <!-- Previsualización -->
+      <div class="bg-gradient-to-r from-emerald-950 via-slate-900 to-teal-950 border border-emerald-500/50 rounded-2xl p-3 mb-3 flex items-center gap-3 shadow-inner">
+        <div id="editAvatarPreview" class="w-14 h-14 rounded-full border-2 border-amber-400 p-0.5 bg-slate-900 shadow-md flex-shrink-0 flex items-center justify-center">
+          <!-- SVG dinámico -->
+        </div>
+        <div class="overflow-hidden">
+          <div class="text-[9.5px] uppercase font-black text-amber-400 tracking-wider">Vista Previa</div>
+          <div id="editNickPreview" class="text-base font-black text-white truncate">Jugador</div>
+          <div class="text-[9.5px] text-emerald-400/80">Guardado permanente</div>
+        </div>
+      </div>
+
+      <!-- Input de Nickname -->
+      <label class="text-xs font-bold text-slate-200 mb-1 block">Nuevo Apodo / Nombre:</label>
+      <input id="editNickInput" type="text" maxlength="15" placeholder="Escribe tu nuevo apodo..."
+        class="w-full bg-slate-900 border-2 border-emerald-500/50 rounded-xl px-3 py-2 text-sm font-bold text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400 mb-1" />
+      <div id="editNickError" class="text-[10.5px] text-rose-400 font-bold mb-2 hidden">⚠️ Escribe un apodo válido (mínimo 2 caracteres).</div>
+
+      <!-- Selector de Avatar -->
+      <label class="text-xs font-bold text-slate-200 block mb-1">Elige otro Avatar:</label>
+      <div id="editAvatarGrid" class="avatar-grid mb-3">
+        <!-- Generado por JS -->
+      </div>
+
+      <div class="grid grid-cols-2 gap-2">
+        <button id="btnSaveEditProfile" type="button" class="primary-btn !py-2.5 text-xs font-black">
+          ✅ Guardar Cambios
+        </button>
+        <button id="btnCancelEditProfile" type="button" class="secondary-btn !py-2.5 text-xs font-bold !text-slate-300">
+          Cancelar
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Scripts -->
-  <script src="/js/avatars.js?v=28.0"></script>
-  <script src="/js/audio.js?v=28.0"></script>
-  <script src="/js/domino-renderer.js?v=28.0"></script>
-  <script src="/js/game.js?v=28.0"></script>
+  <script src="/js/avatars.js?v=29.0"></script>
+  <script src="/js/audio.js?v=29.0"></script>
+  <script src="/js/domino-renderer.js?v=29.0"></script>
+  <script src="/js/game.js?v=29.0"></script>
 </body>
 
 </html>

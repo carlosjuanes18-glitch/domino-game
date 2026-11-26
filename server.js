@@ -937,11 +937,44 @@ io.on('connection', (socket) => {
     const pendingRequests = storage.getPendingRequests(playerId);
     const pendingInvitations = storage.getPendingInvitations(playerId);
 
+    // Si el jugador ya está en salas activas, actualizar su nombre y avatar
+    if (playerName || avatar) {
+      rooms.forEach(r => {
+        const p = r.players.find(pl => (pl.playerId === playerId || pl.socketId === socket.id));
+        if (p) {
+          if (playerName) p.name = playerName;
+          if (avatar) p.avatar = avatar;
+          broadcastRoom(r);
+        }
+      });
+    }
+
     socket.emit('sync_friends', {
       user: { id: user.id, name: user.name, avatar: user.avatar },
       friends,
       pendingRequests,
       pendingInvitations
+    });
+  });
+
+  // Actualización de Nick y Avatar del jugador (permitir cambiar posteriormente)
+  socket.on('update_profile', ({ playerId, playerName, avatar }) => {
+    if (!playerId) return;
+    const user = storage.upsertUser(playerId, null, playerName, avatar);
+
+    // Actualizar datos del jugador en cualquier sala o lobby activo
+    rooms.forEach(r => {
+      const p = r.players.find(pl => (pl.playerId === playerId || pl.socketId === socket.id));
+      if (p) {
+        if (playerName) p.name = playerName;
+        if (avatar) p.avatar = avatar;
+        broadcastRoom(r);
+      }
+    });
+
+    socket.emit('profile_updated', {
+      ok: true,
+      user: { id: user.id, name: user.name, avatar: user.avatar }
     });
   });
 

@@ -1,5 +1,5 @@
 // Service Worker para Dominó Clásico - Web Push & PWA
-const CACHE_NAME = 'domino-cache-v37.0';
+const CACHE_NAME = 'domino-cache-v38.0';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -9,6 +9,12 @@ const STATIC_ASSETS = [
   '/js/audio.js',
   '/js/avatars.js',
   '/images/domino-icon.svg',
+  '/images/icon-192.png',
+  '/images/icon-512.png',
+  '/images/icon-maskable-512.png',
+  '/images/apple-touch-icon.png',
+  '/images/favicon.png',
+  '/images/rabbit-matrix.jpg',
   '/manifest.json',
   '/audio/bomba-tiempo.mp3',
   '/images/avatars/avatar_1.png',
@@ -70,8 +76,8 @@ self.addEventListener('push', (event) => {
 
   const options = {
     body: data.body,
-    icon: '/images/domino-icon.svg',
-    badge: '/images/domino-icon.svg',
+    icon: '/images/icon-192.png',
+    badge: '/images/favicon.png',
     vibrate: [200, 100, 200],
     data: data.data || { url: '/' },
     actions: [

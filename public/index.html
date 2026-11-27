@@ -7,24 +7,36 @@
     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Dominó Clásico - Modalidad Bloqueo 4P</title>
   <!-- PWA & Mobile Web App Meta Tags -->
-  <link rel="manifest" href="/manifest.json?v=38.0">
-  <meta name="theme-color" content="#064e3b">
+  <link rel="manifest" href="/manifest.json?v=39.0">
+  <meta name="theme-color" content="#030e07">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Dominó">
-  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
-  <link rel="icon" type="image/png" sizes="192x192" href="/images/icon-192.png">
-  <link rel="icon" type="image/png" sizes="512x512" href="/images/icon-512.png">
-  <link rel="shortcut icon" href="/images/favicon.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png?v=39.0">
+  <link rel="icon" type="image/png" sizes="192x192" href="/images/icon-192.png?v=39.0">
+  <link rel="icon" type="image/png" sizes="512x512" href="/images/icon-512.png?v=39.0">
+  <link rel="icon" type="image/x-icon" href="/favicon.ico?v=39.0">
+  <link rel="shortcut icon" href="/favicon.ico?v=39.0">
   <!-- Tailwind CSS CDN para diseño responsivo ágil -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Socket.io -->
   <script src="/socket.io/socket.io.js"></script>
   <!-- Estilos personalizados -->
-  <link rel="stylesheet" href="/css/style.css?v=38.0">
+  <link rel="stylesheet" href="/css/style.css?v=39.0">
 </head>
 
 <body>
+
+  <!-- Pantalla Splash de Bienvenida (Conejo Matrix) -->
+  <div id="appSplashScreen" class="app-splash-screen" onclick="this.classList.add('splash-hidden')">
+    <div class="splash-content">
+      <img src="/images/rabbit-matrix.jpg" alt="Dominó" class="splash-rabbit-img" />
+      <div class="splash-brand">
+        <span class="splash-title">DOMINÓ CLÁSICO</span>
+        <span class="splash-subtitle">Modalidad Bloqueo</span>
+      </div>
+    </div>
+  </div>
 
   <div class="app-viewport">
     <!-- Encabezado de la Mesa -->
@@ -1230,10 +1242,10 @@
   </div>
 
   <!-- Scripts -->
-  <script src="/js/avatars.js?v=38.0"></script>
-  <script src="/js/audio.js?v=38.0"></script>
-  <script src="/js/domino-renderer.js?v=38.0"></script>
-  <script src="/js/game.js?v=38.0"></script>
+  <script src="/js/avatars.js?v=39.0"></script>
+  <script src="/js/audio.js?v=39.0"></script>
+  <script src="/js/domino-renderer.js?v=39.0"></script>
+  <script src="/js/game.js?v=39.0"></script>
 </body>
 
 </html>

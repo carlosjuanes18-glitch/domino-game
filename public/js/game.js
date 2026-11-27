@@ -3890,4 +3890,12 @@
     }
   });
 
+  // Auto-cierre suave de la pantalla Splash de Bienvenida (Conejo Matrix)
+  setTimeout(() => {
+    const splash = document.getElementById('appSplashScreen');
+    if (splash && !splash.classList.contains('splash-hidden')) {
+      splash.classList.add('splash-hidden');
+    }
+  }, 1400);
+
 })();

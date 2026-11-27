@@ -3919,6 +3919,6 @@
     if (splash && !splash.classList.contains('splash-hidden')) {
       splash.classList.add('splash-hidden');
     }
-  }, 1400);
+  }, 2000);
 
 })();

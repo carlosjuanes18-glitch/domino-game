@@ -129,8 +129,12 @@ try {
   const savedRooms = storage.loadRoomsFromDisk();
   if (savedRooms && savedRooms.length > 0) {
     savedRooms.forEach(r => {
-      // Al reiniciar el servidor, marcar que los jugadores humanos reconectarán
-      if (r.players) {
+      // Si la sala estaba finalizada o sin jugadores, resetearla limpia a 'waiting'
+      if (r.status === 'session_finished' || !r.players || r.players.length === 0) {
+        r.status = 'waiting';
+        r.players = [];
+        r.board = [];
+      } else if (r.players) {
         r.players.forEach(p => {
           if (!p.isBot) {
             p.isDisconnected = true;
@@ -1082,7 +1086,7 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('join_room', ({ roomId, playerName, avatar, clientId, playerId, playerToken, forceReset, takeSeat, gameRate, penaltyValue }) => {
+  socket.on('join_room', ({ roomId, playerName, avatar, clientId, playerId, playerToken, forceReset, takeSeat, gameRate, penaltyValue, maxPlayers }) => {
     const formattedRoomId = (roomId || 'MESA-1').toUpperCase().trim();
     let room = rooms.get(formattedRoomId);
 
@@ -1092,14 +1096,24 @@ io.on('connection', (socket) => {
 
     storage.upsertUser(effectivePlayerId, playerToken, cleanName, avatar);
 
-    // Si el usuario forzó el reinicio de la sala o la sala no existe
-    if (forceReset || !room) {
+    // Verificar si hay humanos activos conectados en la sala
+    const hasLiveHumans = room && room.players.some(p => !p.isBot && !p.isDisconnected && io.sockets.sockets.has(p.socketId));
+
+    // Si el usuario forzó el reinicio, o la sala no existe, o ya concluyó,
+    // o si estaba en 'playing' pero quedó fantasma sin ningún jugador humano conectado:
+    if (forceReset || !room || room.status === 'session_finished' || (room.status === 'playing' && !hasLiveHumans)) {
       room = createInitialRoom(formattedRoomId, socket.id);
       if (gameRate !== undefined && !isNaN(parseInt(gameRate))) {
         room.gameRate = Math.max(0, parseInt(gameRate));
       }
       if (penaltyValue !== undefined && !isNaN(parseInt(penaltyValue))) {
         room.penaltyPerPass = Math.max(0, parseInt(penaltyValue));
+      }
+      if (maxPlayers !== undefined && !isNaN(parseInt(maxPlayers))) {
+        const pMax = parseInt(maxPlayers);
+        if (pMax >= 2 && pMax <= 4) {
+          room.maxPlayers = pMax;
+        }
       }
       rooms.set(formattedRoomId, room);
     }
@@ -1209,8 +1223,13 @@ io.on('connection', (socket) => {
       }
     }
 
-    // Reasignar asientos correlativos si estamos en espera
+    // Si estamos en espera, reasignar asientos y asegurar que el anfitrión esté vivo
     if (room.status === 'waiting') {
+      const liveHost = room.players.find(p => p.socketId === room.hostId && io.sockets.sockets.has(p.socketId));
+      if (!liveHost) {
+        // Asignar el anfitrión al socket actual
+        room.hostId = socket.id;
+      }
       room.players.forEach((p, idx) => p.seat = idx);
     }
 
@@ -1268,9 +1287,14 @@ io.on('connection', (socket) => {
     if (!room || room.status !== 'waiting') return;
 
     // Solo el anfitrión puede cambiar el número de jugadores
-    if (room.hostId && room.hostId !== socket.id) {
-      socket.emit('error_message', 'Solo el anfitrión puede configurar la mesa.');
-      return;
+    const hostConnected = room.players.some(p => p.socketId === room.hostId && io.sockets.sockets.has(p.socketId));
+    if (room.hostId !== socket.id) {
+      if (!hostConnected) {
+        room.hostId = socket.id;
+      } else {
+        socket.emit('error_message', 'Solo el anfitrión puede configurar la mesa.');
+        return;
+      }
     }
 
     const num = parseInt(count);

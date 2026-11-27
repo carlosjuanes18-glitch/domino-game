@@ -419,9 +419,12 @@
   // Comprobar parámetros URL para unirse directo (?room=XXXX)
   const urlParams = new URLSearchParams(window.location.search);
   const roomParam = urlParams.get('room');
+  const inputRoom = document.getElementById('inputRoomId');
   if (roomParam) {
-    const inputRoom = document.getElementById('inputRoomId');
     if (inputRoom) inputRoom.value = roomParam.toUpperCase();
+  } else if (inputRoom && (!inputRoom.value || inputRoom.value === 'MESA-1')) {
+    const rand = Math.floor(Math.random() * 900) + 100;
+    inputRoom.value = `MESA-${rand}`;
   }
 
   // Inicializar verificación de registro y tarjeta de perfil
@@ -3486,19 +3489,24 @@
       }
       window.soundManager.playTileClick();
 
-      // Determinar la mesa correspondiente
-      let targetRoom = 'MESA-1';
-      if (currentRoom && currentRoom.id) {
+      // Número deseado de jugadores según los amigos invitados:
+      // 1 amigo -> mesa de 2 jugadores
+      // 2 amigos -> mesa de 3 jugadores
+      // 3 amigos -> mesa de 4 jugadores
+      const selectedCount = selectedFriendIds.size;
+      const desiredPlayers = Math.min(4, Math.max(2, selectedCount + 1));
+
+      let targetRoom = '';
+      if (currentRoom && currentRoom.id && currentRoom.status === 'waiting') {
+        // Ya estamos en una sala de espera, usamos esta misma sala
         targetRoom = currentRoom.id;
+        socket.emit('set_player_count', { count: desiredPlayers });
       } else {
+        // Crear una sala NUEVA limpia y exclusiva para jugar con los amigos
+        const rand = Math.floor(Math.random() * 900) + 100;
+        targetRoom = `MESA-${rand}`;
         const inputRoom = document.getElementById('inputRoomId');
-        if (inputRoom && inputRoom.value.trim()) {
-          targetRoom = inputRoom.value.trim().toUpperCase();
-        } else {
-          const rand = Math.floor(Math.random() * 90) + 10;
-          targetRoom = `MESA-${rand}`;
-          if (inputRoom) inputRoom.value = targetRoom;
-        }
+        if (inputRoom) inputRoom.value = targetRoom;
 
         const nameInput = document.getElementById('inputPlayerName')?.value?.trim() || localStorage.getItem('domino_player_name') || 'Jugador';
         socket.emit('join_room', {
@@ -3508,7 +3516,8 @@
           clientId: myClientId,
           playerId: myPlayerId,
           playerToken: myPlayerToken,
-          forceReset: false
+          forceReset: true, // ¡Garantiza mesa limpia donde tú eres el anfitrión!
+          maxPlayers: desiredPlayers
         });
       }
 
@@ -3531,26 +3540,21 @@
         friendsModal.style.display = 'none';
       }
 
-      // Mandar a la pantalla correspondiente
-      if (currentRoom && currentRoom.status === 'playing') {
-        // En partida activa: volver al tablero
-        if (setupModal) { setupModal.classList.add('hidden'); setupModal.style.display = 'none'; }
-        if (lobbyModal) { lobbyModal.classList.add('hidden'); lobbyModal.style.display = 'none'; }
-      } else {
-        // En espera: mostrar la Sala de Espera de la mesa correspondiente
-        if (setupModal) {
-          setupModal.classList.add('hidden');
-          setupModal.style.display = 'none';
-        }
+      // Ocultar menú principal
+      if (setupModal) {
+        setupModal.classList.add('hidden');
+        setupModal.style.display = 'none';
+      }
+
+      // Si ya estábamos en el lobby de esta sala, actualizar visualmente
+      if (currentRoom && currentRoom.id === targetRoom && currentRoom.status === 'waiting') {
         if (lobbyModal) {
           lobbyModal.classList.remove('hidden');
           lobbyModal.style.display = 'flex';
-          const lobbyRoomCode = document.getElementById('lobbyRoomCode');
-          if (lobbyRoomCode) lobbyRoomCode.textContent = targetRoom;
         }
       }
 
-      showToast(`🚀 Invitación enviada a ${selectedNames.join(', ')}. Esperando en ${targetRoom}...`);
+      showToast(`🚀 Creando ${targetRoom} con ${desiredPlayers} jugadores e invitando a ${selectedNames.join(', ')}...`);
       selectedFriendIds.clear();
       renderFriendsList(myFriends);
     });

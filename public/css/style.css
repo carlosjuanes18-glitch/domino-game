@@ -190,6 +190,10 @@ body {
   border: 2px solid rgba(255, 255, 255, 0.2);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
   transition: all 0.3s ease;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .player-pod.active-turn .avatar-wrapper {
@@ -1262,11 +1266,12 @@ body {
 .avatar-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
-  margin: 8px 0;
-  max-height: 200px;
+  gap: 10px;
+  margin: 10px 0;
+  max-height: 270px;
   overflow-y: auto;
-  padding: 4px 2px;
+  -webkit-overflow-scrolling: touch;
+  padding: 6px 4px;
 }
 
 .avatar-option {
@@ -1277,12 +1282,34 @@ body {
   border: 2px solid transparent;
   transition: all 0.2s ease;
   padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.6);
+}
+
+.avatar-option:hover {
+  transform: scale(1.06);
+  box-shadow: 0 0 10px rgba(251, 191, 36, 0.4);
 }
 
 .avatar-option.selected {
   border-color: #fbbf24;
-  transform: scale(1.1);
-  box-shadow: 0 0 14px #fbbf24;
+  transform: scale(1.12);
+  box-shadow: 0 0 16px #fbbf24;
+}
+
+.avatar-option img,
+.avatar-wrapper img,
+#setupProfileAvatar img,
+#regAvatarPreview img,
+#editAvatarPreview img,
+.lobby-seat-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
 }
 
 /* Asientos en la Sala de Espera (Lobby) */

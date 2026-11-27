@@ -1,5 +1,5 @@
 // Service Worker para Dominó Clásico - Web Push & PWA
-const CACHE_NAME = 'domino-cache-v30.0';
+const CACHE_NAME = 'domino-cache-v31.0';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -9,7 +9,23 @@ const STATIC_ASSETS = [
   '/js/audio.js',
   '/js/avatars.js',
   '/images/domino-icon.svg',
-  '/manifest.json'
+  '/manifest.json',
+  '/images/avatars/avatar_1.png',
+  '/images/avatars/avatar_2.png',
+  '/images/avatars/avatar_3.png',
+  '/images/avatars/avatar_4.png',
+  '/images/avatars/avatar_5.png',
+  '/images/avatars/avatar_6.png',
+  '/images/avatars/avatar_7.png',
+  '/images/avatars/avatar_8.png',
+  '/images/avatars/avatar_9.png',
+  '/images/avatars/avatar_10.png',
+  '/images/avatars/avatar_11.png',
+  '/images/avatars/avatar_12.png',
+  '/images/avatars/avatar_13.png',
+  '/images/avatars/avatar_14.png',
+  '/images/avatars/avatar_15.png',
+  '/images/avatars/avatar_16.png'
 ];
 
 self.addEventListener('install', (event) => {

@@ -1159,7 +1159,7 @@ io.on('connection', (socket) => {
           botSeat.playerId = effectivePlayerId;
           botSeat.clientId = effectiveClientId;
           botSeat.name = cleanName;
-          botSeat.avatar = avatar || 'male_1';
+          botSeat.avatar = avatar || 'avatar_1';
           botSeat.isBot = false;
           botSeat.isDisconnected = false;
           botSeat.disconnectedAt = null;
@@ -1180,7 +1180,7 @@ io.on('connection', (socket) => {
             clientId: effectiveClientId,
             id: socket.id,
             name: cleanName,
-            avatar: avatar || 'male_1',
+            avatar: avatar || 'avatar_1',
             seat: freeSeat,
             isBot: false,
             ready: false,
@@ -1245,7 +1245,7 @@ io.on('connection', (socket) => {
       clientId: me ? me.clientId : socket.id,
       id: socket.id,
       name: me ? me.name : 'Jugador',
-      avatar: me ? me.avatar : 'male_1',
+      avatar: me ? me.avatar : 'avatar_1',
       seat: 0,
       isBot: false,
       ready: false,
@@ -1309,7 +1309,7 @@ io.on('connection', (socket) => {
     }
 
     const botNames = ['Mateo Bot', 'Sofía Bot', 'Carlos Bot', 'Valentina Bot', 'Lucas Bot', 'Camila Bot'];
-    const botAvatars = ['male_2', 'female_2', 'male_3', 'female_3', 'male_4', 'female_4'];
+    const botAvatars = ['avatar_2', 'avatar_3', 'avatar_4', 'avatar_5', 'avatar_6', 'avatar_7', 'avatar_8', 'avatar_10'];
 
     const takenSeats = room.players.map(p => p.seat);
     let freeSeat = 0;

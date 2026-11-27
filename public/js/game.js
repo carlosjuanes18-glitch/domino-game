@@ -42,7 +42,7 @@
       socket.connect();
     }
     const pName = document.getElementById('inputPlayerName')?.value?.trim() || localStorage.getItem('domino_player_name') || 'Jugador';
-    const pAvatar = (typeof selectedAvatar !== 'undefined' && selectedAvatar) ? selectedAvatar : (localStorage.getItem('domino_selected_avatar') || 'male_1');
+    const pAvatar = (typeof selectedAvatar !== 'undefined' && selectedAvatar) ? selectedAvatar : (localStorage.getItem('domino_selected_avatar') || 'avatar_1');
 
     socket.emit('auth_profile', {
       playerId: myPlayerId,
@@ -100,7 +100,7 @@
   let myHand = [];
   let currentRoom = null;
   let selectedTileForChoice = null;
-  let selectedAvatar = 'male_1';
+  let selectedAvatar = 'avatar_1';
 
   // Elementos del DOM
   const setupModal = document.getElementById('setupModal');
@@ -145,7 +145,11 @@
   // Actualizar la tarjeta de perfil en la pantalla inicial y los datos locales
   function updateProfileCardUI() {
     const savedName = localStorage.getItem('domino_player_name') || 'Jugador';
-    const savedAvatar = localStorage.getItem('domino_selected_avatar') || selectedAvatar || 'male_1';
+    let savedAvatar = localStorage.getItem('domino_selected_avatar') || selectedAvatar || 'avatar_1';
+    if (savedAvatar.startsWith('male_') || savedAvatar.startsWith('female_')) {
+      savedAvatar = window.AVATARS[savedAvatar]?.id || 'avatar_1';
+      localStorage.setItem('domino_selected_avatar', savedAvatar);
+    }
     selectedAvatar = savedAvatar;
 
     const setupAvatar = document.getElementById('setupProfileAvatar');
@@ -181,7 +185,7 @@
       const regGrid = document.getElementById('regAvatarGrid');
       const regErr = document.getElementById('regNickError');
 
-      let tempRegAvatar = selectedAvatar || 'male_1';
+      let tempRegAvatar = selectedAvatar || 'avatar_1';
       if (regPreviewAvatar && window.AVATARS[tempRegAvatar]) {
         regPreviewAvatar.innerHTML = window.AVATARS[tempRegAvatar].svg;
       }
@@ -238,7 +242,12 @@
         };
       }
     } else {
-      selectedAvatar = localStorage.getItem('domino_selected_avatar') || 'male_1';
+      let savedAv = localStorage.getItem('domino_selected_avatar') || 'avatar_1';
+      if (savedAv.startsWith('male_') || savedAv.startsWith('female_')) {
+        savedAv = window.AVATARS[savedAv]?.id || 'avatar_1';
+        localStorage.setItem('domino_selected_avatar', savedAv);
+      }
+      selectedAvatar = savedAv;
       const pNameInput = document.getElementById('inputPlayerName');
       if (pNameInput) pNameInput.value = savedName;
       updateProfileCardUI();
@@ -255,7 +264,10 @@
     editModal.style.display = 'flex';
 
     const currentName = localStorage.getItem('domino_player_name') || 'Jugador';
-    let tempEditAvatar = localStorage.getItem('domino_selected_avatar') || selectedAvatar || 'male_1';
+    let tempEditAvatar = localStorage.getItem('domino_selected_avatar') || selectedAvatar || 'avatar_1';
+    if (tempEditAvatar.startsWith('male_') || tempEditAvatar.startsWith('female_')) {
+      tempEditAvatar = window.AVATARS[tempEditAvatar]?.id || 'avatar_1';
+    }
 
     const editInput = document.getElementById('editNickInput');
     const editPreviewName = document.getElementById('editNickPreview');
@@ -788,7 +800,7 @@
       card.className = `lobby-seat-card ${player ? 'occupied' : ''}`;
 
       if (player) {
-        const avatarObj = window.AVATARS[player.avatar] || window.AVATARS.male_1;
+        const avatarObj = window.AVATARS[player.avatar] || window.AVATARS.avatar_1;
         card.innerHTML = `
           <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden border border-emerald-400 flex-shrink-0">
             ${avatarObj.svg}
@@ -949,7 +961,7 @@
         }
       }
 
-      const avatarObj = window.AVATARS[player.avatar] || window.AVATARS.male_1;
+      const avatarObj = window.AVATARS[player.avatar] || window.AVATARS.avatar_1;
       const avatarEl = podEl.querySelector('.pod-avatar');
       if (avatarEl) avatarEl.innerHTML = avatarObj.svg;
 
@@ -1351,7 +1363,7 @@
       const isWinner = p.wins > 0;
       card.className = `player-score-card ${isWinner ? 'winner' : ''}`;
 
-      const avatarObj = window.AVATARS[p.avatar] || window.AVATARS.male_1;
+      const avatarObj = window.AVATARS[p.avatar] || window.AVATARS.avatar_1;
       const penaltyAmount = (p.passesTotal || 0) * penaltyVal;
 
       card.innerHTML = `

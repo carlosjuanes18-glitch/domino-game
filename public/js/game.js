@@ -3098,6 +3098,29 @@
     });
   }
 
+  // Botón visible de instalación / actualización en la pantalla de inicio
+  const btnLobbyInstallApp = document.getElementById('btnLobbyInstallApp');
+  if (btnLobbyInstallApp) {
+    btnLobbyInstallApp.addEventListener('click', async () => {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+          showToast('📲 ¡Instalando aplicación de Dominó con el nuevo icono!');
+        }
+        deferredPrompt = null;
+        return;
+      }
+      
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+      if (isStandalone) {
+        alert('ℹ️ Ya estás dentro del juego.\n\nPara que tu teléfono tome el nuevo icono neón en la pantalla:\n1. Sal de aquí y ve a la pantalla de tu celular donde están tus apps.\n2. Mantén presionado el icono anterior de Dominó y dale "Desinstalar" o "Eliminar".\n3. Abre la app de Google Chrome y entra a:\nhttps://domino-game-6fw2.onrender.com\n4. Toca los 3 puntos (⋮) arriba a la derecha y elige "Instalar aplicación".');
+      } else {
+        alert('ℹ️ Para instalar el acceso directo con el nuevo icono:\n1. Si ya tienes un icono viejo en tu pantalla de inicio, desinstálalo primero.\n2. En Google Chrome, toca los 3 puntos verticales (⋮) arriba a la derecha.\n3. Selecciona "Instalar aplicación" o "Agregar a la pantalla principal".');
+      }
+    });
+  }
+
   // Elementos de la interfaz de Amigos
   const friendsModal = document.getElementById('friendsModal');
   const btnOpenFriends = document.getElementById('btnOpenFriends');

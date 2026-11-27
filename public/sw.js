@@ -1,5 +1,5 @@
 // Service Worker para Dominó Clásico - Web Push & PWA
-const CACHE_NAME = 'domino-cache-v34.0';
+const CACHE_NAME = 'domino-cache-v35.0';
 const STATIC_ASSETS = [
   '/',
   '/index.html',

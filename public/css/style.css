@@ -2015,3 +2015,36 @@ body {
   background: #f59e0b;
   box-shadow: 0 0 8px #f59e0b;
 }
+
+.friend-card.selected {
+  border-color: rgba(16, 185, 129, 0.85) !important;
+  background: rgba(6, 78, 59, 0.45) !important;
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.25) !important;
+}
+
+.friend-select-box {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 2px solid #64748b;
+  background: rgba(15, 23, 42, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.friend-select-box:hover {
+  border-color: #34d399;
+  background: rgba(16, 185, 129, 0.15);
+}
+
+.friend-select-box.checked {
+  background: #10b981;
+  border-color: #34d399;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.6), inset 0 0 4px rgba(255, 255, 255, 0.4);
+  transform: scale(1.05);
+}

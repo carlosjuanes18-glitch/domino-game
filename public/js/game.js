@@ -3352,9 +3352,53 @@
     }
   }
 
+  // Conjunto de amigos seleccionados para invitar en bloque (de 1 a 3 amigos)
+  const selectedFriendIds = new Set();
+
+  function updateInviteSelectedUI() {
+    const count = selectedFriendIds.size;
+    const countEl = document.getElementById('selectedFriendsCount');
+    const hintEl = document.getElementById('selectedFriendsHint');
+    const btnInvite = document.getElementById('btnInviteSelectedFriends');
+    const btnText = document.getElementById('btnInviteSelectedText');
+
+    if (countEl) countEl.textContent = count;
+    if (hintEl) {
+      if (count === 0) hintEl.textContent = 'Marca de 1 a 3 amigos';
+      else if (count < 3) hintEl.textContent = `Puedes elegir ${3 - count} más`;
+      else hintEl.textContent = '¡Máximo de 3 amigos alcanzado!';
+    }
+
+    if (btnInvite && btnText) {
+      if (count > 0) {
+        btnInvite.disabled = false;
+        btnInvite.classList.remove('opacity-50', 'cursor-not-allowed');
+        btnInvite.classList.add('!bg-emerald-600', 'hover:!bg-emerald-500', 'shadow-[0_0_15px_rgba(16,185,129,0.5)]');
+        btnText.textContent = `Invitar a la Partida (${count} ${count === 1 ? 'amigo' : 'amigos'})`;
+      } else {
+        btnInvite.disabled = true;
+        btnInvite.classList.add('opacity-50', 'cursor-not-allowed');
+        btnInvite.classList.remove('!bg-emerald-600', 'hover:!bg-emerald-500', 'shadow-[0_0_15px_rgba(16,185,129,0.5)]');
+        btnText.textContent = 'Invitar a la Partida (Selecciona 1 a 3 amigos)';
+      }
+    }
+  }
+
   function renderFriendsList(friends) {
     if (!myFriendsList) return;
     myFriendsList.innerHTML = '';
+
+    // Limpiar IDs de amigos seleccionados que ya no existan en la lista
+    if (friends && friends.length > 0) {
+      const validIds = new Set(friends.map(f => f.id));
+      selectedFriendIds.forEach(id => {
+        if (!validIds.has(id)) selectedFriendIds.delete(id);
+      });
+    } else {
+      selectedFriendIds.clear();
+    }
+
+    updateInviteSelectedUI();
 
     if (!friends || friends.length === 0) {
       emptyFriendsNotice?.classList.remove('hidden');
@@ -3363,8 +3407,9 @@
     emptyFriendsNotice?.classList.add('hidden');
 
     friends.forEach(f => {
+      const isSelected = selectedFriendIds.has(f.id);
       const card = document.createElement('div');
-      card.className = 'friend-card';
+      card.className = `friend-card ${isSelected ? 'selected' : ''} cursor-pointer`;
       const avSvg = window.AVATARS[f.avatar]?.svg || '👤';
 
       let statusHtml = '<span class="text-[9.5px] text-slate-400 flex items-center gap-1"><span class="friend-status-dot offline"></span> Desconectado</span>';
@@ -3375,34 +3420,47 @@
       }
 
       card.innerHTML = `
-        <div class="flex items-center gap-2.5">
-          <div class="w-10 h-10 rounded-full bg-slate-800 border border-emerald-500/40 overflow-hidden flex items-center justify-center">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <div class="w-10 h-10 rounded-full bg-slate-800 border border-emerald-500/40 overflow-hidden flex items-center justify-center shrink-0">
             ${avSvg}
           </div>
-          <div>
-            <div class="text-xs font-black text-white">${f.name}</div>
+          <div class="min-w-0">
+            <div class="text-xs font-black text-white truncate max-w-[130px] sm:max-w-[170px]">${f.name}</div>
             ${statusHtml}
           </div>
         </div>
-        <div class="flex items-center gap-1.5">
-          <button type="button" class="btn-invite-friend primary-btn !py-1 !px-2.5 !text-[11px] font-bold" data-id="${f.id}" data-name="${f.name}">
-            🎮 Invitar
+        <div class="flex items-center gap-2 shrink-0">
+          <button type="button" class="btn-remove-friend !py-1 !px-2 bg-rose-950/70 hover:bg-rose-900 border border-rose-500/40 text-rose-300 hover:text-white rounded-lg text-[10.5px] font-bold transition-all active:scale-95 flex items-center gap-1 shadow-sm" title="Eliminar amigo" data-id="${f.id}" data-name="${f.name}">
+            🗑️
           </button>
-          <button type="button" class="btn-remove-friend !py-1 !px-2 bg-rose-950/80 hover:bg-rose-800 border border-rose-500/50 text-rose-200 hover:text-white rounded-lg text-[10.5px] font-bold transition-all active:scale-95 flex items-center gap-1 shadow-sm" title="Eliminar amigo" data-id="${f.id}" data-name="${f.name}">
-            🗑️ Eliminar
-          </button>
+          <div class="friend-select-box ${isSelected ? 'checked' : ''}" data-id="${f.id}" title="${isSelected ? 'Deseleccionar' : 'Seleccionar para invitar'}">
+            ${isSelected ? '<svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg>' : ''}
+          </div>
         </div>
       `;
 
-      card.querySelector('.btn-invite-friend').addEventListener('click', (e) => {
-        e.stopPropagation();
-        inviteFriendToPlay(f.id, f.name);
+      card.addEventListener('click', (e) => {
+        // Evitar toggle si se hizo click en el botón de eliminar
+        if (e.target.closest('.btn-remove-friend')) return;
+
+        window.soundManager.playTileClick();
+        if (selectedFriendIds.has(f.id)) {
+          selectedFriendIds.delete(f.id);
+        } else {
+          if (selectedFriendIds.size >= 3) {
+            showToast('⚠️ Solo puedes seleccionar de 1 a 3 amigos para invitar a la mesa.');
+            return;
+          }
+          selectedFriendIds.add(f.id);
+        }
+        renderFriendsList(myFriends);
       });
 
       card.querySelector('.btn-remove-friend').addEventListener('click', (e) => {
         e.stopPropagation();
         const conf = confirm(`¿Estás seguro que deseas eliminar de amigos a ${f.name}?`);
         if (conf) {
+          selectedFriendIds.delete(f.id);
           socket.emit('remove_friend', {
             playerId: myPlayerId,
             friendId: f.id
@@ -3410,11 +3468,91 @@
         }
       });
 
-      card.addEventListener('click', () => {
-        inviteFriendToPlay(f.id, f.name);
+      myFriendsList.appendChild(card);
+    });
+  }
+
+  // Listener para el botón inferior de invitar amigos seleccionados
+  const btnInviteSelected = document.getElementById('btnInviteSelectedFriends');
+  if (btnInviteSelected) {
+    btnInviteSelected.addEventListener('click', () => {
+      if (selectedFriendIds.size === 0) {
+        showToast('⚠️ Marca la casilla de al menos 1 amigo para invitar.');
+        return;
+      }
+      if (selectedFriendIds.size > 3) {
+        showToast('⚠️ Solo puedes seleccionar de 1 a 3 amigos.');
+        return;
+      }
+      window.soundManager.playTileClick();
+
+      // Determinar la mesa correspondiente
+      let targetRoom = 'MESA-1';
+      if (currentRoom && currentRoom.id) {
+        targetRoom = currentRoom.id;
+      } else {
+        const inputRoom = document.getElementById('inputRoomId');
+        if (inputRoom && inputRoom.value.trim()) {
+          targetRoom = inputRoom.value.trim().toUpperCase();
+        } else {
+          const rand = Math.floor(Math.random() * 90) + 10;
+          targetRoom = `MESA-${rand}`;
+          if (inputRoom) inputRoom.value = targetRoom;
+        }
+
+        const nameInput = document.getElementById('inputPlayerName')?.value?.trim() || localStorage.getItem('domino_player_name') || 'Jugador';
+        socket.emit('join_room', {
+          roomId: targetRoom,
+          playerName: nameInput,
+          avatar: selectedAvatar,
+          clientId: myClientId,
+          playerId: myPlayerId,
+          playerToken: myPlayerToken,
+          forceReset: false
+        });
+      }
+
+      // Enviar invitaciones a los amigos seleccionados
+      const selectedNames = [];
+      selectedFriendIds.forEach(friendId => {
+        const friendObj = myFriends.find(f => f.id === friendId);
+        if (friendObj) selectedNames.push(friendObj.name);
+
+        socket.emit('send_game_invite', {
+          fromId: myPlayerId,
+          toId: friendId,
+          roomId: targetRoom
+        });
       });
 
-      myFriendsList.appendChild(card);
+      // Cerrar la ventana de amigos
+      if (friendsModal) {
+        friendsModal.classList.add('hidden');
+        friendsModal.style.display = 'none';
+      }
+
+      // Mandar a la pantalla correspondiente
+      if (currentRoom && currentRoom.status === 'playing') {
+        // En partida activa: volver al tablero
+        if (setupModal) { setupModal.classList.add('hidden'); setupModal.style.display = 'none'; }
+        if (lobbyModal) { lobbyModal.classList.add('hidden'); lobbyModal.style.display = 'none'; }
+      } else {
+        // En espera: mostrar la Sala de Espera de la mesa correspondiente
+        if (setupModal) {
+          setupModal.classList.add('hidden');
+          setupModal.style.display = 'none';
+        }
+        if (lobbyModal) {
+          lobbyModal.classList.remove('hidden');
+          lobbyModal.style.display = 'flex';
+          const lobbyRoomCode = document.getElementById('lobbyRoomCode');
+          if (lobbyRoomCode) lobbyRoomCode.textContent = targetRoom;
+        }
+      }
+
+      showToast(`🚀 Invitación enviada a ${selectedNames.join(', ')}. Esperando en ${targetRoom}...`);
+      selectedFriendIds.clear();
+      renderFriendsList(myFriends);
     });
   }
 

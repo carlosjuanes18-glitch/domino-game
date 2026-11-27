@@ -40,6 +40,14 @@
   // ========================================================
   function saveActiveSession(sessionData) {
     if (!sessionData || !sessionData.roomId) return;
+    // Solo persistir la sesión para auto-reanudación si la partida está actualmente en juego ('playing')
+    // No persistir si la sala está en espera ('waiting') o si ya concluyó la partida ('session_finished')
+    const currentStatus = sessionData.status || (currentRoom ? currentRoom.status : null);
+    if (currentStatus !== 'playing') {
+      clearActiveSession();
+      return;
+    }
+
     const pName = sessionData.playerName || document.getElementById('inputPlayerName')?.value?.trim() || localStorage.getItem('domino_player_name') || 'Jugador';
     const pAv = sessionData.avatar || (typeof selectedAvatar !== 'undefined' && selectedAvatar) || localStorage.getItem('domino_selected_avatar') || 'avatar_1';
     const dataToSave = {
@@ -49,6 +57,7 @@
       clientId: myClientId,
       playerId: myPlayerId,
       playerToken: myPlayerToken,
+      status: 'playing',
       savedAt: Date.now()
     };
     try {
@@ -97,7 +106,7 @@
     });
 
     const saved = getActiveSession();
-    if (saved && saved.roomId) {
+    if (saved && saved.roomId && saved.status === 'playing') {
       try {
         isAttemptingRecovery = true;
         socket.emit('join_room', {
@@ -418,10 +427,10 @@
   // Inicializar verificación de registro y tarjeta de perfil
   checkFirstTimeRegistration();
 
-  // Si el usuario ya tenía una partida activa guardada (cierre accidental de ventana o corte),
-  // recuperarla automáticamente al tocar el icono del juego sin pasar por el menú inicial
+  // Si el usuario tenía una partida activa EN JUEGO guardada (cierre accidental de ventana, desconexión o corte),
+  // recuperarla automáticamente al tocar el icono del juego directamente a la mesa
   const savedActive = getActiveSession();
-  if (savedActive && savedActive.roomId && !roomParam) {
+  if (savedActive && savedActive.roomId && savedActive.status === 'playing' && !roomParam) {
     if (setupModal) {
       setupModal.classList.add('hidden');
       setupModal.style.display = 'none';
@@ -507,13 +516,6 @@
     localStorage.setItem('domino_player_name', nameInput);
     localStorage.setItem('domino_selected_avatar', selectedAvatar);
 
-    // Guardar sesión activa persistente para auto-recuperar si se cierra la ventana
-    saveActiveSession({
-      roomId: roomInput,
-      playerName: nameInput,
-      avatar: selectedAvatar
-    });
-
     socket.emit('join_room', {
       roomId: roomInput,
       playerName: nameInput,
@@ -543,13 +545,6 @@
       localStorage.setItem('domino_player_name', nameInput);
       localStorage.setItem('domino_selected_avatar', selectedAvatar);
 
-      // Guardar sesión activa persistente
-      saveActiveSession({
-        roomId: cleanRoom,
-        playerName: nameInput,
-        avatar: selectedAvatar
-      });
-
       socket.emit('join_room', {
         roomId: cleanRoom,
         playerName: nameInput,
@@ -567,7 +562,6 @@
   // Evento: Unido exitosamente a la sala
   socket.on('joined_successfully', (data) => {
     mySeat = data.playerSeat;
-    saveActiveSession({ roomId: data.roomId });
     if (sessionRecoveryTimeout) {
       clearTimeout(sessionRecoveryTimeout);
       sessionRecoveryTimeout = null;
@@ -575,9 +569,11 @@
     setupModal.classList.add('hidden');
     setupModal.style.display = 'none';
     if (currentRoom && currentRoom.status === 'playing') {
+      saveActiveSession({ roomId: data.roomId, status: 'playing' });
       lobbyModal.classList.add('hidden');
       lobbyModal.style.display = 'none';
     } else {
+      clearActiveSession();
       lobbyModal.classList.remove('hidden');
       lobbyModal.style.display = 'flex';
     }
@@ -628,6 +624,71 @@
     socket.emit('start_game');
   });
 
+  // Botón: Regresar a la pantalla de inicio desde la Sala de Espera
+  const btnLobbyReturnHome = document.getElementById('btnLobbyReturnHome');
+  if (btnLobbyReturnHome) {
+    btnLobbyReturnHome.addEventListener('click', () => {
+      window.soundManager.playTileClick();
+      const ok = confirm(
+        '¿Estás seguro de que deseas regresar a la pantalla de inicio?\n\n' +
+        '• Se liberará tu asiento en esta sala de espera.\n' +
+        '• Podrás crear una nueva mesa o invitar a tus amigos desde el inicio.'
+      );
+      if (ok) {
+        clearActiveSession();
+        socket.emit('leave_game');
+        lobbyModal.classList.add('hidden');
+        lobbyModal.style.display = 'none';
+        setupModal.classList.remove('hidden');
+        setupModal.style.display = 'flex';
+        currentRoom = null;
+        mySeat = null;
+        myHand = [];
+        const rand = Math.floor(Math.random() * 90) + 10;
+        const inputRoom = document.getElementById('inputRoomId');
+        if (inputRoom) inputRoom.value = `MESA-${rand}`;
+        updateProfileCardUI();
+        showToast('🏠 Has regresado a la pantalla de inicio.');
+      }
+    });
+  }
+
+  // Botón: Salir y cerrar la aplicación desde la Sala de Espera
+  const btnLobbyExitApp = document.getElementById('btnLobbyExitApp');
+  if (btnLobbyExitApp) {
+    btnLobbyExitApp.addEventListener('click', () => {
+      window.soundManager.playTileClick();
+      const ok = confirm('¿Estás seguro de que deseas salir y cerrar la aplicación?');
+      if (ok) {
+        clearActiveSession();
+        socket.emit('leave_game');
+        window.soundManager.stopBgm(true);
+        window.soundManager.stopTimeBomb();
+        window.soundManager.stopChampions();
+
+        try {
+          window.close();
+        } catch (e) { }
+
+        lobbyModal.classList.add('hidden');
+        lobbyModal.style.display = 'none';
+        setupModal.classList.add('hidden');
+        setupModal.style.display = 'none';
+
+        document.body.innerHTML = `
+          <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:#022c22;color:#a7f3d0;font-family:system-ui,-apple-system,sans-serif;text-align:center;padding:24px;">
+            <div style="font-size:52px;margin-bottom:12px;">👋</div>
+            <h1 style="font-size:24px;font-weight:900;color:#fcd34d;margin-bottom:8px;">Has salido de la partida</h1>
+            <p style="font-size:15px;color:#cbd5e1;max-width:320px;line-height:1.4;">Ya puedes cerrar esta ventana o salir de la aplicación.</p>
+            <button onclick="window.location.href='/'" style="margin-top:24px;padding:12px 24px;background:#059669;color:white;border:none;border-radius:14px;font-size:15px;font-weight:bold;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,0.4);">
+              🏠 Volver a Abrir el Juego
+            </button>
+          </div>
+        `;
+      }
+    });
+  }
+
   // Botón Copiar Enlace de Invitación
   document.getElementById('btnCopyInvite').addEventListener('click', () => {
     if (!currentRoom) return;
@@ -669,8 +730,10 @@
       sessionRecoveryTimeout = null;
     }
 
-    if (room && room.id && room.status !== 'session_finished') {
-      saveActiveSession({ roomId: room.id });
+    if (room && room.id && room.status === 'playing') {
+      saveActiveSession({ roomId: room.id, status: 'playing' });
+    } else {
+      clearActiveSession();
     }
 
     const banner = document.getElementById('reconnectBanner');
@@ -2313,12 +2376,15 @@
 
   // Confirmación al jugador que abandonó
   socket.on('leave_game_ack', (data) => {
-    // Si la sesión no ha terminado, mostrar aviso de abandono. Si ya concluyó la partida, salir limpio al menú
-    if (!finalBalanceModal || finalBalanceModal.classList.contains('hidden') || finalBalanceModal.style.display === 'none') {
-      alert(`Has abandonado la partida. Se registró 1 juego perdido para ${data.playerName}. Total de derrotas acumuladas: ${data.losses}.`);
+    // Solo mostrar aviso de abandono si la partida estaba efectivamente en juego
+    if (data.wasPlaying) {
+      if (!finalBalanceModal || finalBalanceModal.classList.contains('hidden') || finalBalanceModal.style.display === 'none') {
+        alert(`Has abandonado la partida. Se registró 1 juego perdido para ${data.playerName}. Total de derrotas acumuladas: ${data.losses}.`);
+      }
     }
     clearActiveSession();
     lobbyModal.classList.add('hidden');
+    lobbyModal.style.display = 'none';
     scoreboardModal.classList.add('hidden');
     roundOverModal.classList.add('hidden');
     finalBalanceModal.classList.add('hidden');
@@ -3419,7 +3485,6 @@
       if (inputRoom) inputRoom.value = targetRoom;
 
       const nameInput = document.getElementById('inputPlayerName')?.value?.trim() || 'Jugador';
-      saveActiveSession({ roomId: targetRoom, playerName: nameInput, avatar: selectedAvatar });
       socket.emit('join_room', {
         roomId: targetRoom,
         playerName: nameInput,
@@ -3504,7 +3569,6 @@
       gameInviteModal.style.display = 'none';
 
       const nameInput = document.getElementById('inputPlayerName')?.value?.trim() || 'Jugador';
-      saveActiveSession({ roomId: targetRoom, playerName: nameInput, avatar: selectedAvatar });
       socket.emit('join_room', {
         roomId: targetRoom,
         playerName: nameInput,

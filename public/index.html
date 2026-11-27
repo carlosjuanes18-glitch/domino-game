@@ -18,7 +18,7 @@
   <!-- Socket.io -->
   <script src="/socket.io/socket.io.js"></script>
   <!-- Estilos personalizados -->
-  <link rel="stylesheet" href="/css/style.css?v=33.0">
+  <link rel="stylesheet" href="/css/style.css?v=34.0">
 </head>
 
 <body>
@@ -504,6 +504,20 @@
           class="text-[10px] text-amber-300/80 hover:text-amber-300 underline font-semibold text-center py-0.5">
           🔄 ¿Hay jugadores fantasma o quieres reiniciar la mesa? Toca aquí
         </button>
+
+        <!-- Opciones de Salida de la Sala de Espera -->
+        <div class="grid grid-cols-2 gap-2 mt-1 pt-2 border-t border-slate-700/60">
+          <button id="btnLobbyReturnHome" type="button"
+            class="secondary-btn !py-2 !px-2 text-xs font-bold flex items-center justify-center gap-1.5 bg-slate-800/90 hover:bg-slate-700 border border-slate-600 text-slate-200 transition">
+            <span>🏠</span>
+            <span>Regresar al Inicio</span>
+          </button>
+          <button id="btnLobbyExitApp" type="button"
+            class="danger-btn !py-2 !px-2 text-xs font-bold flex items-center justify-center gap-1.5 bg-rose-950/70 hover:bg-rose-900 border border-rose-500/50 text-rose-200 transition">
+            <span>🚪</span>
+            <span>Salir y Cerrar</span>
+          </button>
+        </div>
       </div>
 
       <div class="text-[7.5px] text-emerald-400/60 text-center mt-1">Por Von Carloo MC • Veracruz</div>
@@ -1200,10 +1214,10 @@
   </div>
 
   <!-- Scripts -->
-  <script src="/js/avatars.js?v=33.0"></script>
-  <script src="/js/audio.js?v=33.0"></script>
-  <script src="/js/domino-renderer.js?v=33.0"></script>
-  <script src="/js/game.js?v=33.0"></script>
+  <script src="/js/avatars.js?v=34.0"></script>
+  <script src="/js/audio.js?v=34.0"></script>
+  <script src="/js/domino-renderer.js?v=34.0"></script>
+  <script src="/js/game.js?v=34.0"></script>
 </body>
 
 </html>

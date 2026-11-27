@@ -1607,10 +1607,11 @@ io.on('connection', (socket) => {
     const player = room.players.find(p => p.socketId === socket.id);
     if (!player) return;
 
-    player.losses = (player.losses || 0) + 1;
-    player.hasLeft = true;
+    const wasPlaying = (room.status === 'playing');
+    if (wasPlaying) {
+      player.losses = (player.losses || 0) + 1;
+      player.hasLeft = true;
 
-    if (room.status === 'playing') {
       const activePlayers = room.players.filter(p => !p.hasLeft);
       if (activePlayers.length < 2) {
         // Solo queda 1 jugador activo: gana por abandono del rival
@@ -1647,6 +1648,10 @@ io.on('connection', (socket) => {
     } else if (room.status === 'waiting' || room.status === 'session_finished') {
       room.players = room.players.filter(p => p.socketId !== socket.id && p.playerId !== player.playerId);
       room.players.forEach((p, idx) => p.seat = idx);
+      const firstHuman = room.players.find(p => !p.isBot);
+      if (firstHuman) {
+        room.hostId = firstHuman.socketId;
+      }
       broadcastRoom(room);
     } else {
       broadcastRoom(room);
@@ -1654,7 +1659,8 @@ io.on('connection', (socket) => {
 
     socket.emit('leave_game_ack', {
       playerName: player.name,
-      losses: player.losses
+      losses: player.losses,
+      wasPlaying: wasPlaying
     });
   });
 

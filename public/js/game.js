@@ -35,7 +35,52 @@
     }
   }, 10000);
 
-  // Auto-recuperar sesión y sincronizar mesa al reconectar o volver de otra app / desbloquear pantalla
+  // ========================================================
+  // PERSISTENCIA DE SESIÓN ACTIVA (Para volver tras cerrar ventana/accidente)
+  // ========================================================
+  function saveActiveSession(sessionData) {
+    if (!sessionData || !sessionData.roomId) return;
+    const pName = sessionData.playerName || document.getElementById('inputPlayerName')?.value?.trim() || localStorage.getItem('domino_player_name') || 'Jugador';
+    const pAv = sessionData.avatar || (typeof selectedAvatar !== 'undefined' && selectedAvatar) || localStorage.getItem('domino_selected_avatar') || 'avatar_1';
+    const dataToSave = {
+      roomId: sessionData.roomId,
+      playerName: pName,
+      avatar: pAv,
+      clientId: myClientId,
+      playerId: myPlayerId,
+      playerToken: myPlayerToken,
+      savedAt: Date.now()
+    };
+    try {
+      const serialized = JSON.stringify(dataToSave);
+      localStorage.setItem('domino_active_session', serialized);
+      sessionStorage.setItem('domino_active_session', serialized);
+    } catch (e) {
+      console.warn('Error guardando active session:', e);
+    }
+  }
+
+  function getActiveSession() {
+    try {
+      const raw = localStorage.getItem('domino_active_session') || sessionStorage.getItem('domino_active_session');
+      if (!raw) return null;
+      return JSON.parse(raw);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function clearActiveSession() {
+    try {
+      localStorage.removeItem('domino_active_session');
+      sessionStorage.removeItem('domino_active_session');
+    } catch (e) { }
+  }
+
+  let sessionRecoveryTimeout = null;
+  let isAttemptingRecovery = false;
+
+  // Auto-recuperar sesión y sincronizar mesa al reconectar o volver de otra app / desbloquear pantalla / reabrir ventana
   function syncSessionWithServer() {
     if (!socket) return;
     if (!socket.connected) {
@@ -51,12 +96,12 @@
       avatar: pAvatar
     });
 
-    const saved = sessionStorage.getItem('domino_active_session');
-    if (saved) {
+    const saved = getActiveSession();
+    if (saved && saved.roomId) {
       try {
-        const data = JSON.parse(saved);
+        isAttemptingRecovery = true;
         socket.emit('join_room', {
-          ...data,
+          ...saved,
           clientId: myClientId,
           playerId: myPlayerId,
           playerToken: myPlayerToken
@@ -316,15 +361,12 @@
 
         updateProfileCardUI();
 
-        // Actualizar sesión activa en sessionStorage si existe
-        const saved = sessionStorage.getItem('domino_active_session');
+        // Actualizar sesión activa persistente si existe
+        const saved = getActiveSession();
         if (saved) {
-          try {
-            const data = JSON.parse(saved);
-            data.playerName = newName;
-            data.avatar = selectedAvatar;
-            sessionStorage.setItem('domino_active_session', JSON.stringify(data));
-          } catch (e) {}
+          saved.playerName = newName;
+          saved.avatar = selectedAvatar;
+          saveActiveSession(saved);
         }
 
         // Notificar en tiempo real al servidor
@@ -375,6 +417,44 @@
 
   // Inicializar verificación de registro y tarjeta de perfil
   checkFirstTimeRegistration();
+
+  // Si el usuario ya tenía una partida activa guardada (cierre accidental de ventana o corte),
+  // recuperarla automáticamente al tocar el icono del juego sin pasar por el menú inicial
+  const savedActive = getActiveSession();
+  if (savedActive && savedActive.roomId && !roomParam) {
+    if (setupModal) {
+      setupModal.classList.add('hidden');
+      setupModal.style.display = 'none';
+    }
+    const banner = document.getElementById('reconnectBanner');
+    if (banner) {
+      banner.textContent = `🔄 Recuperando tu partida en curso en ${savedActive.roomId}...`;
+      banner.classList.remove('hidden');
+    }
+    isAttemptingRecovery = true;
+    syncSessionWithServer();
+
+    // Timeout de seguridad por si la sala ya no existe o terminó
+    sessionRecoveryTimeout = setTimeout(() => {
+      if (!currentRoom || currentRoom.status === 'session_finished') {
+        const b = document.getElementById('reconnectBanner');
+        if (b) b.classList.add('hidden');
+        if (setupModal) {
+          setupModal.classList.remove('hidden');
+          setupModal.style.display = 'flex';
+          showToast('ℹ️ La partida anterior ya concluyó o no está disponible.');
+          clearActiveSession();
+        }
+      }
+    }, 7000);
+  }
+
+  // Prevenir cierres accidentales durante partidas activas y asegurar guardado
+  window.addEventListener('beforeunload', (e) => {
+    if (currentRoom && currentRoom.status === 'playing') {
+      saveActiveSession({ roomId: currentRoom.id });
+    }
+  });
 
   const btnOpenEditProfile = document.getElementById('btnOpenEditProfile');
   if (btnOpenEditProfile) {
@@ -427,15 +507,12 @@
     localStorage.setItem('domino_player_name', nameInput);
     localStorage.setItem('domino_selected_avatar', selectedAvatar);
 
-    // Guardar para que nunca se pierda si minimiza o cambia de app
-    sessionStorage.setItem('domino_active_session', JSON.stringify({
+    // Guardar sesión activa persistente para auto-recuperar si se cierra la ventana
+    saveActiveSession({
       roomId: roomInput,
       playerName: nameInput,
-      avatar: selectedAvatar,
-      clientId: myClientId,
-      playerId: myPlayerId,
-      playerToken: myPlayerToken
-    }));
+      avatar: selectedAvatar
+    });
 
     socket.emit('join_room', {
       roomId: roomInput,
@@ -466,14 +543,12 @@
       localStorage.setItem('domino_player_name', nameInput);
       localStorage.setItem('domino_selected_avatar', selectedAvatar);
 
-      sessionStorage.setItem('domino_active_session', JSON.stringify({
+      // Guardar sesión activa persistente
+      saveActiveSession({
         roomId: cleanRoom,
         playerName: nameInput,
-        avatar: selectedAvatar,
-        clientId: myClientId,
-        playerId: myPlayerId,
-        playerToken: myPlayerToken
-      }));
+        avatar: selectedAvatar
+      });
 
       socket.emit('join_room', {
         roomId: cleanRoom,
@@ -492,10 +567,20 @@
   // Evento: Unido exitosamente a la sala
   socket.on('joined_successfully', (data) => {
     mySeat = data.playerSeat;
+    saveActiveSession({ roomId: data.roomId });
+    if (sessionRecoveryTimeout) {
+      clearTimeout(sessionRecoveryTimeout);
+      sessionRecoveryTimeout = null;
+    }
     setupModal.classList.add('hidden');
     setupModal.style.display = 'none';
-    lobbyModal.classList.remove('hidden');
-    lobbyModal.style.display = 'flex';
+    if (currentRoom && currentRoom.status === 'playing') {
+      lobbyModal.classList.add('hidden');
+      lobbyModal.style.display = 'none';
+    } else {
+      lobbyModal.classList.remove('hidden');
+      lobbyModal.style.display = 'flex';
+    }
   });
 
   // Botón Reclamar Anfitrión
@@ -578,6 +663,33 @@
   // Actualización Global de la Sala
   socket.on('room_update', (room) => {
     currentRoom = room;
+
+    if (sessionRecoveryTimeout) {
+      clearTimeout(sessionRecoveryTimeout);
+      sessionRecoveryTimeout = null;
+    }
+
+    if (room && room.id && room.status !== 'session_finished') {
+      saveActiveSession({ roomId: room.id });
+    }
+
+    const banner = document.getElementById('reconnectBanner');
+    if (banner) banner.classList.add('hidden');
+
+    // Determinar mySeat de inmediato si aún no está asignado o varió
+    if (mySeat === null || !room.players.some(p => p.seat === mySeat)) {
+      const me = room.players.find(p => p.hand !== undefined) ||
+                 room.players.find(p => (myPlayerId && p.playerId === myPlayerId) || (myClientId && p.clientId === myClientId));
+      if (me) {
+        mySeat = me.seat;
+      }
+    }
+
+    if (isAttemptingRecovery) {
+      isAttemptingRecovery = false;
+      showToast(`🎮 ¡Partida en ${room.id} recuperada! Continúa tu juego.`);
+    }
+
     updateRoomUI(room);
   });
 
@@ -2103,6 +2215,18 @@
   // Errores de jugada o turno (Notificación flotante no intrusiva que nunca saca de la partida)
   socket.on('error_message', (msg) => {
     showToast(`⚠️ ${msg}`);
+    if (sessionRecoveryTimeout) {
+      clearTimeout(sessionRecoveryTimeout);
+      sessionRecoveryTimeout = null;
+      isAttemptingRecovery = false;
+      clearActiveSession();
+      if (setupModal) {
+        setupModal.classList.remove('hidden');
+        setupModal.style.display = 'flex';
+      }
+      const banner = document.getElementById('reconnectBanner');
+      if (banner) banner.classList.add('hidden');
+    }
     if (currentRoom) {
       updateUI(currentRoom);
       socket.emit('request_room_refresh');
@@ -2192,7 +2316,7 @@
     if (!finalBalanceModal || finalBalanceModal.classList.contains('hidden') || finalBalanceModal.style.display === 'none') {
       alert(`Has abandonado la partida. Se registró 1 juego perdido para ${data.playerName}. Total de derrotas acumuladas: ${data.losses}.`);
     }
-    sessionStorage.removeItem('domino_active_session');
+    clearActiveSession();
     lobbyModal.classList.add('hidden');
     scoreboardModal.classList.add('hidden');
     roundOverModal.classList.add('hidden');
@@ -2214,7 +2338,7 @@
     window.soundManager.stopChampions();
     window.soundManager.stopBgm(true);
 
-    sessionStorage.removeItem('domino_active_session');
+    clearActiveSession();
     socket.emit('leave_game');
 
     currentRoom = null;
@@ -3293,6 +3417,7 @@
       if (inputRoom) inputRoom.value = targetRoom;
 
       const nameInput = document.getElementById('inputPlayerName')?.value?.trim() || 'Jugador';
+      saveActiveSession({ roomId: targetRoom, playerName: nameInput, avatar: selectedAvatar });
       socket.emit('join_room', {
         roomId: targetRoom,
         playerName: nameInput,
@@ -3377,6 +3502,7 @@
       gameInviteModal.style.display = 'none';
 
       const nameInput = document.getElementById('inputPlayerName')?.value?.trim() || 'Jugador';
+      saveActiveSession({ roomId: targetRoom, playerName: nameInput, avatar: selectedAvatar });
       socket.emit('join_room', {
         roomId: targetRoom,
         playerName: nameInput,
@@ -3502,6 +3628,10 @@
     if (partnerDisconnectBanner) {
       partnerDisconnectBanner.classList.add('hidden');
     }
+    if (graceExpiredModal) {
+      graceExpiredModal.classList.add('hidden');
+      graceExpiredModal.style.display = 'none';
+    }
     if (activePartnerGraceInterval) {
       clearInterval(activePartnerGraceInterval);
       activePartnerGraceInterval = null;
@@ -3530,7 +3660,7 @@
         graceExpiredModal.classList.add('hidden');
         graceExpiredModal.style.display = 'none';
       }
-      sessionStorage.removeItem('domino_active_session');
+      clearActiveSession();
       window.location.reload();
     });
   }

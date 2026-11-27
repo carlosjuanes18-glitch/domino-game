@@ -1758,7 +1758,7 @@ io.on('connection', (socket) => {
       // Si es su turno, permite que juegue normalmente.
       // Cuando el turno llegue al jugador desconectado, espera durante el periodo de gracia y conserva su asiento.
       // Evita saltar turnos o jugar en nombre del jugador desconectado.
-      const graceSeconds = 60;
+      const graceSeconds = 180; // 3 minutos de gracia para que cualquier accidente o cierre permita volver al juego con un click
       const isHisTurn = (room.currentTurnSeat === player.seat);
 
       io.to(room.id).emit('player_disconnected', {

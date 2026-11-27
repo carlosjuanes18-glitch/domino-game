@@ -760,7 +760,7 @@
   });
 
   function updateRoomUI(room) {
-    const maxP = room.maxPlayers || 4;
+    const maxP = room.maxPlayers || 2;
 
     roomCodeHeader.textContent = room.id;
     roundNumHeader.textContent = room.round || 1;
@@ -854,7 +854,7 @@
     if (!seatsContainer) return;
     seatsContainer.innerHTML = '';
 
-    const maxP = room.maxPlayers || 4;
+    const maxP = room.maxPlayers || 2;
     const isHost = (room.hostId === socket.id);
 
     // Actualizar badges del anfitrión y selector de cantidad de jugadores
@@ -1069,7 +1069,7 @@
 
   // Actualizar Pods en la Mesa de Dominó adaptados a 2, 3 o 4 jugadores
   function updatePlayerPods(room) {
-    const maxP = room.maxPlayers || 4;
+    const maxP = room.maxPlayers || 2;
 
     // Ocultar todos los pods primero
     ['south', 'west', 'north', 'east'].forEach(pos => {
@@ -1961,7 +1961,7 @@
 
   function triggerFloatingReaction(seat, content) {
     if (!content) return;
-    const maxP = (currentRoom && currentRoom.maxPlayers) ? currentRoom.maxPlayers : 4;
+    const maxP = (currentRoom && currentRoom.maxPlayers) ? currentRoom.maxPlayers : 2;
     let targetPos = 'south';
 
     if (mySeat !== null) {

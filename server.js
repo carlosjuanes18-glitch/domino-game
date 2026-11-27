@@ -168,7 +168,7 @@ function createInitialRoom(roomId, hostSocketId) {
     id: roomId,
     hostId: hostSocketId,
     status: 'waiting', // 'waiting', 'playing', 'round_end'
-    maxPlayers: 4, // 2, 3 o 4 jugadores elegidos por el anfitrión
+    maxPlayers: 2, // 2 por defecto (el anfitrión puede cambiar a 3 o 4)
     round: 0,
     gameRate: 5, // Valor de cada partida ganada (pesos)
     penaltyPerPass: 1, // Valor de aportación / penalización por cada paso (monedas/puntos)
@@ -191,7 +191,7 @@ function getSafeRoomData(room, requesterSocketId) {
     id: room.id,
     hostId: room.hostId,
     status: room.status,
-    maxPlayers: room.maxPlayers || 4,
+    maxPlayers: room.maxPlayers || 2,
     round: room.round,
     gameRate: (typeof room.gameRate === 'number') ? room.gameRate : 5,
     penaltyPerPass: (typeof room.penaltyPerPass === 'number') ? room.penaltyPerPass : 1,
@@ -1178,7 +1178,7 @@ io.on('connection', (socket) => {
           botSeat.isDisconnected = false;
           botSeat.disconnectedAt = null;
           botSeat.lastSeen = Date.now();
-        } else if (room.players.length < (room.maxPlayers || 4)) {
+        } else if (room.players.length < (room.maxPlayers || 2)) {
           // Si hay espacio, añadir al jugador
           const takenSeats = room.players.map(p => p.seat);
           let freeSeat = 0;
@@ -1210,7 +1210,7 @@ io.on('connection', (socket) => {
           room.players.push(newPlayer);
         } else {
           // La sala de espera está llena
-          socket.emit('error_message', `La sala ${formattedRoomId} ya está llena (${room.players.length}/${room.maxPlayers || 4}).`);
+          socket.emit('error_message', `La sala ${formattedRoomId} ya está llena (${room.players.length}/${room.maxPlayers || 2}).`);
           return;
         }
       } else {
@@ -1324,7 +1324,7 @@ io.on('connection', (socket) => {
   socket.on('add_bot', () => {
     if (!currentRoomId) return;
     const room = rooms.get(currentRoomId);
-    const maxP = room ? (room.maxPlayers || 4) : 4;
+    const maxP = room ? (room.maxPlayers || 2) : 2;
     if (!room || room.players.length >= maxP || room.status !== 'waiting') return;
 
     if (room.hostId && room.hostId !== socket.id) {
@@ -1394,7 +1394,7 @@ io.on('connection', (socket) => {
       return;
     }
 
-    const maxP = room.maxPlayers || 4;
+    const maxP = room.maxPlayers || 2;
     if (room.players.length !== maxP) {
       socket.emit('error_message', `Se requieren exactamente ${maxP} jugadores para iniciar.`);
       return;

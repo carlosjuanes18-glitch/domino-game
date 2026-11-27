@@ -18,7 +18,7 @@
   <!-- Socket.io -->
   <script src="/socket.io/socket.io.js"></script>
   <!-- Estilos personalizados -->
-  <link rel="stylesheet" href="/css/style.css?v=36.0">
+  <link rel="stylesheet" href="/css/style.css?v=37.0">
 </head>
 
 <body>
@@ -386,7 +386,7 @@
         </div>
         <div
           class="text-xs bg-emerald-950 text-emerald-300 font-extrabold px-2.5 py-0.5 rounded-full border border-emerald-500/40">
-          <span id="lobbyCount">1/4</span>
+          <span id="lobbyCount">1/2</span>
         </div>
       </div>
 
@@ -413,13 +413,13 @@
           </span>
         </div>
         <div id="playerCountButtons" class="grid grid-cols-3 gap-1.5">
-          <button type="button" class="player-count-btn secondary-btn !py-1 !text-xs font-bold" data-count="2">
+          <button type="button" class="player-count-btn secondary-btn !py-1 !text-xs font-bold active" data-count="2">
             2 Jugadores
           </button>
           <button type="button" class="player-count-btn secondary-btn !py-1 !text-xs font-bold" data-count="3">
             3 Jugadores
           </button>
-          <button type="button" class="player-count-btn secondary-btn !py-1 !text-xs font-bold active" data-count="4">
+          <button type="button" class="player-count-btn secondary-btn !py-1 !text-xs font-bold" data-count="4">
             4 Jugadores
           </button>
         </div>
@@ -434,7 +434,7 @@
       </div>
 
       <div class="flex items-center justify-between text-[10.5px] text-slate-300 font-bold mb-1">
-        <span>Jugadores en la mesa (<span id="lobbyNeededPlayers">4</span> para iniciar):</span>
+        <span>Jugadores en la mesa (<span id="lobbyNeededPlayers">2</span> para iniciar):</span>
         <button id="btnEditProfileFromLobby" type="button"
           class="text-[10px] text-emerald-400 hover:text-emerald-300 bg-emerald-950/60 border border-emerald-500/40 px-2 py-0.5 rounded-full font-bold flex items-center gap-1 transition-all">
           <span>✏️</span> Cambiar Mi Nick
@@ -495,7 +495,7 @@
       <!-- Botones de Acción del Lobby (EL BOTÓN COMENZAR ARRIBA PARA QUE NUNCA SE OCULTE) -->
       <div class="flex flex-col gap-1.5 mt-0.5">
         <button id="btnStartGame" class="primary-btn !py-2 text-sm sm:text-base font-black shadow-lg" disabled>
-          <span>🚀 ¡Comenzar Partida (4/4)!</span>
+          <span>🚀 ¡Comenzar Partida (2/2)!</span>
         </button>
         <button id="btnAddBot" class="secondary-btn !py-1.5 text-xs font-bold">
           <span>🤖 Añadir Bot Inteligente (Completar asiento)</span>
@@ -1227,10 +1227,10 @@
   </div>
 
   <!-- Scripts -->
-  <script src="/js/avatars.js?v=36.0"></script>
-  <script src="/js/audio.js?v=36.0"></script>
-  <script src="/js/domino-renderer.js?v=36.0"></script>
-  <script src="/js/game.js?v=36.0"></script>
+  <script src="/js/avatars.js?v=37.0"></script>
+  <script src="/js/audio.js?v=37.0"></script>
+  <script src="/js/domino-renderer.js?v=37.0"></script>
+  <script src="/js/game.js?v=37.0"></script>
 </body>
 
 </html>

@@ -1819,4 +1819,14 @@ io.on('connection', (socket) => {
 
 server.listen(PORT, () => {
   console.log(`Servidor de Dominó activo en http://localhost:${PORT}`);
+  // Sincronizar amistades persistentes con Google Sheets si las credenciales están configuradas
+  if (storage.googleSheets && storage.googleSheets.isConfigured()) {
+    storage.syncFriendshipsFromGoogleSheets().then(res => {
+      console.log(`[Google Sheets] Inicio de sincronización: ${res.synced} amistades nuevas cargadas (Total: ${res.total}).`);
+    }).catch(err => {
+      console.warn('[Google Sheets] No se pudo sincronizar en el arranque:', err.message);
+    });
+  } else {
+    console.log('[Google Sheets] Variables de entorno no configuradas. Operando con almacenamiento local.');
+  }
 });

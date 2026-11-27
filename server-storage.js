@@ -2,6 +2,7 @@
 const fs = require('fs');
 const path = require('path');
 const webpush = require('web-push');
+const googleSheets = require('./google-sheets-storage');
 
 const DATA_DIR = path.join(__dirname, 'data');
 const DB_FILE = path.join(DATA_DIR, 'persistence.json');
@@ -149,6 +150,11 @@ function removeFriend(idA, idB) {
   );
   if (db.friends.length < initialLen) {
     saveDatabase();
+    if (googleSheets.isConfigured()) {
+      googleSheets.removeFriendship(idA, idB).catch(err => {
+        console.warn('[Google Sheets] Error al eliminar amistad:', err.message);
+      });
+    }
     return { ok: true, removed: true, idA, idB };
   }
   return { ok: false, error: 'No se encontró la amistad' };
@@ -182,6 +188,11 @@ function sendFriendRequest(fromId, toId) {
     reciprocal.acceptedAt = Date.now();
     db.friends.push({ user1: fromId, user2: toId, createdAt: Date.now() });
     saveDatabase();
+    if (googleSheets.isConfigured()) {
+      googleSheets.addFriendship(fromId, toId, db.users[fromId]?.name, db.users[toId]?.name).catch(err => {
+        console.warn('[Google Sheets] Error al registrar amistad:', err.message);
+      });
+    }
     return { ok: true, autoAccepted: true, friend: db.users[toId] };
   }
 
@@ -231,6 +242,11 @@ function respondFriendRequest(requestId, recipientId, action) {
       db.friends.push({ user1: req.fromId, user2: req.toId, createdAt: Date.now() });
     }
     saveDatabase();
+    if (googleSheets.isConfigured()) {
+      googleSheets.addFriendship(req.fromId, req.toId, db.users[req.fromId]?.name, db.users[req.toId]?.name).catch(err => {
+        console.warn('[Google Sheets] Error al registrar amistad:', err.message);
+      });
+    }
     return {
       ok: true,
       action: 'accepted',
@@ -402,6 +418,56 @@ function loadRoomsFromDisk() {
   return [];
 }
 
+async function syncFriendshipsFromGoogleSheets() {
+  if (!googleSheets.isConfigured()) return { synced: 0, reason: 'not_configured' };
+  try {
+    const sheetFriends = await googleSheets.loadFriendships();
+    let newCount = 0;
+    sheetFriends.forEach(sf => {
+      const exists = db.friends.some(f =>
+        (f.user1 === sf.user1 && f.user2 === sf.user2) ||
+        (f.user1 === sf.user2 && f.user2 === sf.user1)
+      );
+      if (!exists) {
+        db.friends.push({
+          user1: sf.user1,
+          user2: sf.user2,
+          createdAt: sf.createdAt || Date.now()
+        });
+        newCount++;
+      }
+      // Asegurar que existan metadatos de usuario mínimos para listarlos
+      if (!db.users[sf.user1] && sf.name1) {
+        db.users[sf.user1] = {
+          id: sf.user1,
+          name: sf.name1,
+          avatar: 'avatar_1',
+          createdAt: sf.createdAt || Date.now(),
+          lastSeen: Date.now()
+        };
+      }
+      if (!db.users[sf.user2] && sf.name2) {
+        db.users[sf.user2] = {
+          id: sf.user2,
+          name: sf.name2,
+          avatar: 'avatar_1',
+          createdAt: sf.createdAt || Date.now(),
+          lastSeen: Date.now()
+        };
+      }
+    });
+
+    if (newCount > 0) {
+      saveDatabase();
+      console.log(`[Google Sheets] Sincronizadas ${newCount} amistades desde Google Sheets.`);
+    }
+    return { synced: newCount, total: db.friends.length };
+  } catch (err) {
+    console.error('[Google Sheets] Error al sincronizar amistades:', err.message);
+    return { synced: 0, error: err.message };
+  }
+}
+
 module.exports = {
   vapidKeys,
   upsertUser,
@@ -418,5 +484,7 @@ module.exports = {
   savePushSubscription,
   sendPushNotification,
   saveRoomsToDisk,
-  loadRoomsFromDisk
+  loadRoomsFromDisk,
+  syncFriendshipsFromGoogleSheets,
+  googleSheets
 };

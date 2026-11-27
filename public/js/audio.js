@@ -22,6 +22,8 @@ class SoundManager {
     this.bgmInterrupted = false;
     this.bgmInterruptionTimeout = null;
     this.isChampionsExclusive = false;
+    this.isBombExclusive = false;
+    this.bombEndTimeout = null;
 
     // Archivos de audio reales personalizados
     this.audioFiles = {
@@ -79,6 +81,7 @@ class SoundManager {
   // Reproducir sonido de intervención pausando temporalmente la música de fondo
   playAudio(key, volume = 0.9, isIntervention = true) {
     if (this.muted) return;
+    if (this.isBombExclusive && key !== 'timeBomb') return;
     this.init();
     const sound = this.audioFiles[key];
     if (!sound) return;
@@ -114,7 +117,7 @@ class SoundManager {
 
   // Cambiar entre canción Overworld (inicial) y Underground (a 3 fichas)
   setBgmTrack(track) {
-    if (this.isChampionsExclusive) return;
+    if (this.isChampionsExclusive || this.isBombExclusive) return;
     const fbModal = document.getElementById('finalBalanceModal');
     if (fbModal && !fbModal.classList.contains('hidden') && fbModal.style.display !== 'none') return;
 
@@ -139,7 +142,7 @@ class SoundManager {
 
   // Iniciar / Continuar la música de fondo durante la partida
   startBgm() {
-    if (this.isChampionsExclusive) return;
+    if (this.isChampionsExclusive || this.isBombExclusive) return;
     const fbModal = document.getElementById('finalBalanceModal');
     if (fbModal && !fbModal.classList.contains('hidden') && fbModal.style.display !== 'none') return;
 
@@ -280,9 +283,94 @@ class SoundManager {
     }
   }
 
-  // Efecto de sonido Bomba de Tiempo (para el emoji de bomba clásica 💣)
+  // Efecto de sonido Bomba de Tiempo cuando ambos extremos tienen números iguales
+  // Detiene todos los demás sonidos y música para sonar única y exclusivamente la bomba
+  playTimeBombExclusive() {
+    this.isBombExclusive = true;
+    this.stopBgm(false); // Pausar BGM de Mario
+
+    // Detener cualquier otro sonido o efecto que esté sonando
+    Object.keys(this.audioFiles).forEach(key => {
+      if (key !== 'timeBomb') {
+        const s = this.audioFiles[key];
+        if (s) {
+          try {
+            s.pause();
+            s.currentTime = 0;
+          } catch (e) { }
+        }
+      }
+    });
+
+    const bombSound = this.audioFiles['timeBomb'];
+    if (!bombSound) return;
+
+    if (this.bombEndTimeout) {
+      clearTimeout(this.bombEndTimeout);
+      this.bombEndTimeout = null;
+    }
+
+    bombSound.onended = () => {
+      this.isBombExclusive = false;
+      // Reanudar la música de fondo solo si la partida sigue en juego y no está finalizada
+      const fbModal = document.getElementById('finalBalanceModal');
+      const roModal = document.getElementById('roundOverModal');
+      const inFinal = fbModal && !fbModal.classList.contains('hidden') && fbModal.style.display !== 'none';
+      const inRoundOver = roModal && !roModal.classList.contains('hidden') && roModal.style.display !== 'none';
+      if (!inFinal && !inRoundOver && this.bgmDesired && !this.muted) {
+        this.init();
+        try { this.bgm.play().catch(() => {}); } catch (e) {}
+      }
+    };
+
+    // Failsafe por si onended no se dispara (duración del archivo ~ 13s)
+    const durationSec = (bombSound.duration && !isNaN(bombSound.duration) && bombSound.duration > 0) ? bombSound.duration : 13;
+    this.bombEndTimeout = setTimeout(() => {
+      if (this.isBombExclusive) {
+        this.isBombExclusive = false;
+        const fbModal = document.getElementById('finalBalanceModal');
+        const roModal = document.getElementById('roundOverModal');
+        const inFinal = fbModal && !fbModal.classList.contains('hidden') && fbModal.style.display !== 'none';
+        const inRoundOver = roModal && !roModal.classList.contains('hidden') && roModal.style.display !== 'none';
+        if (!inFinal && !inRoundOver && this.bgmDesired && !this.muted) {
+          this.init();
+          try { this.bgm.play().catch(() => {}); } catch (e) {}
+        }
+      }
+    }, (durationSec + 0.5) * 1000);
+
+    if (this.muted) return;
+    this.init();
+    try {
+      bombSound.pause();
+      bombSound.currentTime = 0;
+      bombSound.volume = 1.0;
+      const p = bombSound.play();
+      if (p !== undefined) p.catch(() => {});
+    } catch (e) {
+      console.warn('Bomb audio play error:', e);
+    }
+  }
+
+  // Alias para mantener compatibilidad
   playTimeBomb() {
-    this.playAudio('timeBomb', 0.95);
+    this.playTimeBombExclusive();
+  }
+
+  // Detener la bomba si termina la ronda o se sale de la partida
+  stopTimeBomb() {
+    this.isBombExclusive = false;
+    if (this.bombEndTimeout) {
+      clearTimeout(this.bombEndTimeout);
+      this.bombEndTimeout = null;
+    }
+    const bombSound = this.audioFiles['timeBomb'];
+    if (bombSound) {
+      try {
+        bombSound.pause();
+        bombSound.currentTime = 0;
+      } catch (e) {}
+    }
   }
 
   // Sonido Super Mario Bros PowerUp (cuando una ficha colocada hace pasar al siguiente jugador)

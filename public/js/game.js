@@ -1358,17 +1358,17 @@
 
   // Notificaciones de jugadas recibidas
   socket.on('tile_played', (data) => {
-    if (data.forcedPass) {
+    if (data.isBombEnds) {
+      // Ambos extremos con números iguales: parar todos los sonidos y sonar únicamente la bomba de tiempo
+      window.soundManager.playTimeBombExclusive();
+      triggerBombScreenEffect(data.seat, data.bombNumber);
+      if (data.forcedPass) {
+        triggerForcedPassScreenEffect(data.seat, data.playerName, data.forcedPlayerName, data.forcedPlayerSeat);
+      }
+    } else if (data.forcedPass) {
       // ¡Al poner la ficha hizo pasar al siguiente jugador! Sonido Super Mario Bros PowerUp
       window.soundManager.playMarioPowerUp();
       triggerForcedPassScreenEffect(data.seat, data.playerName, data.forcedPlayerName, data.forcedPlayerSeat);
-      if (data.isBombEnds) {
-        triggerBombScreenEffect(data.seat, data.bombNumber);
-      }
-    } else if (data.isBombEnds) {
-      // Puntas iguales: ¡Activar efecto de bomba con sonido característico y animación!
-      window.soundManager.playTimeBomb();
-      triggerBombScreenEffect(data.seat, data.bombNumber);
     } else {
       window.soundManager.playTileClick();
     }
@@ -1381,6 +1381,7 @@
 
   // Final de Ronda / Dominó / Tranca
   socket.on('round_ended', (data) => {
+    window.soundManager.stopTimeBomb();
     window.soundManager.stopBgm(true);
     const outcome = data.outcome || {};
 
@@ -2335,6 +2336,7 @@
 
   // Salir de la partida / mesa al cerrar la ventana de Balance Final y regresar al menú principal
   function exitGameToMainMenu() {
+    window.soundManager.stopTimeBomb();
     window.soundManager.stopChampions();
     window.soundManager.stopBgm(true);
 

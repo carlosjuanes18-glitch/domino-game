@@ -1644,8 +1644,8 @@ io.on('connection', (socket) => {
           broadcastRoom(room);
         }
       }
-    } else if (room.status === 'waiting') {
-      room.players = room.players.filter(p => p.socketId !== socket.id);
+    } else if (room.status === 'waiting' || room.status === 'session_finished') {
+      room.players = room.players.filter(p => p.socketId !== socket.id && p.playerId !== player.playerId);
       room.players.forEach((p, idx) => p.seat = idx);
       broadcastRoom(room);
     } else {

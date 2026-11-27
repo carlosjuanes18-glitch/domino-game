@@ -21,6 +21,7 @@ class SoundManager {
     this.bgmDesired = false;
     this.bgmInterrupted = false;
     this.bgmInterruptionTimeout = null;
+    this.isChampionsExclusive = false;
 
     // Archivos de audio reales personalizados
     this.audioFiles = {
@@ -113,6 +114,10 @@ class SoundManager {
 
   // Cambiar entre canción Overworld (inicial) y Underground (a 3 fichas)
   setBgmTrack(track) {
+    if (this.isChampionsExclusive) return;
+    const fbModal = document.getElementById('finalBalanceModal');
+    if (fbModal && !fbModal.classList.contains('hidden') && fbModal.style.display !== 'none') return;
+
     if (this.currentBgmTrack === track) return;
     const wasPlaying = !this.bgm.paused && this.bgmDesired;
     try {
@@ -134,6 +139,10 @@ class SoundManager {
 
   // Iniciar / Continuar la música de fondo durante la partida
   startBgm() {
+    if (this.isChampionsExclusive) return;
+    const fbModal = document.getElementById('finalBalanceModal');
+    if (fbModal && !fbModal.classList.contains('hidden') && fbModal.style.display !== 'none') return;
+
     this.bgmDesired = true;
     if (this.muted) return;
     if (this.bgmInterrupted) return; // Si hay una intervención activa, esperar que termine
@@ -179,6 +188,10 @@ class SoundManager {
 
   // Reanudar la música de fondo continuando la secuencia desde donde se pausó
   resumeBgmAfterIntervention() {
+    if (this.isChampionsExclusive) return;
+    const fbModal = document.getElementById('finalBalanceModal');
+    if (fbModal && !fbModal.classList.contains('hidden') && fbModal.style.display !== 'none') return;
+
     this.bgmInterrupted = false;
     if (this.bgmInterruptionTimeout) {
       clearTimeout(this.bgmInterruptionTimeout);
@@ -230,13 +243,32 @@ class SoundManager {
     this.playAudio('youWin', 0.95);
   }
 
-  // Canción de Queen - We Are The Champions para la pantalla de Balance Final
+  // Canción de Queen - We Are The Champions para la pantalla de Balance Final (EXCLUSIVA)
   playChampions() {
+    this.isChampionsExclusive = true;
+    // Detener por completo y reiniciar cualquier música de fondo de Mario
+    this.stopBgm(true);
+
+    // Pausar y silenciar cualquier otro efecto de sonido para que solo se escuche Queen
+    Object.keys(this.audioFiles).forEach(key => {
+      if (key !== 'champions') {
+        const sound = this.audioFiles[key];
+        if (sound) {
+          try {
+            sound.pause();
+            sound.currentTime = 0;
+          } catch (e) { }
+        }
+      }
+    });
+
+    // Reproducir única y exclusivamente We Are The Champions
     this.playAudio('champions', 0.95);
   }
 
   // Detener la canción de Champions al cerrar la pantalla de Balance Final
   stopChampions() {
+    this.isChampionsExclusive = false;
     const sound = this.audioFiles['champions'];
     if (sound) {
       try {

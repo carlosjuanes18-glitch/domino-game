@@ -2176,20 +2176,89 @@
 
   // Confirmación al jugador que abandonó
   socket.on('leave_game_ack', (data) => {
-    alert(`Has abandonado la partida. Se registró 1 juego perdido para ${data.playerName}. Total de derrotas acumuladas: ${data.losses}.`);
+    // Si la sesión no ha terminado, mostrar aviso de abandono. Si ya concluyó la partida, salir limpio al menú
+    if (!finalBalanceModal || finalBalanceModal.classList.contains('hidden') || finalBalanceModal.style.display === 'none') {
+      alert(`Has abandonado la partida. Se registró 1 juego perdido para ${data.playerName}. Total de derrotas acumuladas: ${data.losses}.`);
+    }
+    sessionStorage.removeItem('domino_active_session');
     lobbyModal.classList.add('hidden');
     scoreboardModal.classList.add('hidden');
     roundOverModal.classList.add('hidden');
     finalBalanceModal.classList.add('hidden');
+    finalBalanceModal.style.display = 'none';
     setupModal.classList.remove('hidden');
+    setupModal.style.display = 'flex';
     currentRoom = null;
     mySeat = null;
+    myHand = [];
+    if (boardContainer) boardContainer.innerHTML = '';
+    const myHandContainer = document.getElementById('myHand');
+    if (myHandContainer) myHandContainer.innerHTML = '';
+    updateProfileCardUI();
   });
+
+  // Salir de la partida / mesa al cerrar la ventana de Balance Final y regresar al menú principal
+  function exitGameToMainMenu() {
+    window.soundManager.stopChampions();
+    window.soundManager.stopBgm(true);
+
+    sessionStorage.removeItem('domino_active_session');
+    socket.emit('leave_game');
+
+    currentRoom = null;
+    mySeat = null;
+    myHand = [];
+
+    // Ocultar modal de Balance Final y todos los modales de juego
+    if (finalBalanceModal) {
+      finalBalanceModal.classList.add('hidden');
+      finalBalanceModal.style.display = 'none';
+    }
+    if (roundOverModal) {
+      roundOverModal.classList.add('hidden');
+      roundOverModal.style.display = 'none';
+    }
+    if (scoreboardModal) {
+      scoreboardModal.classList.add('hidden');
+      scoreboardModal.style.display = 'none';
+    }
+    if (liveBalanceModal) {
+      liveBalanceModal.classList.add('hidden');
+      liveBalanceModal.style.display = 'none';
+    }
+    if (lobbyModal) {
+      lobbyModal.classList.add('hidden');
+      lobbyModal.style.display = 'none';
+    }
+
+    // Limpiar tablero y fichas
+    if (boardContainer) boardContainer.innerHTML = '';
+    const myHandContainer = document.getElementById('myHand');
+    if (myHandContainer) myHandContainer.innerHTML = '';
+
+    // Limpiar parámetro ?room de la URL
+    if (window.history.pushState) {
+      window.history.pushState({}, document.title, window.location.pathname);
+    }
+
+    // Mostrar pantalla de inicio / perfil
+    if (setupModal) {
+      setupModal.classList.remove('hidden');
+      setupModal.style.display = 'flex';
+      updateProfileCardUI();
+    }
+
+    showToast('🚪 Has salido del juego');
+  }
 
   // Renderizar y mostrar el Balance Final (Imágenes 1 y 2)
   function renderFinalBalance(balance) {
     if (!balance) return;
     currentSessionBalance = balance;
+
+    // Detener de inmediato toda música de fondo y reproducir exclusivamente Queen - We Are The Champions
+    window.soundManager.stopBgm(true);
+    window.soundManager.playChampions();
 
     // Abrir inmediatamente el modal y cerrar los demás
     try {
@@ -2625,7 +2694,7 @@
 
   // Socket: Recibir el Balance Final
   socket.on('session_finished', (balanceData) => {
-    window.soundManager.playSnareRollReveal();
+    window.soundManager.stopBgm(true);
     renderFinalBalance(balanceData);
   });
 
@@ -2649,10 +2718,16 @@
   const btnCloseFinalBalance = document.getElementById('btnCloseFinalBalance');
   if (btnCloseFinalBalance) {
     btnCloseFinalBalance.addEventListener('click', () => {
-      // Detener la canción de Champions inmediatamente al cerrar esta pantalla
-      window.soundManager.stopChampions();
-      finalBalanceModal.classList.add('hidden');
-      finalBalanceModal.style.display = 'none';
+      // Detener Champions y salir del juego al menú principal
+      exitGameToMainMenu();
+    });
+  }
+
+  const btnExitGameFromBalance = document.getElementById('btnExitGameFromBalance');
+  if (btnExitGameFromBalance) {
+    btnExitGameFromBalance.addEventListener('click', () => {
+      // Detener Champions y salir del juego al menú principal
+      exitGameToMainMenu();
     });
   }
 
@@ -2752,10 +2827,8 @@
   // Si se cierra el modal con Escape
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-      if (finalBalanceModal && !finalBalanceModal.classList.contains('hidden')) {
-        window.soundManager.stopChampions();
-        finalBalanceModal.classList.add('hidden');
-        finalBalanceModal.style.display = 'none';
+      if (finalBalanceModal && !finalBalanceModal.classList.contains('hidden') && finalBalanceModal.style.display !== 'none') {
+        exitGameToMainMenu();
       }
       if (liveBalanceModal && !liveBalanceModal.classList.contains('hidden')) {
         liveBalanceModal.classList.add('hidden');

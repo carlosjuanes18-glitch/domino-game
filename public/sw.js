@@ -1,5 +1,5 @@
 // Service Worker para Dominó Clásico - Web Push & PWA
-const CACHE_NAME = 'domino-cache-v43.0';
+const CACHE_NAME = 'domino-cache-v44.0';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -10,6 +10,8 @@ const STATIC_ASSETS = [
   '/js/avatars.js',
   '/favicon.ico',
   '/images/domino-icon.svg',
+  '/images/domino-psycho.svg',
+  '/images/domino-scared.svg',
   '/images/icon-192.png',
   '/images/icon-512.png',
   '/images/icon-maskable-512.png',
@@ -19,6 +21,7 @@ const STATIC_ASSETS = [
   '/images/app-matrix-domino.jpg',
   '/manifest.json',
   '/audio/bomba-tiempo.mp3',
+  '/audio/psicosis.mp3',
   '/images/avatars/avatar_1.png',
   '/images/avatars/avatar_2.png',
   '/images/avatars/avatar_3.png',

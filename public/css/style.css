@@ -818,6 +818,14 @@ body {
   filter: drop-shadow(0 8px 22px rgba(220, 38, 38, 0.75));
 }
 
+.slow-scared-domino-img {
+  width: 1.4em;
+  height: 1.4em;
+  display: block;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 22px rgba(2, 132, 199, 0.85));
+}
+
 @keyframes slowFloatEntireScreen {
   0% {
     opacity: 0;
@@ -2126,3 +2134,132 @@ body {
   opacity: 0.75;
   text-transform: uppercase;
 }
+
+/* Escena divertida de persecución Psicosis (Ficha psicópata persiguiendo a ficha aterrada) */
+.psycho-chase-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1000000;
+  overflow: hidden;
+}
+
+.psycho-chase-convoy {
+  position: absolute;
+  bottom: 35%;
+  left: 105%;
+  display: flex;
+  align-items: flex-end;
+  gap: 24px;
+  animation: chaseRunAcross 4.6s cubic-bezier(0.2, 0.9, 0.4, 1) forwards;
+  will-change: transform, left;
+}
+
+@keyframes chaseRunAcross {
+  0% {
+    left: 110%;
+    transform: translateY(0) scale(0.95);
+  }
+  15% {
+    left: 70%;
+    transform: translateY(-20px) scale(1.05);
+  }
+  40% {
+    left: 40%;
+    transform: translateY(12px) scale(1.1);
+  }
+  70% {
+    left: 10%;
+    transform: translateY(-16px) scale(1.05);
+  }
+  100% {
+    left: -130%;
+    transform: translateY(0) scale(0.95);
+  }
+}
+
+.scared-runner {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: runnerPanicBounce 0.22s infinite alternate ease-in-out;
+}
+
+.psycho-hunter {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: hunterCrazyDash 0.18s infinite alternate ease-in-out;
+}
+
+@keyframes runnerPanicBounce {
+  0% {
+    transform: translateY(0) rotate(-6deg);
+  }
+  100% {
+    transform: translateY(-22px) rotate(5deg) scale(1.08);
+  }
+}
+
+@keyframes hunterCrazyDash {
+  0% {
+    transform: translateY(0) rotate(6deg) scale(1);
+  }
+  100% {
+    transform: translateY(-18px) rotate(-8deg) scale(1.12);
+  }
+}
+
+.chase-domino-scared-img {
+  width: 105px;
+  height: 115px;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 24px rgba(2, 132, 199, 0.85));
+}
+
+.chase-domino-psycho-img {
+  width: 120px;
+  height: 130px;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 26px rgba(220, 38, 38, 0.95));
+}
+
+.chase-shout {
+  position: absolute;
+  top: -38px;
+  white-space: nowrap;
+  font-size: 0.8rem;
+  font-weight: 900;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6);
+  user-select: none;
+}
+
+.scared-shout {
+  background: #0284c7;
+  color: #ffffff;
+  border: 2px solid #38bdf8;
+  animation: shoutWiggle 0.2s infinite alternate;
+}
+
+.psycho-shout {
+  background: #991b1b;
+  color: #fef08a;
+  border: 2px solid #ef4444;
+  animation: shoutWiggle 0.18s infinite alternate-reverse;
+}
+
+@keyframes shoutWiggle {
+  0% { transform: scale(0.96) rotate(-3deg); }
+  100% { transform: scale(1.04) rotate(3deg); }
+}
+
+.dust-cloud, .blood-drips {
+  font-size: 1.4rem;
+  line-height: 1;
+  margin-top: -4px;
+}
+

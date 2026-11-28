@@ -35,7 +35,7 @@ class SoundManager {
       angry: new Audio('/audio/whatsapp-angry.mpeg'),
       champions: new Audio('/audio/queen-champions.mp3'),
       timeBomb: new Audio('/audio/bomba-tiempo.mp3'),
-      psychosis: new Audio('/audio/psicosis.mp3'),
+      psychosis: new Audio('/audio/psicosis.mp3?v=44.0'),
       marioPass: new Audio('/audio/mario-pipe-pass.mp3'),
       marioCastleClear: new Audio('/audio/mario-castle-clear.mp3'),
       marioPowerUp: new Audio('/audio/mario-powerup.mp3'),

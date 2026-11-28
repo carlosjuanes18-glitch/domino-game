@@ -1938,8 +1938,9 @@
       // Bomba clásica en forma de bola negra -> Efecto Bomba de Tiempo
       window.soundManager.playTimeBomb();
     } else if (data.emoji === 'DOMINO_PSYCHO' || (data.text && data.text.includes('Psicópata'))) {
-      // Dominó Psicópata con cuchillo -> Tema de Psicosis
+      // Dominó Psicópata con cuchillo -> Tema de Psicosis mejorado
       window.soundManager.playPsychosis();
+      triggerPsychoChaseAnimation();
     } else if (data.emoji === '😂') {
       window.soundManager.playLaughter();
     } else if (data.emoji === '😱' || data.emoji === '💀') {
@@ -1996,9 +1997,18 @@
     }
 
     // Detectar si es un emoji individual o una frase de texto
-    const isSingleEmoji = (content.length <= 4 && !content.includes(' ')) || content === 'DOMINO_PSYCHO';
+    const isSingleEmoji = (content.length <= 4 && !content.includes(' ')) || content === 'DOMINO_PSYCHO' || content === 'DOMINO_SCARED';
 
     if (isSingleEmoji) {
+      if (content === 'DOMINO_PSYCHO' || content === 'DOMINO_SCARED') {
+        triggerPsychoChaseAnimation();
+        const psychoThematic = ['DOMINO_SCARED', 'DOMINO_PSYCHO', '🔪', '🩸', '😱', 'DOMINO_SCARED', 'DOMINO_PSYCHO', '🔪', '🩸', '💦', '🏃‍♂️', '💨'];
+        psychoThematic.forEach((em, idx) => {
+          setTimeout(() => createSlowScreenEmoji(em, idx, psychoThematic.length), idx * 210);
+        });
+        return;
+      }
+
       // Caravana de 12 emojis que recorren lentamente toda la pantalla (de abajo hacia arriba, cubriendo todo el ancho)
       const count = 12;
       for (let i = 0; i < count; i++) {
@@ -2016,7 +2026,8 @@
       // Acompañar con emojis temáticos flotando lentamente por toda la pantalla
       let thematicIcons = ['💬', '🗣️', '💭'];
       if (content.includes('Psicópata')) {
-        thematicIcons = ['DOMINO_PSYCHO', '🔪', '🩸', 'DOMINO_PSYCHO', '🔪', '🩸', 'DOMINO_PSYCHO', '🔪', '🩸', 'DOMINO_PSYCHO', '🔪', 'DOMINO_PSYCHO'];
+        triggerPsychoChaseAnimation();
+        thematicIcons = ['DOMINO_SCARED', 'DOMINO_PSYCHO', '🔪', '🩸', '😱', 'DOMINO_SCARED', 'DOMINO_PSYCHO', '🔪', '🩸', '💦', '🏃‍♂️', '💨'];
       } else if (content.includes('volar la papada') || content.includes('BOMBA') || content.includes('PUNTAS') || content.includes('💣')) {
         thematicIcons = ['💣', '💥', '🔥', '💣', '💥', '🔥', '💣', '💥', '🔥', '💣', '💥', '🔥'];
       } else if (content.includes('PASAR A') || content.includes('🍄') || content.includes('PowerUp')) {
@@ -2041,6 +2052,37 @@
         if (badge.parentNode) badge.parentNode.removeChild(badge);
       }, 4200);
     }
+  }
+
+  // Animación cómica de persecución Psicosis: Ficha psicópata persiguiendo a ficha aterrada
+  function triggerPsychoChaseAnimation() {
+    const existing = document.querySelector('.psycho-chase-overlay');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'psycho-chase-overlay';
+    overlay.innerHTML = `
+      <div class="psycho-chase-convoy">
+        <!-- Ficha de dominó aterrada corriendo desesperadamente -->
+        <div class="scared-runner">
+          <div class="chase-shout scared-shout">¡AUXILIOOO! 😱💦</div>
+          <img src="/images/domino-scared.svg" class="chase-domino-scared-img" alt="Dominó Aterrado">
+          <div class="dust-cloud">💨💨</div>
+        </div>
+
+        <!-- Ficha de dominó psicópata con cara de loca persiguiendo con cuchillo ensangrentado -->
+        <div class="psycho-hunter">
+          <div class="chase-shout psycho-shout">¡TE VOY A PICAR! 🔪🩸</div>
+          <img src="/images/domino-psycho.svg" class="chase-domino-psycho-img" alt="Dominó Psicópata">
+          <div class="blood-drips">🩸🩸</div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    setTimeout(() => {
+      if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+    }, 4800);
   }
 
   // Activa la animación en pantalla cuando una ficha colocada hace pasar al siguiente jugador
@@ -2154,6 +2196,8 @@
     el.className = 'slow-screen-emoji';
     if (emoji === 'DOMINO_PSYCHO') {
       el.innerHTML = `<img src="/images/domino-psycho.svg" class="slow-psycho-domino-img" alt="Dominó Psicópata">`;
+    } else if (emoji === 'DOMINO_SCARED') {
+      el.innerHTML = `<img src="/images/domino-scared.svg" class="slow-scared-domino-img" alt="Dominó Aterrado">`;
     } else {
       el.textContent = emoji;
     }

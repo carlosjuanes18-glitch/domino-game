@@ -1099,9 +1099,25 @@ io.on('connection', (socket) => {
     // Verificar si hay humanos activos conectados en la sala
     const hasLiveHumans = room && room.players.some(p => !p.isBot && !p.isDisconnected && io.sockets.sockets.has(p.socketId));
 
+    // Verificar si el jugador que llega es un participante legítimo de la partida en curso
+    const isReturningPlayer = room && room.players.some(p =>
+      (p.playerId && p.playerId === effectivePlayerId) ||
+      (p.clientId && p.clientId === effectiveClientId) ||
+      p.socketId === socket.id ||
+      (p.name && cleanName && p.name.toLowerCase() === cleanName.toLowerCase()) ||
+      (p.name && cleanName && p.name.toLowerCase() === `${cleanName.toLowerCase()} (auto)`)
+    );
+
+    // Si la sala está en 'playing', solo se considera fantasma abandonada si:
+    // 1) NO hay humanos vivos conectados, Y
+    // 2) El que se conecta NO es un jugador que regresa a continuar su partida, Y
+    // 3) Todos los humanos desconectados llevan más de 3 minutos desconectados
+    const isAbandonedGhostRoom = room && room.status === 'playing' && !isReturningPlayer && !hasLiveHumans &&
+      room.players.every(p => p.isBot || (p.disconnectedAt && (Date.now() - p.disconnectedAt > 180000)));
+
     // Si el usuario forzó el reinicio, o la sala no existe, o ya concluyó,
-    // o si estaba en 'playing' pero quedó fantasma sin ningún jugador humano conectado:
-    if (forceReset || !room || room.status === 'session_finished' || (room.status === 'playing' && !hasLiveHumans)) {
+    // o si estaba en 'playing' pero quedó fantasma abandonada por más de 3 minutos:
+    if (forceReset || !room || room.status === 'session_finished' || isAbandonedGhostRoom) {
       room = createInitialRoom(formattedRoomId, socket.id);
       if (gameRate !== undefined && !isNaN(parseInt(gameRate))) {
         room.gameRate = Math.max(0, parseInt(gameRate));

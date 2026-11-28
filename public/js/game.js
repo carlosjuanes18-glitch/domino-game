@@ -86,6 +86,16 @@
     } catch (e) { }
   }
 
+  // Si hay una sesión activa de juego en curso, preparar la vista de inmediato para reconexión instantánea
+  const initialSavedSession = getActiveSession();
+  if (initialSavedSession && initialSavedSession.status === 'playing') {
+    const sModal = document.getElementById('setupModal');
+    if (sModal) {
+      sModal.classList.add('hidden');
+      sModal.style.display = 'none';
+    }
+  }
+
   let sessionRecoveryTimeout = null;
   let isAttemptingRecovery = false;
 
@@ -109,6 +119,16 @@
     if (saved && saved.roomId && saved.status === 'playing') {
       try {
         isAttemptingRecovery = true;
+        const sModal = document.getElementById('setupModal');
+        if (sModal) {
+          sModal.classList.add('hidden');
+          sModal.style.display = 'none';
+        }
+        const lModal = document.getElementById('lobbyModal');
+        if (lModal) {
+          lModal.classList.add('hidden');
+          lModal.style.display = 'none';
+        }
         socket.emit('join_room', {
           ...saved,
           clientId: myClientId,
@@ -571,12 +591,17 @@
     }
     setupModal.classList.add('hidden');
     setupModal.style.display = 'none';
-    if (currentRoom && currentRoom.status === 'playing') {
+
+    const saved = getActiveSession();
+    if (saved && saved.status === 'playing') {
+      // Reingresando a partida activa por reconexión / apertura de acceso directo
+      lobbyModal.classList.add('hidden');
+      lobbyModal.style.display = 'none';
+    } else if (currentRoom && currentRoom.status === 'playing') {
       saveActiveSession({ roomId: data.roomId, status: 'playing' });
       lobbyModal.classList.add('hidden');
       lobbyModal.style.display = 'none';
     } else {
-      clearActiveSession();
       lobbyModal.classList.remove('hidden');
       lobbyModal.style.display = 'flex';
     }

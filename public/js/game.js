@@ -108,11 +108,17 @@
     const pName = document.getElementById('inputPlayerName')?.value?.trim() || localStorage.getItem('domino_player_name') || 'Jugador';
     const pAvatar = (typeof selectedAvatar !== 'undefined' && selectedAvatar) ? selectedAvatar : (localStorage.getItem('domino_selected_avatar') || 'avatar_1');
 
+    let cachedFriends = [];
+    try {
+      cachedFriends = JSON.parse(localStorage.getItem('domino_friends_cache') || '[]');
+    } catch (e) {}
+
     socket.emit('auth_profile', {
       playerId: myPlayerId,
       playerToken: myPlayerToken,
       playerName: pName,
-      avatar: pAvatar
+      avatar: pAvatar,
+      cachedFriends: Array.isArray(cachedFriends) ? cachedFriends : []
     });
 
     const saved = getActiveSession();
@@ -3295,16 +3301,26 @@
   const btnGoToShareFromEmpty = document.getElementById('btnGoToShareFromEmpty');
   const btnTogglePushNotifications = document.getElementById('btnTogglePushNotifications');
 
-  // Enlace personal de amistad
-  const myFriendLink = `${window.location.origin}/?friend=${myPlayerId}`;
-  if (myFriendLinkInput) {
-    myFriendLinkInput.value = myFriendLink;
+  // Enlace personal de amistad dinámico con nombre y avatar
+  function getMyFriendLink() {
+    const pName = document.getElementById('inputPlayerName')?.value?.trim() || localStorage.getItem('domino_player_name') || 'Jugador';
+    const pAvatar = (typeof selectedAvatar !== 'undefined' && selectedAvatar) ? selectedAvatar : (localStorage.getItem('domino_selected_avatar') || 'avatar_1');
+    return `${window.location.origin}/?friend=${encodeURIComponent(myPlayerId)}&name=${encodeURIComponent(pName)}&avatar=${encodeURIComponent(pAvatar)}`;
   }
+
+  function updateFriendLinkField() {
+    if (myFriendLinkInput) {
+      myFriendLinkInput.value = getMyFriendLink();
+    }
+  }
+
+  updateFriendLinkField();
 
   // Abrir y cerrar Panel de Amigos
   if (btnOpenFriends) {
     btnOpenFriends.addEventListener('click', () => {
       window.soundManager.playTileClick();
+      updateFriendLinkField();
       if (friendsModal) {
         friendsModal.classList.remove('hidden');
         friendsModal.style.display = 'flex';
@@ -3326,6 +3342,7 @@
 
   if (btnGoToShareFromEmpty) {
     btnGoToShareFromEmpty.addEventListener('click', () => {
+      updateFriendLinkField();
       switchFriendsTab('shareLink');
     });
   }
@@ -3347,6 +3364,7 @@
       tabBtnRequests.classList.add('active');
       tabContentRequests?.classList.remove('hidden');
     } else if (tabName === 'shareLink') {
+      updateFriendLinkField();
       tabBtnShareLink.classList.add('active');
       tabContentShareLink?.classList.remove('hidden');
     }
@@ -3359,20 +3377,23 @@
   // Copiar Enlace de Amistad
   if (btnCopyFriendLink) {
     btnCopyFriendLink.addEventListener('click', () => {
+      const link = getMyFriendLink();
+      updateFriendLinkField();
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(myFriendLink).then(() => {
+        navigator.clipboard.writeText(link).then(() => {
           showToast('📋 ¡Enlace de amistad copiado!');
         }).catch(() => {
-          copyFallback(myFriendLink);
+          copyFallback(link);
         });
       } else {
-        copyFallback(myFriendLink);
+        copyFallback(link);
       }
     });
   }
 
   function copyFallback(text) {
     if (myFriendLinkInput) {
+      myFriendLinkInput.value = text;
       myFriendLinkInput.select();
       document.execCommand('copy');
       showToast('📋 ¡Enlace de amistad copiado!');
@@ -3382,8 +3403,48 @@
   // Compartir Enlace por WhatsApp
   if (btnShareFriendWhatsApp) {
     btnShareFriendWhatsApp.addEventListener('click', () => {
-      const msg = `¡Hola! Agrégame como amigo en Dominó Clásico para que juguemos juntos cuando quieras:\n${myFriendLink}`;
+      const link = getMyFriendLink();
+      updateFriendLinkField();
+      const msg = `¡Hola! Agrégame como amigo en Dominó Clásico para que juguemos juntos cuando quieras:\n${link}`;
       window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
+    });
+  }
+
+  // Agregar amigo por código o enlace
+  const inputFriendCodeToAdd = document.getElementById('inputFriendCodeToAdd');
+  const btnAddFriendByCode = document.getElementById('btnAddFriendByCode');
+  if (btnAddFriendByCode && inputFriendCodeToAdd) {
+    btnAddFriendByCode.addEventListener('click', () => {
+      const rawVal = inputFriendCodeToAdd.value.trim();
+      if (!rawVal) {
+        showToast('⚠️ Ingresa el código o enlace de tu amigo.');
+        return;
+      }
+      let targetId = rawVal;
+      let targetName = '';
+      if (rawVal.includes('friend=')) {
+        try {
+          const u = new URL(rawVal, window.location.origin);
+          targetId = u.searchParams.get('friend') || rawVal;
+          targetName = u.searchParams.get('name') || '';
+        } catch (e) {
+          const match = rawVal.match(/friend=([^&]+)/);
+          if (match) targetId = decodeURIComponent(match[1]);
+        }
+      }
+      if (!targetId || targetId === myPlayerId) {
+        showToast('⚠️ No puedes agregarte a ti mismo.');
+        return;
+      }
+      const myName = document.getElementById('inputPlayerName')?.value?.trim() || localStorage.getItem('domino_player_name') || 'Jugador';
+      socket.emit('send_friend_request', {
+        fromId: myPlayerId,
+        toId: targetId,
+        fromName: myName,
+        toName: targetName
+      });
+      showToast('📨 Enviando solicitud de amistad...');
+      inputFriendCodeToAdd.value = '';
     });
   }
 
@@ -3450,6 +3511,23 @@
     myFriends = data.friends || [];
     pendingRequests = data.pendingRequests || [];
     pendingInvitations = data.pendingInvitations || [];
+
+    // Guardar lista en localStorage para sobrevivir reinicios de servidor
+    if (Array.isArray(myFriends) && myFriends.length > 0) {
+      try {
+        localStorage.setItem('domino_friends_cache', JSON.stringify(myFriends));
+      } catch (e) {}
+    } else {
+      // Si el servidor devolvió lista vacía tras reinicio pero tenemos caché local previa,
+      // pedir al servidor que las restaure
+      try {
+        const local = JSON.parse(localStorage.getItem('domino_friends_cache') || '[]');
+        if (Array.isArray(local) && local.length > 0 && myFriends.length === 0) {
+          socket.emit('restore_friends_cache', { playerId: myPlayerId, cachedFriends: local });
+          myFriends = local;
+        }
+      } catch (e) {}
+    }
 
     renderFriendsList(myFriends);
     renderRequestsList(pendingRequests);
@@ -3920,20 +3998,29 @@
   const btnDismissFriendCard = document.getElementById('btnDismissFriendCard');
 
   const friendParam = urlParams.get('friend');
+  const friendNameParam = urlParams.get('name');
+  const friendAvatarParam = urlParams.get('avatar');
+
   if (friendParam && friendParam !== myPlayerId) {
+    if (friendInviteCardModal) {
+      if (targetFriendName) targetFriendName.textContent = friendNameParam || 'Un amigo';
+      if (targetFriendDisplayName) targetFriendDisplayName.textContent = friendNameParam || 'Un amigo';
+      if (targetFriendAvatarWrapper && friendAvatarParam && window.AVATARS && window.AVATARS[friendAvatarParam]) {
+        targetFriendAvatarWrapper.innerHTML = window.AVATARS[friendAvatarParam]?.svg || '👤';
+      }
+      if (inputVisitorName) {
+        inputVisitorName.value = localStorage.getItem('domino_player_name') || '';
+      }
+      friendInviteCardModal.classList.remove('hidden');
+      friendInviteCardModal.style.display = 'flex';
+    }
+
     fetch(`/api/user/${friendParam}`).then(r => r.json()).then(targetUser => {
       if (targetUser && targetUser.id) {
         if (targetFriendName) targetFriendName.textContent = targetUser.name;
         if (targetFriendDisplayName) targetFriendDisplayName.textContent = targetUser.name;
-        if (targetFriendAvatarWrapper) {
+        if (targetFriendAvatarWrapper && window.AVATARS && window.AVATARS[targetUser.avatar]) {
           targetFriendAvatarWrapper.innerHTML = window.AVATARS[targetUser.avatar]?.svg || '👤';
-        }
-        if (inputVisitorName) {
-          inputVisitorName.value = localStorage.getItem('domino_player_name') || '';
-        }
-        if (friendInviteCardModal) {
-          friendInviteCardModal.classList.remove('hidden');
-          friendInviteCardModal.style.display = 'flex';
         }
       }
     }).catch(e => console.warn('Error cargando amigo de URL:', e));
@@ -3956,8 +4043,24 @@
 
       socket.emit('send_friend_request', {
         fromId: myPlayerId,
-        toId: friendParam
+        toId: friendParam,
+        fromName: vName,
+        toName: friendNameParam || ''
       });
+
+      // Guardar de inmediato en caché local del navegador
+      try {
+        const cache = JSON.parse(localStorage.getItem('domino_friends_cache') || '[]');
+        if (!cache.some(c => c.id === friendParam)) {
+          cache.push({
+            id: friendParam,
+            name: friendNameParam || 'Amigo',
+            avatar: friendAvatarParam || 'avatar_1',
+            since: Date.now()
+          });
+          localStorage.setItem('domino_friends_cache', JSON.stringify(cache));
+        }
+      } catch (e) {}
 
       if (friendInviteCardModal) {
         friendInviteCardModal.classList.add('hidden');

@@ -1028,6 +1028,22 @@
             <span>📲 Compartir por WhatsApp</span>
           </button>
         </div>
+
+        <div class="bg-slate-900/90 border border-slate-700/60 rounded-xl p-2.5 mb-2.5 shadow-sm">
+          <div class="text-xs font-bold text-emerald-300 mb-1 flex items-center gap-1.5">
+            <span>🆔</span> Agregar amigo por Código o Enlace
+          </div>
+          <div class="text-[10px] text-slate-300 mb-2 leading-tight">
+            Pega aquí el enlace o código que te compartió tu amigo (ej: <code>p_...</code>) para conectarte de inmediato:
+          </div>
+          <div class="flex items-center gap-1.5">
+            <input id="inputFriendCodeToAdd" type="text" placeholder="Código o enlace de tu amigo..."
+              class="flex-1 bg-slate-950 border border-slate-700/70 rounded-lg px-2 py-1 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500" />
+            <button id="btnAddFriendByCode" type="button" class="primary-btn !py-1 !px-3 text-xs font-bold">
+              ➕ Agregar
+            </button>
+          </div>
+        </div>
       </div>
 
       <!-- Footer del Panel: Notificaciones Web Push e Instalación PWA -->

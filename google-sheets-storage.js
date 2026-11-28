@@ -15,9 +15,14 @@ function isConfigured() {
 }
 
 function getSheetsClient() {
-  const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
-  let key = process.env.GOOGLE_PRIVATE_KEY;
+  const email = (process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || '').trim();
+  let key = (process.env.GOOGLE_PRIVATE_KEY || '').trim();
   if (!email || !key) return null;
+
+  // Manejar comillas accidentales en variables de entorno de Render
+  if ((key.startsWith('"') && key.endsWith('"')) || (key.startsWith("'") && key.endsWith("'"))) {
+    key = key.slice(1, -1);
+  }
 
   // Manejar saltos de línea escapados en variables de entorno de Render
   if (key.includes('\\n')) {

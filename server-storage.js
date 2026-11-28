@@ -125,17 +125,23 @@ function getFriendsList(playerId) {
   const result = [];
   db.friends.forEach(f => {
     let friendId = null;
-    if (f.user1 === playerId) friendId = f.user2;
-    else if (f.user2 === playerId) friendId = f.user1;
+    let fallbackName = '';
+    if (f.user1 === playerId) {
+      friendId = f.user2;
+      fallbackName = f.name2 || f.name1;
+    } else if (f.user2 === playerId) {
+      friendId = f.user1;
+      fallbackName = f.name1 || f.name2;
+    }
 
-    if (friendId && db.users[friendId]) {
+    if (friendId) {
       const u = db.users[friendId];
       result.push({
-        id: u.id,
-        name: u.name,
-        avatar: u.avatar,
-        since: f.createdAt,
-        lastSeen: u.lastSeen
+        id: friendId,
+        name: (u && u.name) ? u.name : (fallbackName || ('Amigo (' + friendId.slice(-4) + ')')),
+        avatar: (u && u.avatar) ? u.avatar : 'avatar1',
+        since: f.createdAt || Date.now(),
+        lastSeen: (u && u.lastSeen) ? u.lastSeen : 0
       });
     }
   });
@@ -160,13 +166,36 @@ function removeFriend(idA, idB) {
   return { ok: false, error: 'No se encontró la amistad' };
 }
 
-function sendFriendRequest(fromId, toId) {
+function sendFriendRequest(fromId, toId, fromName, toName) {
   if (!fromId || !toId || fromId === toId) {
     return { ok: false, error: 'No puedes enviarte solicitud a ti mismo' };
   }
+
+  // Si el usuario destino o remitente no existen aún en memoria (por reinicio de servidor), creamos stubs seguros
   if (!db.users[toId]) {
-    return { ok: false, error: 'El jugador de destino no existe' };
+    db.users[toId] = {
+      id: toId,
+      name: toName || ('Jugador ' + toId.slice(-4)),
+      avatar: 'avatar1',
+      createdAt: Date.now(),
+      lastSeen: Date.now()
+    };
+  } else if (toName && (!db.users[toId].name || db.users[toId].name === 'Jugador')) {
+    db.users[toId].name = toName;
   }
+
+  if (!db.users[fromId]) {
+    db.users[fromId] = {
+      id: fromId,
+      name: fromName || ('Jugador ' + fromId.slice(-4)),
+      avatar: 'avatar1',
+      createdAt: Date.now(),
+      lastSeen: Date.now()
+    };
+  } else if (fromName && (!db.users[fromId].name || db.users[fromId].name === 'Jugador')) {
+    db.users[fromId].name = fromName;
+  }
+
   if (areFriends(fromId, toId)) {
     return { ok: false, error: 'Ya son amigos' };
   }
@@ -186,10 +215,12 @@ function sendFriendRequest(fromId, toId) {
   if (reciprocal) {
     reciprocal.status = 'accepted';
     reciprocal.acceptedAt = Date.now();
-    db.friends.push({ user1: fromId, user2: toId, createdAt: Date.now() });
+    const nameA = db.users[fromId]?.name || fromName || '';
+    const nameB = db.users[toId]?.name || toName || '';
+    db.friends.push({ user1: fromId, user2: toId, name1: nameA, name2: nameB, createdAt: Date.now() });
     saveDatabase();
     if (googleSheets.isConfigured()) {
-      googleSheets.addFriendship(fromId, toId, db.users[fromId]?.name, db.users[toId]?.name).catch(err => {
+      googleSheets.addFriendship(fromId, toId, nameA, nameB).catch(err => {
         console.warn('[Google Sheets] Error al registrar amistad:', err.message);
       });
     }
@@ -238,12 +269,20 @@ function respondFriendRequest(requestId, recipientId, action) {
   if (action === 'accept') {
     req.status = 'accepted';
     req.acceptedAt = Date.now();
+    const nameA = db.users[req.fromId]?.name || '';
+    const nameB = db.users[req.toId]?.name || '';
     if (!areFriends(req.fromId, req.toId)) {
-      db.friends.push({ user1: req.fromId, user2: req.toId, createdAt: Date.now() });
+      db.friends.push({
+        user1: req.fromId,
+        user2: req.toId,
+        name1: nameA,
+        name2: nameB,
+        createdAt: Date.now()
+      });
     }
     saveDatabase();
     if (googleSheets.isConfigured()) {
-      googleSheets.addFriendship(req.fromId, req.toId, db.users[req.fromId]?.name, db.users[req.toId]?.name).catch(err => {
+      googleSheets.addFriendship(req.fromId, req.toId, nameA, nameB).catch(err => {
         console.warn('[Google Sheets] Error al registrar amistad:', err.message);
       });
     }
@@ -261,6 +300,69 @@ function respondFriendRequest(requestId, recipientId, action) {
     saveDatabase();
     return { ok: true, action: 'rejected', senderId: req.fromId, recipientId: req.toId };
   }
+}
+
+// Restauración y re-inyección de amistad (usado por caché de cliente y Google Sheets)
+function restoreFriendship(idA, idB, nameA, nameB) {
+  if (!idA || !idB || idA === idB) return false;
+  if (!areFriends(idA, idB)) {
+    db.friends.push({
+      user1: idA,
+      user2: idB,
+      name1: nameA || '',
+      name2: nameB || '',
+      createdAt: Date.now()
+    });
+
+    if (!db.users[idA]) {
+      db.users[idA] = {
+        id: idA,
+        name: nameA || ('Jugador ' + idA.slice(-4)),
+        avatar: 'avatar1',
+        createdAt: Date.now(),
+        lastSeen: Date.now()
+      };
+    } else if (nameA && (!db.users[idA].name || db.users[idA].name === 'Jugador')) {
+      db.users[idA].name = nameA;
+    }
+
+    if (!db.users[idB]) {
+      db.users[idB] = {
+        id: idB,
+        name: nameB || ('Jugador ' + idB.slice(-4)),
+        avatar: 'avatar1',
+        createdAt: Date.now(),
+        lastSeen: Date.now()
+      };
+    } else if (nameB && (!db.users[idB].name || db.users[idB].name === 'Jugador')) {
+      db.users[idB].name = nameB;
+    }
+
+    saveDatabase();
+
+    if (googleSheets.isConfigured()) {
+      googleSheets.addFriendship(idA, idB, nameA, nameB).catch(err => {
+        console.warn('[Google Sheets] Error al registrar amistad restaurada:', err.message);
+      });
+    }
+    return true;
+  }
+  return false;
+}
+
+// Sincronizar conjunto de amigos reportados por la caché local del navegador
+function restoreCachedFriends(playerId, cachedFriends) {
+  if (!playerId || !Array.isArray(cachedFriends)) return 0;
+  const user = db.users[playerId] || { name: 'Jugador' };
+  let restored = 0;
+  cachedFriends.forEach(cf => {
+    if (cf && cf.id && cf.id !== playerId) {
+      if (restoreFriendship(playerId, cf.id, user.name, cf.name)) {
+        restored++;
+      }
+    }
+  });
+  return restored;
 }
 
 // ----------------- Gestión de Invitaciones a Partida -----------------
@@ -432,28 +534,47 @@ async function syncFriendshipsFromGoogleSheets() {
         db.friends.push({
           user1: sf.user1,
           user2: sf.user2,
+          name1: sf.name1 || '',
+          name2: sf.name2 || '',
           createdAt: sf.createdAt || Date.now()
         });
         newCount++;
+      } else {
+        // Actualizar nombres si estaban vacíos
+        const match = db.friends.find(f =>
+          (f.user1 === sf.user1 && f.user2 === sf.user2) ||
+          (f.user1 === sf.user2 && f.user2 === sf.user1)
+        );
+        if (match) {
+          if (!match.name1 && sf.name1) match.name1 = sf.name1;
+          if (!match.name2 && sf.name2) match.name2 = sf.name2;
+        }
       }
-      // Asegurar que existan metadatos de usuario mínimos para listarlos
-      if (!db.users[sf.user1] && sf.name1) {
+      // Asegurar que existan perfiles de usuario en memoria
+      const name1 = sf.name1 || ('Jugador ' + sf.user1.slice(-4));
+      const name2 = sf.name2 || ('Jugador ' + sf.user2.slice(-4));
+      if (!db.users[sf.user1]) {
         db.users[sf.user1] = {
           id: sf.user1,
-          name: sf.name1,
-          avatar: 'avatar_1',
+          name: name1,
+          avatar: 'avatar1',
           createdAt: sf.createdAt || Date.now(),
           lastSeen: Date.now()
         };
+      } else if (!db.users[sf.user1].name || db.users[sf.user1].name === 'Jugador') {
+        db.users[sf.user1].name = name1;
       }
-      if (!db.users[sf.user2] && sf.name2) {
+
+      if (!db.users[sf.user2]) {
         db.users[sf.user2] = {
           id: sf.user2,
-          name: sf.name2,
-          avatar: 'avatar_1',
+          name: name2,
+          avatar: 'avatar1',
           createdAt: sf.createdAt || Date.now(),
           lastSeen: Date.now()
         };
+      } else if (!db.users[sf.user2].name || db.users[sf.user2].name === 'Jugador') {
+        db.users[sf.user2].name = name2;
       }
     });
 
@@ -478,6 +599,8 @@ module.exports = {
   sendFriendRequest,
   getPendingRequests,
   respondFriendRequest,
+  restoreFriendship,
+  restoreCachedFriends,
   createGameInvitation,
   getPendingInvitations,
   respondInvitation,
@@ -486,5 +609,6 @@ module.exports = {
   saveRoomsToDisk,
   loadRoomsFromDisk,
   syncFriendshipsFromGoogleSheets,
-  googleSheets
+  googleSheets,
+  getDb: () => db
 };

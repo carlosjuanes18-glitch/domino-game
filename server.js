@@ -39,6 +39,16 @@ app.post('/api/push/subscribe', (req, res) => {
   res.json({ ok: true });
 });
 
+app.get('/api/storage-status', (req, res) => {
+  const isConfigured = Boolean(storage.googleSheets && storage.googleSheets.isConfigured());
+  const db = storage.getDb ? storage.getDb() : {};
+  res.json({
+    googleSheetsConfigured: isConfigured,
+    totalUsers: Object.keys(db.users || {}).length,
+    totalFriendships: (db.friends || []).length
+  });
+});
+
 app.get('/api/user/:playerId', (req, res) => {
   const user = storage.getUser(req.params.playerId);
   if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
@@ -915,9 +925,13 @@ io.on('connection', (socket) => {
   let currentRoomId = null;
 
   // Autenticación de perfil y sincronización de identidad persistente
-  socket.on('auth_profile', ({ playerId, playerToken, playerName, avatar }) => {
+  socket.on('auth_profile', ({ playerId, playerToken, playerName, avatar, cachedFriends }) => {
     if (!playerId) return;
     const user = storage.upsertUser(playerId, playerToken, playerName, avatar);
+
+    if (Array.isArray(cachedFriends) && cachedFriends.length > 0) {
+      storage.restoreCachedFriends(playerId, cachedFriends);
+    }
 
     if (!userSockets.has(playerId)) userSockets.set(playerId, new Set());
     userSockets.get(playerId).add(socket.id);
@@ -982,9 +996,18 @@ io.on('connection', (socket) => {
     });
   });
 
+  // Restaurar amistades desde la caché persistente del navegador
+  socket.on('restore_friends_cache', ({ playerId, cachedFriends }) => {
+    if (!playerId || !Array.isArray(cachedFriends)) return;
+    const restored = storage.restoreCachedFriends(playerId, cachedFriends);
+    if (restored > 0) {
+      notifyUser(playerId, 'friends_updated');
+    }
+  });
+
   // Enviar solicitud de amistad
-  socket.on('send_friend_request', ({ fromId, toId }) => {
-    const result = storage.sendFriendRequest(fromId, toId);
+  socket.on('send_friend_request', ({ fromId, toId, fromName, toName }) => {
+    const result = storage.sendFriendRequest(fromId, toId, fromName, toName);
     socket.emit('friend_request_result', result);
 
     if (result.ok) {

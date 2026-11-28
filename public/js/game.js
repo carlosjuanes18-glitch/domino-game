@@ -681,40 +681,53 @@
     });
   }
 
+  // Salir completamente y cerrar la aplicación sin volver a ninguna pantalla de juego
+  function exitAndCloseApplication() {
+    window.soundManager.playTileClick();
+    const ok = confirm('¿Estás seguro de que deseas salir y cerrar la aplicación?');
+    if (!ok) return;
+
+    clearActiveSession();
+    socket.emit('leave_game');
+    window.soundManager.stopBgm(true);
+    window.soundManager.stopTimeBomb();
+    window.soundManager.stopChampions();
+
+    currentRoom = null;
+    mySeat = null;
+    myHand = [];
+
+    // Ocultar todos los modales de juego
+    document.querySelectorAll('.modal-backdrop').forEach(m => {
+      m.classList.add('hidden');
+      m.style.display = 'none';
+    });
+
+    try {
+      window.close();
+    } catch (e) { }
+
+    document.body.innerHTML = `
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:#030e07;color:#a7f3d0;font-family:system-ui,-apple-system,sans-serif;text-align:center;padding:24px;">
+        <div style="font-size:52px;margin-bottom:12px;">🚪</div>
+        <h1 style="font-size:24px;font-weight:900;color:#fcd34d;margin-bottom:8px;">Has salido del juego</h1>
+        <p style="font-size:15px;color:#cbd5e1;max-width:320px;line-height:1.4;">La partida ha concluido y la aplicación está cerrada.</p>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-top:20px;">
+          <button onclick="try { window.close(); } catch(e){} window.location.href='about:blank';" style="padding:12px 24px;background:#e11d48;color:white;border:none;border-radius:14px;font-size:14px;font-weight:bold;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,0.5);">
+            Cerrar Ventana
+          </button>
+          <button onclick="window.location.href='/'" style="padding:10px 20px;background:#059669;color:white;border:none;border-radius:14px;font-size:13px;font-weight:bold;cursor:pointer;">
+            🏠 Volver a Abrir el Juego
+          </button>
+        </div>
+      </div>
+    `;
+  }
+
   // Botón: Salir y cerrar la aplicación desde la Sala de Espera
   const btnLobbyExitApp = document.getElementById('btnLobbyExitApp');
   if (btnLobbyExitApp) {
-    btnLobbyExitApp.addEventListener('click', () => {
-      window.soundManager.playTileClick();
-      const ok = confirm('¿Estás seguro de que deseas salir y cerrar la aplicación?');
-      if (ok) {
-        clearActiveSession();
-        socket.emit('leave_game');
-        window.soundManager.stopBgm(true);
-        window.soundManager.stopTimeBomb();
-        window.soundManager.stopChampions();
-
-        try {
-          window.close();
-        } catch (e) { }
-
-        lobbyModal.classList.add('hidden');
-        lobbyModal.style.display = 'none';
-        setupModal.classList.add('hidden');
-        setupModal.style.display = 'none';
-
-        document.body.innerHTML = `
-          <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:#022c22;color:#a7f3d0;font-family:system-ui,-apple-system,sans-serif;text-align:center;padding:24px;">
-            <div style="font-size:52px;margin-bottom:12px;">👋</div>
-            <h1 style="font-size:24px;font-weight:900;color:#fcd34d;margin-bottom:8px;">Has salido de la partida</h1>
-            <p style="font-size:15px;color:#cbd5e1;max-width:320px;line-height:1.4;">Ya puedes cerrar esta ventana o salir de la aplicación.</p>
-            <button onclick="window.location.href='/'" style="margin-top:24px;padding:12px 24px;background:#059669;color:white;border:none;border-radius:14px;font-size:15px;font-weight:bold;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,0.4);">
-              🏠 Volver a Abrir el Juego
-            </button>
-          </div>
-        `;
-      }
-    });
+    btnLobbyExitApp.addEventListener('click', exitAndCloseApplication);
   }
 
   // Botón Copiar Enlace de Invitación
@@ -3001,10 +3014,7 @@
 
   const btnExitGameFromBalance = document.getElementById('btnExitGameFromBalance');
   if (btnExitGameFromBalance) {
-    btnExitGameFromBalance.addEventListener('click', () => {
-      // Detener Champions y salir del juego al menú principal
-      exitGameToMainMenu();
-    });
+    btnExitGameFromBalance.addEventListener('click', exitAndCloseApplication);
   }
 
   const btnPrintPDF = document.getElementById('btnPrintPDF');

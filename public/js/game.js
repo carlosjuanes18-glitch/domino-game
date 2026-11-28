@@ -3073,15 +3073,81 @@
     });
   }
 
+  // Control de estado del botón de instalación del Lobby (Habilitar / Inhabilitar según esté instalado)
+  const btnLobbyInstallApp = document.getElementById('btnLobbyInstallApp');
+
+  function setLobbyInstallButtonState(isInstalled) {
+    if (!btnLobbyInstallApp) return;
+    if (isInstalled) {
+      btnLobbyInstallApp.disabled = true;
+      btnLobbyInstallApp.innerHTML = '<span>✅ Acceso Directo Ya Instalado</span>';
+      btnLobbyInstallApp.classList.add('opacity-40', 'cursor-not-allowed', 'pointer-events-none');
+      btnLobbyInstallApp.classList.remove('active:scale-95');
+    } else {
+      btnLobbyInstallApp.disabled = false;
+      btnLobbyInstallApp.innerHTML = '<span>📲 Instalar / Actualizar Acceso Directo</span>';
+      btnLobbyInstallApp.classList.remove('opacity-40', 'cursor-not-allowed', 'pointer-events-none');
+      btnLobbyInstallApp.classList.add('active:scale-95');
+    }
+  }
+
+  async function checkPwaInstalledStatus() {
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+    if (isStandalone) {
+      setLobbyInstallButtonState(true);
+      return;
+    }
+
+    if ('getInstalledRelatedApps' in navigator) {
+      try {
+        const related = await navigator.getInstalledRelatedApps();
+        if (related && related.length > 0) {
+          setLobbyInstallButtonState(true);
+          return;
+        } else {
+          setLobbyInstallButtonState(false);
+          return;
+        }
+      } catch (e) {
+        // Fallback
+      }
+    }
+  }
+
   // Capturar evento PWA para instalación en pantalla de inicio
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredPrompt = e;
+    setLobbyInstallButtonState(false);
     const btnInstallPwa = document.getElementById('btnInstallPwa');
     if (btnInstallPwa) {
       btnInstallPwa.classList.remove('hidden');
     }
   });
+
+  // Cuando se termina de instalar la aplicación / crear el acceso directo
+  window.addEventListener('appinstalled', () => {
+    deferredPrompt = null;
+    setLobbyInstallButtonState(true);
+    showToast('✅ ¡Acceso directo creado correctamente!');
+    const btnInstallPwa = document.getElementById('btnInstallPwa');
+    if (btnInstallPwa) {
+      btnInstallPwa.classList.add('hidden');
+    }
+  });
+
+  // Si cambia el modo de visualización entre standalone y navegador
+  try {
+    const standaloneMedia = window.matchMedia('(display-mode: standalone)');
+    if (standaloneMedia && standaloneMedia.addEventListener) {
+      standaloneMedia.addEventListener('change', (e) => {
+        setLobbyInstallButtonState(e.matches);
+      });
+    }
+  } catch (err) {}
+
+  // Verificar estado inicial al cargar
+  checkPwaInstalledStatus();
 
   const btnInstallPwa = document.getElementById('btnInstallPwa');
   if (btnInstallPwa) {
@@ -3091,6 +3157,7 @@
         const { outcome } = await deferredPrompt.userChoice;
         if (outcome === 'accepted') {
           showToast('📲 ¡Instalando aplicación de Dominó!');
+          setLobbyInstallButtonState(true);
         }
         deferredPrompt = null;
         btnInstallPwa.classList.add('hidden');
@@ -3099,14 +3166,15 @@
   }
 
   // Botón visible de instalación / actualización en la pantalla de inicio
-  const btnLobbyInstallApp = document.getElementById('btnLobbyInstallApp');
   if (btnLobbyInstallApp) {
     btnLobbyInstallApp.addEventListener('click', async () => {
+      if (btnLobbyInstallApp.disabled) return;
       if (deferredPrompt) {
         deferredPrompt.prompt();
         const { outcome } = await deferredPrompt.userChoice;
         if (outcome === 'accepted') {
           showToast('📲 ¡Instalando aplicación de Dominó con el nuevo icono!');
+          setLobbyInstallButtonState(true);
         }
         deferredPrompt = null;
         return;
@@ -3114,6 +3182,7 @@
       
       const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
       if (isStandalone) {
+        setLobbyInstallButtonState(true);
         alert('ℹ️ Ya estás dentro del juego.\n\nPara que tu teléfono tome el nuevo icono neón en la pantalla:\n1. Sal de aquí y ve a la pantalla de tu celular donde están tus apps.\n2. Mantén presionado el icono anterior de Dominó y dale "Desinstalar" o "Eliminar".\n3. Abre la app de Google Chrome y entra a:\nhttps://domino-game-6fw2.onrender.com\n4. Toca los 3 puntos (⋮) arriba a la derecha y elige "Instalar aplicación".');
       } else {
         alert('ℹ️ Para instalar el acceso directo con el nuevo icono:\n1. Si ya tienes un icono viejo en tu pantalla de inicio, desinstálalo primero.\n2. En Google Chrome, toca los 3 puntos verticales (⋮) arriba a la derecha.\n3. Selecciona "Instalar aplicación" o "Agregar a la pantalla principal".');
